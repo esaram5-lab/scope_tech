@@ -125,6 +125,9 @@ class SimScope:
             return resp(v)
         if h == "*OPC":
             return resp(1) if q else None
+        if q and h in ("*OPT", "HORIZONTAL:MODE", "TRIGGER:A:MODE", "ACQUIRE:STOPAFTER"):
+            return resp({"*OPT": "NONE", "HORIZONTAL:MODE": "AUTO", "TRIGGER:A:MODE": "AUTO",
+                         "ACQUIRE:STOPAFTER": self.stopafter}[h])
         if h in ("HEADER", "VERBOSE"):
             return None
         if h == "CLEAR":
