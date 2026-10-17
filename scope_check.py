@@ -28,6 +28,7 @@ from scopetech.transport import (  # noqa: E402
 )
 
 CURSOR = "DISplay:WAVEView1:CURSor:CURSOR1"
+INK = False  # --ink 로 잉크 절약(INVErted) 캡처 시험
 
 
 class Checker:
@@ -118,6 +119,7 @@ class Checker:
             time.sleep(0.1)
         self.out(f"    BUSY? 0 까지 {time.monotonic() - t0:.2f}s, 1초 추가 대기")
         time.sleep(1)
+        self.w(f"SAVe:IMAGe:COMPosition {'INVErted' if INK else 'NORMal'}")
 
     def fetch(self, fname: str, timeout: float) -> bytes:
         """READFile 로 가져온다. 실장비 멈춤과 관련된 CWD 변경/LDIR? 는 쓰지 않는다."""
@@ -184,7 +186,7 @@ class Checker:
     def s5_screenshot(self):
         """Single 로 고정 후 화면 캡처 저장(SAVe:IMAGe) - 저장만, 전송 없음"""
         self.freeze()
-        self.w("SAVe:IMAGe:COMPosition INVErted")
+        self.w(f"SAVe:IMAGe:COMPosition {'INVErted' if INK else 'NORMal'}")
         fname = "check_screen.png"
         self.w(f'SAVe:IMAGe "{self.temp_dir}/{fname}"')
         dt = self.wait_opc("화면 저장", 60)
@@ -292,8 +294,11 @@ def main(argv=None) -> int:
     ap.add_argument("--sim", action="store_true")
     ap.add_argument("--from", dest="start", type=int, default=1, help="시작 단계 번호")
     ap.add_argument("--yes", action="store_true", help="단계마다 묻지 않고 진행")
+    ap.add_argument("--ink", action="store_true", help="잉크 절약(흰 배경, INVErted) 캡처로 시험")
     args = ap.parse_args(argv)
 
+    global INK
+    INK = args.ink
     cfg = Config(args.config)
     log_dir = HERE / cfg.get("output", "log_dir")
     log_dir.mkdir(parents=True, exist_ok=True)
