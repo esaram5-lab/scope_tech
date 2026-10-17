@@ -1,0 +1,132 @@
+# scope_tech — MSO58B VIL/VIH/VOH/VOL 측정 도우미
+
+Tektronix MSO58B로 PLD(SLG4AD4449) 입출력 레벨을 측정하고, 명령 하나로 아래 3가지를 수행합니다.
+
+1. **측정/커서 생성**: VIL/VIH는 커서, VOH/VOL은 측정과 통계
+2. **화면 캡처**: 측정/커서가 보이는 `meas.png`, 숨긴 `clean.png` 두 장
+3. **파형 저장**: `waveform.csv`(분석용), `CHx.wfm`(스코프·TekScope에서 다시 열기용), `setup.set`(스코프 설정)
+
+- **필요한 것:** Windows와 Python 3.13만 있으면 됩니다. 표준 라이브러리만 쓰므로 `pip install`이 필요 없습니다.
+- **오프라인 PC 사용:** 이 폴더를 통째로 USB 메모리에 담아 복사하면 됩니다.
+
+---
+
+## 1. 연결 (둘 중 하나)
+
+| | USB | LAN (설치 불필요, 권장) |
+|---|---|---|
+| PC 설치 | **TekVISA 또는 NI-VISA 필요**¹ | 없음 |
+| 케이블 | 스코프 뒷면 **USB Device 포트**(USB 3.0 B타입) | 랜선으로 PC와 스코프를 직결 |
+| 스코프 설정 | Utility > I/O > USB Device Port **On** | Utility > I/O > LAN: IP 수동 지정(예: `192.168.0.10`)<br>Utility > I/O > Socket Server **On**, Protocol **None**, Port **4000** |
+| PC 설정 | — | 이더넷 어댑터 IP를 `192.168.0.100`, 서브넷 `255.255.255.0`으로 지정 |
+| `config.ini` | `interface = usb` | `interface = lan`, `ip = 192.168.0.10` |
+
+¹ Windows에는 USB 계측기(USBTMC) 드라이버가 기본으로 들어 있지 않습니다. 그래서 USB로 연결하려면 VISA가 꼭 필요합니다. 인터넷이 되는 PC에서 TekVISA 설치 파일을 받아 옮겨 설치하세요. 설치가 어려우면 LAN을 쓰면 됩니다.
+
+## 2. 실행
+
+- `run_scope.bat`을 더블클릭하거나, 명령창에서 `py scope.py`를 실행합니다.
+- **연습:** `py scope.py --sim`으로 스코프 없이 시뮬레이터로 모든 명령을 해볼 수 있습니다. 결과는 `captures_sim/`에 저장됩니다.
+- **한 번만 실행:** `py scope.py --temp 85 --name INV_3V3 all vih 1 2`처럼 명령 하나만 실행하고 끝낼 수도 있습니다.
+
+### 처음 연결할 때 점검 순서
+이 프로그램은 시뮬레이터로만 검증된 상태라, 실제 장비에서는 한 단계씩 확인하는 것을 권장합니다.
+```
+status          <- 연결/모델 확인
+vih 1 2 hold    <- 지금 멈춰 있는 화면으로 분석 + 커서
+capture         <- meas.png / clean.png
+save 1 2        <- CSV + wfm + setup
+```
+오류가 나면 `logs/scpi_날짜.log` 파일을 보내주세요. 어떤 명령에서 막혔는지 바로 알 수 있습니다.
+
+## 3. 사용 예
+```
+[25C TEST PP spec=-] scope> temp 25
+[25C TEST PP spec=-] scope> name INV_3V3
+[25C INV_3V3 PP spec=-] scope> spec 3V3
+[25C INV_3V3 PP spec=3V3] scope> all vih 1 2      <- VIL/VIH: 측정 -> 캡처 -> 저장
+[25C INV_3V3 PP spec=3V3] scope> all voh 2        <- VOH/VOL: 측정 -> 캡처 -> 저장
+[25C INV_3V3 PP spec=3V3] scope> temp 85          <- 온도만 바꿔서 반복
+```
+
+### 명령어
+| 명령 | 내용 |
+|---|---|
+| `vih [입력 출력] [hold]` | VIL/VIH 측정. 기본 `1 2`. Single 획득 후 분석하고, 입력 채널에 커서 A(VT+) / B(VT−)를 놓습니다. `hold`를 붙이면 새로 획득하지 않고 지금 화면으로 분석합니다. |
+| `voh [채널...] [hold]` | VOH/VOL 측정. 기본 `2`. 채널마다 TOP, BASE, MAX, MIN 측정을 추가하고, N회 획득 통계를 냅니다. 첫 채널의 TOP/BASE 위치에 수평 커서를 놓습니다. |
+| `capture` | 측정/커서가 있으면 `meas.png`와 `clean.png`, 없으면 `clean.png`만 저장합니다. |
+| `save [채널...]` | 파형과 설정을 저장합니다. 채널을 생략하면 화면에 켜진 채널 전부를 저장합니다. |
+| `all vih 1 2` / `all voh 2` | 측정 → 캡처 → 저장을 한 번에 실행합니다. |
+| `temp`, `name`, `spec`, `type pp\|od` | 시험 조건을 설정합니다. 폴더 이름과 판정에 반영됩니다. |
+| `status`, `run`, `stop`, `single`, `clear`, `idn` | 상태 확인과 스코프 직접 제어 |
+| `scpi <명령>` | SCPI 명령을 직접 보냅니다. 예: `scpi ACQuire:MODe?` |
+| `help <명령>`, `quit` | 도움말, 종료 |
+
+> 측정 명령을 실행하면 스코프에 있던 기존 측정이 지워집니다. 프로그램이 만든 측정만 지우게 하려면 `config.ini`에서 `clear_existing_measurements = no`로 바꾸세요.
+
+## 4. 측정 원리
+
+### VIL / VIH (CH1 = 함수발생기 입력, CH2 = PLD 출력)
+입력에 느린 삼각파를 넣고, **출력이 바뀌는 순간(출력 50% 지점)의 입력 전압**을 읽습니다.
+
+| 결과 | 의미 | 판정 |
+|---|---|---|
+| VT+ | 입력이 **올라가다가** 출력이 바뀐 전압 (VIH 쪽 실제 문턱) | `max(VT+) ≤ VIH(min)` |
+| VT− | 입력이 **내려가다가** 출력이 바뀐 전압 (VIL 쪽 실제 문턱) | `min(VT−) ≥ VIL(max)` |
+| 히스테리시스 | VT+ − VT− | — |
+
+- 출력이 입력과 같은 방향으로 움직이는지(버퍼/AND/레벨시프터), 반대인지(인버터)는 자동으로 판별합니다. 1V 비교기도 같은 방식으로 문턱과 히스테리시스를 측정합니다.
+- 화면에 3주기가 들어 있으면 상승 3회, 하강 3회를 측정해 최소/평균/최대를 냅니다.
+- 문턱 근처에서 출력이 여러 번 바뀌면(떨림) 각 구간의 첫 전환을 쓰고 경고를 표시합니다.
+- 측정할 때 획득 모드를 **High Res**로 바꿉니다(노이즈 감소, 최대 16bit).
+
+**세팅 팁**
+- **삼각파:** 0V → VCCIO(3.3V 또는 1.8V)까지만 넣으세요. **절대 최대 정격을 넘으면 안 됩니다.** 주파수는 100Hz~1kHz 정도가 적당합니다.
+- **화면:** time/div를 3주기가 들어오게 맞춥니다(100Hz면 3ms/div). V/div는 파형이 화면 세로를 꽉 채우게 맞춥니다.
+- **레코드 길이:** 10만~100만 포인트를 권장합니다. 100만 포인트 7채널이면 CSV가 약 60MB입니다.
+- **OD 출력:** 상승이 느리면 `config.ini`의 `out_cross`를 0.1~0.2로 낮추세요. 출력이 실제로 바뀌기 시작한 지점 기준으로 계산합니다.
+
+### VOH / VOL
+- MSO5B에서 `HIGH`/`LOW`는 아이 다이어그램 전용 측정이라 **TOP(=VOH)과 BASE(=VOL)**를 씁니다. 둘 다 오버슈트를 뺀 안정 레벨(최빈값)입니다.
+- N회(기본 50회) 획득 통계로 최악값을 냅니다. VOH는 TOP의 최솟값, VOL은 BASE의 최댓값입니다.
+- MAX/MIN(오버슈트 포함 극값)은 참고용으로 같이 기록합니다.
+- **OD 출력**(`type od`)은 High 레벨이 풀업(1.8V, 1kΩ) 전압이므로 **VOL만 판정**합니다.
+
+## 5. 저장 구조
+```
+captures/
+  results.csv                         <- 모든 측정 누적(엑셀로 열기)
+  summary.csv                         <- analyze.py 재판정 결과
+  VIH/INV_3V3_25C_CH1-CH2_20261017_153012/
+    meas.png  clean.png               <- 화면 캡처(측정/커서 표시 / 숨김)
+    waveform.csv                      <- time_s, CH1_V, CH2_V, ... (화면에 켜진 채널)
+    CH1.wfm ... CH7.wfm  setup.set    <- 스코프에서 Recall 가능
+    result.json                       <- 측정값, 전환 시점, 경고 등 전체 결과
+    xy.svg                            <- (analyze.py --plot) 입력-출력 전달 특성
+  VOH/...
+logs/scpi_20261017.log                <- 스코프 송수신 기록(문제 확인용)
+```
+
+## 6. 판정 기준 넣기 / 나중에 다시 판정
+1. `config.ini`의 `[spec:3V3]`, `[spec:1V8]`, `[spec:CMP1V]`에 datasheet 값을 채웁니다. 비워두면 판정 없이 측정값만 기록합니다.
+2. `py analyze.py`를 실행하면 저장된 모든 결과를 현재 기준으로 재판정해서 `captures/summary.csv`를 만듭니다.
+
+추가 옵션:
+- `py analyze.py --plot`: VIH 폴더마다 `xy.svg`를 생성합니다(입력 X, 출력 Y. 히스테리시스 루프와 기준선이 보입니다).
+- `py analyze.py --recompute`: `vin_avg_points`나 `out_cross`를 바꾼 뒤, 저장된 CSV로 VT+/VT−를 다시 계산합니다.
+- `py analyze.py --spec 1V8`: 결과에 기록된 기준 대신 지정한 기준으로 판정합니다.
+
+## 7. 문제 해결
+| 증상 | 확인 |
+|---|---|
+| `VISA 라이브러리를 찾을 수 없습니다` | TekVISA/NI-VISA를 설치하거나 LAN으로 바꾸세요. |
+| `USB 에서 Tektronix 스코프를 찾지 못했습니다` | 뒷면 USB Device 포트에 연결했는지, USB Device Port가 On인지 확인하세요. |
+| `LAN 연결 실패` | IP 대역, Socket Server On, Protocol None을 확인하세요. |
+| `트리거가 걸리지 않았습니다` | 트리거 설정을 확인하세요. `config.ini`의 `single_timeout_s`로 대기 시간을 늘릴 수 있습니다. |
+| `… 중 스코프 오류: …` | 스코프가 거부한 명령입니다. `logs/` 파일을 보내주세요. |
+
+## 개발자용
+```
+python -m unittest discover -s tests -t .
+```
+시뮬레이터(`scopetech/sim.py`)와 가짜 TCP 서버, 가짜 VISA DLL로 LAN/USB 전체 흐름을 테스트합니다. SCPI 명령은 Tektronix *4/5/6 Series MSO Programmer Manual* (077-1898-05) 기준입니다.
