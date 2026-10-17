@@ -23,6 +23,7 @@ sys.path.insert(0, str(HERE))
 
 from scope import make_logger, open_transport  # noqa: E402
 from scopetech.config import Config  # noqa: E402
+from scopetech.mso import MSO5B  # noqa: E402
 from scopetech.transport import (  # noqa: E402
     VI_ERROR_TMO, VI_SUCCESS_MAX_CNT, ScopeError, StreamTransport, VisaTransport,
 )
@@ -188,6 +189,10 @@ class Checker:
 
     def aoe_capture(self) -> str:
         """Act On Event 로 화면 저장: 트리거 1회에 스코프가 스스로 PNG 저장. 저장된 파일 이름 반환."""
+        self.out("    AOE 활성화 전 획득 정지 및 BUSY 해제 확인")
+        MSO5B(self.t, settle_s=1).stop()
+        if not self.orig_cwd:
+            self.orig_cwd = self.q("FILESystem:CWD?").strip().strip('"')
         prefix = f"chk{datetime.now():%H%M%S%f}"[:12]
         self.w(f"SAVe:IMAGe:COMPosition {'INVErted' if INK else 'NORMal'}")
         self.w(f'SAVEONEVent:FILEDest "{self.orig_cwd}"')
@@ -375,11 +380,13 @@ def main(argv=None) -> int:
                 t.recover()
                 t.write("*CLS")
                 ck.q("*IDN?", timeout=5)
-                ck.out("    통신 복구됨, 다음 단계 진행 가능")
+                ck.out("    SCPI 응답만 확인됨. TekScope 화면 복구를 의미하지 않습니다.")
             except Exception as e2:
                 ck.out(f"    통신 복구 실패({e2}). 스코프 화면이 응답하는지 확인 후 다시 실행하세요"
                        f" (예: python scope_check.py --from {n + 1}).")
                 break
+            ck.out("    오류 후 자동 진행을 중단합니다. TekScope 화면 상태와 로그를 확인하세요.")
+            break
     ck.out("\n" + ("모든 단계 통과" if not failed else f"실패한 단계: {failed}"))
     ck.out(f"이 파일과 {log_dir / ('scpi_' + datetime.now().strftime('%Y%m%d') + '.log')} 를 보내주세요.")
     t.close()
@@ -389,3 +396,4 @@ def main(argv=None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

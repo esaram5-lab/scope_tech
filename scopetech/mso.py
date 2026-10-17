@@ -79,7 +79,9 @@ class MSO5B:
         if self.is_running():
             self.write("ACQuire:STATE STOP")
             deadline = time.monotonic() + 10
-            while self.query("ACQuire:STATE?") != "0" and time.monotonic() < deadline:
+            while self.query("ACQuire:STATE?") != "0":
+                if time.monotonic() >= deadline:
+                    raise ScopeTimeout("획득 정지 확인 실패: AOE를 켜지 않습니다.")
                 time.sleep(0.1)
         self.wait_idle()
 
@@ -96,7 +98,9 @@ class MSO5B:
     def wait_idle(self, timeout: float = 15) -> None:
         """BUSY? 가 0 이 될 때까지 기다린 뒤 화면 갱신 시간을 준다."""
         deadline = time.monotonic() + timeout
-        while self.query("BUSY?") not in ("0", "") and time.monotonic() < deadline:
+        while self.query("BUSY?") != "0":
+            if time.monotonic() >= deadline:
+                raise ScopeTimeout("스코프 BUSY 상태가 해제되지 않았습니다.")
             time.sleep(0.1)
         time.sleep(self.settle_s)
 
@@ -274,6 +278,9 @@ class MSO5B:
         """화면 캡처. 원격 SAVe:IMAGe 는 실장비(MSO58B FV 2.24.4)에서 TekScope 화면을 멈추게 해서 쓰지 않는다.
         대신 Act On Event(트리거 시 스코프가 스스로 화면 저장)를 켜고 Single 1회로 저장시킨 뒤 파일을 가져온다.
         Single 이 새로 한 번 획득하므로 캡처 화면은 직전 화면과 다른 획득이다(반복 트리거 신호면 같은 모양)."""
+        # 연속 획득 중 AOE를 켜면 Single 전환 전에 여러 저장이 시작될 수 있다.
+        # 정지와 BUSY 해제를 확인하지 못하면 AOE를 절대 활성화하지 않는다.
+        self.stop()
         dest = self.query("FILESystem:CWD?").strip().strip('"').rstrip("/")
         prefix = f"scopetech{time.time_ns() // 1_000_000 % 10**9}"
         self.write(f"SAVe:IMAGe:COMPosition {'INVErted' if ink_saver else 'NORMal'}")
@@ -327,3 +334,4 @@ class MSO5B:
         fname = "scope_tech_setup.set"
         self._save_on_scope(f'SAVe:SETUp "{self.temp_dir}/{fname}"', "설정 저장", 30)
         return self._fetch_file(fname, 30)
+

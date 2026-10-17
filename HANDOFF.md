@@ -36,6 +36,13 @@ Tektronix **MSO58B** (FV 2.24.4, Windows 내장형, TPP1000 프로브, CH1~7 연
 6. 측정 추가/삭제·커서 명령은 정상 (각 묶음 뒤 `*OPC?` + 0.1s 대기 넣음). capture 의 clean.png 는 측정 삭제 대신 `MAINWindow:RRBDisplaystate OFF/ON`.
 
 ## 다음에 할 일 (우선순위)
+### 2026-10-17 7단계 멈춤 후 수정
+- 사용자 로그: 7단계 첫 반복에서 PNG 이름 발견 후 AOE 해제의 `*OPC?`가 10초 타임아웃. TekScope 화면도 멈췄으나 Windows는 정상. 복구 후 `*IDN?` 응답은 UI 복구 증거가 아님.
+- 원인 후보: RUN 중 AOE를 켜서 Single 전환 전 여러 저장이 시작되는 경쟁 상태(미확정).
+- `mso.screenshot()`와 점검 도구 모두 AOE 설정 전에 STOP/획득 정지/BUSY 해제를 확인하도록 변경. 정지 또는 BUSY 확인 실패 시 AOE 활성화 금지.
+- 점검 도구는 오류 후 SCPI 복구 여부와 관계없이 중단. `--from 7`에서도 현재 폴더를 조회하도록 수정.
+- 다음 실장비 시험: TekScope 재시작 후 `py -3.13 scope_check.py --from 7`. 우선 7단계 5회 반복을 확인하고 다음 단계 질문에서 q로 종료, check/scpi 로그 공유. 실장비 해결 여부는 아직 미검증.
+
 1. **실장비 확인**: 최신 브랜치로 `run_check.bat` 1~10단계 (5·6·7·10단계가 AOE 캡처) → 통과 시 `scope.py` 에서 `all vih 1 2`, `all voh 2`.
 2. **미검증: `SAVe:WAVEform`(.wfm 저장)과 `SAVe:SETUp`**. SETUp 은 정상 확인됨. WAVEform 이 멈추면 `config.ini [save] wfm = no` 로 끄거나 AOE `ACTONEVent:TRIGger:ACTION:SAVEWAVEform:STATE` 방식으로 교체.
 3. VIL/VIH 실측: 함수발생기 High-Z, 삼각파 0~VCCIO, 100Hz~1kHz, 3주기 화면. 커서 위치/값이 프로그램 출력과 일치하는지 확인.
@@ -56,3 +63,4 @@ Tektronix **MSO58B** (FV 2.24.4, Windows 내장형, TPP1000 프로브, CH1~7 연
 ## 참고
 - 매뉴얼: https://download.tek.com/manual/4-5-6-Series-MSO_Programmer_077189805.pdf (`pdftotext` 후 grep 으로 명령 확인)
 - 커밋 메시지 끝 attribution 은 세션 지침을 따를 것. 모델명은 커밋/PR 에 쓰지 말 것.
+
