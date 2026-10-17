@@ -303,6 +303,37 @@ class Bench:
         self.echo("[저장] " + ", ".join(x.name for x in out) + f"  -> {rec.folder}")
         return out
 
+    def save_manual(self, label: str, chans: list[int], note: str = "") -> Record:
+        """수동 시험: 기존 측정/커서는 유지하고 CSV와 화면 1장을 저장한다."""
+        if not label.strip() or not chans or any(c < 1 or c > self.scope.num_channels for c in chans):
+            raise ValueError("시험 이름과 저장 채널을 확인해주세요.")
+        s = self.scope
+        s.stop()
+        rec = self._new_record("MANUAL", chans)
+        rec.result = self._base_result("MANUAL")
+        rec.result.update({"manual_item": label, "note": note,
+                           "channels": [f"CH{c}" for c in chans],
+                           "metrics": [], "status": "incomplete",
+                           "capture_note": "CSV 저장 후 화면 캡처를 위해 추가 Single 획득. 동일 획득 아님."})
+        # 폴더에 시험 항목도 표시하며 기존 폴더를 덮어쓰지 않는다.
+        target = rec.folder.with_name(rec.folder.name + "_" + _safe(label))
+        n = 2
+        while target.exists():
+            target = rec.folder.with_name(rec.folder.name + "_" + _safe(label) + f"_{n}")
+            n += 1
+        rec.folder.rename(target)
+        rec.folder = target
+        self.record = rec
+        results.write_json(rec.folder / "result.json", rec.result)
+        self.echo("[1/2] 선택한 채널의 파형 CSV 저장")
+        wfs = [s.fetch_waveform(c) for c in chans]
+        wavefile.write_csv(rec.folder, wfs, {f"CH{c}": self.cfg.channel_name(c) for c in chans})
+        self.echo("[2/2] 기존 측정·커서를 표시한 화면 저장 (추가 Single 획득)")
+        (rec.folder / "screen.png").write_bytes(s.screenshot(self.cfg.getbool("capture", "ink_saver")))
+        rec.result.update({"status": "complete", "saved_channels": [f"CH{c}" for c in chans]})
+        results.write_json(rec.folder / "result.json", rec.result)
+        return rec
+
     # ------------------------------------------------------------------ 기타
     def clear_overlay(self) -> None:
         if self.record:

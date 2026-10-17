@@ -53,8 +53,8 @@ class Wizard:
             while True:
                 pin = self.prompt('측정할 DUT 핀 번호', self.state.get('pin', ''),
                                   lambda s: s.isascii() and s.isdigit() and int(s) > 0)
-                item = self.prompt('측정 항목: 1 VIL/VIH  2 VOH/VOL', self.state.get('item', '1'),
-                                   lambda s: s in ('1', '2'))
+                item = self.prompt('측정 항목: 1 VIL/VIH  2 VOH/VOL  3 데이터·화면 저장만', self.state.get('item', '1'),
+                                   lambda s: s in ('1', '2', '3'))
                 if item == '1':
                     cin = self.channel('in', '입력 신호 스코프 채널', b.cfg.get('defaults', 'vih_in'))
                     while True:
@@ -63,17 +63,29 @@ class Wizard:
                             break
                         self.echo('입력과 출력은 서로 다른 채널을 선택해주세요.')
                     self.state.update({'in': cin, 'out': cout})
-                else:
+                elif item == '2':
                     cout = self.channel('voh', '출력 신호 스코프 채널', '2')
                     b.out_type = self.prompt('출력 타입: PP / OD', b.out_type, lambda s: s.upper() in ('PP', 'OD')).upper()
                     self.state['voh'] = cout
+                else:
+                    label = self.prompt('시험 항목 이름 (R_pd / R_pu / IOH 등)', self.state.get('manual_label', 'R_pd'), lambda s: bool(s))
+                    raw = self.prompt('저장할 채널 번호 (예: 1,2)', self.state.get('manual_channels', '1'), self.valid_channels)
+                    chans = list(dict.fromkeys(int(x) for x in raw.replace(',', ' ').split()))
+                    note = self.prompt('조건 메모 (저항·전원·부하 등, 생략 가능)', '')
+                    self.state.update({'manual_label': label, 'manual_channels': raw})
                 self.state.update({'pin': pin, 'item': item})
                 while True:
-                    self.echo(f'\nDUT 핀 {pin} | {"VIL/VIH" if item == "1" else "VOH/VOL"} | '
-                              + (f'입력 CH{cin} / ' if item == '1' else '') + f'출력 CH{cout}')
+                    title = {'1': 'VIL/VIH', '2': 'VOH/VOL', '3': '데이터·화면 저장만'}[item]
+                    channels = ', '.join(f'CH{c}' for c in chans) if item == '3' else ((f'입력 CH{cin} / ' if item == '1' else '') + f'출력 CH{cout}')
+                    self.echo(f'\nDUT 핀 {pin} | {title} | {channels}')
                     self.echo(f'시험: {b.name} / 온도: {b.temp}°C / 출력: {b.out_type} / 기준: {b.spec_name or "미지정"}')
-                    self.echo('삼각파 0~VCCIO와 트리거를 준비해주세요.' if item == '1' else
-                              'High/Low가 반복되는 출력 신호, 부하 조건과 트리거를 준비해주세요.')
+                    if item == '3':
+                        self.echo(f'항목: {label} / 메모: {note or "없음"}')
+                        self.echo('스코프에서 원하는 측정·커서를 준비해주세요. 저항/전류 자동 계산은 하지 않습니다.')
+                        self.echo('선택 채널의 현재 파형을 CSV로 저장한 뒤 화면을 추가 획득합니다. DC 신호는 Auto 트리거를 준비해주세요.')
+                    else:
+                        self.echo('삼각파 0~VCCIO와 트리거를 준비해주세요.' if item == '1' else
+                                  'High/Low가 반복되는 출력 신호, 부하 조건과 트리거를 준비해주세요.')
                     self.echo('캡처 시 추가 획득이 발생하므로 측정 중 입력 조건을 유지해주세요.')
                     action = self.prompt('준비되면 Enter로 시작 (s: 시험 이름·온도 변경)', '', lambda s: s in ('', 's'))
                     if action == 's':
@@ -84,12 +96,15 @@ class Wizard:
                     self.remember()
                     b.dut_pin = pin
                     try:
-                        self.echo('\n[1/3] 측정')
-                        rec = b.vih(cin, cout) if item == '1' else b.voh([cout])
-                        self.echo('[2/3] 화면 캡처')
-                        b.capture()
-                        self.echo('[3/3] 파형·설정 저장')
-                        b.save()
+                        if item == '3':
+                            rec = b.save_manual(label, chans, note)
+                        else:
+                            self.echo('\n[1/3] 측정')
+                            rec = b.vih(cin, cout) if item == '1' else b.voh([cout])
+                            self.echo('[2/3] 화면 캡처')
+                            b.capture()
+                            self.echo('[3/3] 파형·설정 저장')
+                            b.save()
                     except KeyboardInterrupt:
                         self.echo('\n[중단] 측정을 취소했습니다. 일부 파일만 저장됐을 수 있습니다.')
                         return 130
@@ -105,6 +120,10 @@ class Wizard:
         except (EOFError, KeyboardInterrupt):
             self.echo('\n측정을 종료합니다.')
             return 0
+
+    def valid_channels(self, value):
+        parts = value.replace(',', ' ').split()
+        return bool(parts) and all(p.isascii() and p.isdigit() and 1 <= int(p) <= self.bench.scope.num_channels for p in parts)
 
     @staticmethod
     def valid_temp(value):

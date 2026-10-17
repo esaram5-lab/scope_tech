@@ -53,6 +53,15 @@ save 1 2        <- CSV + wfm + setup
 ```
 오류가 나면 `logs/scpi_날짜.log` 파일을 보내주세요. 어떤 명령에서 막혔는지 바로 알 수 있습니다.
 
+### 데이터·화면 저장만 (R_pd / R_pu / IOH 등)
+기본 실행 메뉴에서 **3**을 선택합니다. DUT 핀 → 항목 이름 → 저장 채널(예: `1,2`) → 조건 메모 → 준비 후 Enter 순서입니다.
+
+- 자동 VIL/VIH·VOH/VOL 측정이나 저항/전류 계산 없이, 선택 채널의 `waveform.csv`, 기존 측정·커서를 표시한 `screen.png`, 조건을 담은 `result.json`을 저장합니다.
+- 저장 위치는 `captures/MANUAL/PIN번호_시험이름_온도_채널_시각_항목/`입니다. 매번 별도 폴더를 만들며 WFM/SET은 이 메뉴에서 저장하지 않습니다.
+- 저항·전류·전원 등 조건은 메모에 직접 적습니다. 예: `외부저항 1 Mohm, VDD 3.3 V`.
+- CSV는 현재 파형을 정지한 뒤 저장하고, 화면은 AOE 방식으로 추가 Single 획득합니다. 같은 획득을 담는 것은 아니므로 입력 조건을 유지해주세요. DC 신호는 Auto 트리거를 준비해주세요.
+- `result.json`의 status가 complete일 때만 전체 저장 완료입니다. 실패 시 일부 파일과 incomplete 상태가 남을 수 있습니다.
+
 ## 3. 사용 예
 ```
 [25C TEST PP spec=-] scope> temp 25

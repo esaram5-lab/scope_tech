@@ -1,0 +1,49 @@
+import json
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import Mock
+
+from scopetech.config import Config
+from scopetech.mso import MSO5B
+from scopetech.sim import SimTransport
+from scopetech.workflow import Bench
+from scopetech.wizard import Wizard
+
+
+class ManualTest(unittest.TestCase):
+    def test_preserves_overlay_and_saves_csv_screen_metadata(self):
+        with tempfile.TemporaryDirectory() as d:
+            t = SimTransport()
+            s = MSO5B(t, settle_s=0)
+            s.connect()
+            s.add_measurement('MEAS1', 'TOP', 1)
+            s.cursor_hbars(1, 1.0, 0.0)
+            t.sim.log.clear()
+            b = Bench(s, Config(), Path(d), echo=lambda _: None)
+            b.dut_pin = '12'
+            rec = b.save_manual('R_pu', [1, 2], '1 Mohm')
+            self.assertTrue((rec.folder/'waveform.csv').exists())
+            self.assertTrue((rec.folder/'screen.png').read_bytes().startswith(b'\x89PNG'))
+            data = json.loads((rec.folder/'result.json').read_text())
+            self.assertEqual((data['dut_pin'], data['manual_item'], data['status']), ('12', 'R_pu', 'complete'))
+            self.assertIn('MEAS1', t.sim.meas)
+            self.assertEqual(t.sim.cursor['STATE'], '1')
+            self.assertFalse(any('DELETEALL' in cmd.upper() or 'RRBDISPLAYSTATE' in cmd.upper() for cmd in t.sim.log))
+            self.assertFalse((Path(d)/'results.csv').exists())
+            self.assertFalse(list(rec.folder.glob('*.wfm')))
+            rec2 = b.save_manual('R_pu', [1], '')
+            self.assertNotEqual(rec.folder, rec2.folder)
+
+    def test_menu_manual_only_and_validation(self):
+        with tempfile.TemporaryDirectory() as d:
+            b = Bench(Mock(num_channels=8), Config(), Path(d), echo=lambda _: None)
+            b.save_manual = Mock(return_value=Mock(folder=Path(d)))
+            b.vih = Mock()
+            b.voh = Mock()
+            answers = iter(['12', '3', 'IOH', '9', '1,2,1', '11 mA', '', '3'])
+            code = Wizard(b, Path(d)/'session.json', ask=lambda _: next(answers), echo=lambda _: None).run()
+            self.assertEqual(code, 0)
+            b.save_manual.assert_called_once_with('IOH', [1, 2], '11 mA')
+            b.vih.assert_not_called()
+            b.voh.assert_not_called()
