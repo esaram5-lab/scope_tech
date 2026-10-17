@@ -100,6 +100,25 @@ class Checker:
         data = self.t._read_until_idle(timeout)
         return data, "수신 멈춤까지 읽음(소켓)"
 
+    def freeze(self) -> None:
+        """실행 중이면 Single 로 한 획득을 끝내고 멈춘 뒤 BUSY? 가 0 이 될 때까지 + 1초 대기."""
+        if self.q("ACQuire:STATE?") != "0":
+            self.w("ACQuire:STOPAfter SEQuence")
+            self.w("ACQuire:STATE ON")
+            t0 = time.monotonic()
+            while self.t.query("ACQuire:STATE?") != "0":
+                if time.monotonic() - t0 > 30:
+                    self.w("ACQuire:STATE STOP")
+                    self.out("    트리거 없음 -> STOP")
+                    break
+                time.sleep(0.1)
+            self.out(f"    Single 완료 ({time.monotonic() - t0:.2f}s)")
+        t0 = time.monotonic()
+        while self.t.query("BUSY?") not in ("0", ""):
+            time.sleep(0.1)
+        self.out(f"    BUSY? 0 까지 {time.monotonic() - t0:.2f}s, 1초 추가 대기")
+        time.sleep(1)
+
     def file_size(self, fname: str) -> int | None:
         self.w(f'FILESystem:CWD "{self.temp_dir}"')
         listing = self.q("FILESystem:LDIR?")
@@ -171,8 +190,8 @@ class Checker:
         self.q("*OPC?", timeout=5)  # 남은 바이트가 있으면 여기서 드러남
 
     def s5_screenshot(self):
-        """화면 캡처 저장(SAVe:IMAGe) - 저장만, 전송 없음"""
-        self.q("ACQuire:STATE?")
+        """Single 로 고정 후 화면 캡처 저장(SAVe:IMAGe) - 저장만, 전송 없음"""
+        self.freeze()
         self.w("SAVe:IMAGe:COMPosition INVErted")
         fname = "check_screen.png"
         self.w(f'SAVe:IMAGe "{self.temp_dir}/{fname}"')
@@ -196,29 +215,19 @@ class Checker:
         self.q("*OPC?", timeout=5)
 
     def s7_stop_screenshot(self):
-        """Single 획득으로 멈춘 뒤 BUSY? 대기 후 화면 캡처 (수정된 capture 순서)"""
-        if self.q("ACQuire:STATE?") != "0":
-            self.w("ACQuire:STOPAfter SEQuence")
-            self.w("ACQuire:STATE ON")
-            t0 = time.monotonic()
-            while self.t.query("ACQuire:STATE?") != "0":
-                if time.monotonic() - t0 > 30:
-                    self.w("ACQuire:STATE STOP")
-                    self.out("    트리거 없음 -> STOP")
-                    break
-                time.sleep(0.1)
-            self.out(f"    Single 완료 ({time.monotonic() - t0:.2f}s)")
-        t0 = time.monotonic()
-        while self.t.query("BUSY?") not in ("0", ""):
-            time.sleep(0.1)
-        self.out(f"    BUSY? 0 까지 {time.monotonic() - t0:.2f}s, 1초 추가 대기")
-        time.sleep(1)
-        fname = "check_screen2.png"
-        self.w(f'SAVe:IMAGe "{self.temp_dir}/{fname}"')
-        self.wait_opc("화면 저장", 60)
-        self.errors()
-        self.fetch(fname, 30)
-        self.q("*OPC?", timeout=5)
+        """반복 시험: 실행 -> Single 로 고정 -> 화면 캡처, 5회"""
+        for k in range(1, 6):
+            self.out(f"    --- {k}/5")
+            self.w("ACQuire:STOPAfter RUNSTop")
+            self.w("ACQuire:STATE RUN")
+            time.sleep(2)
+            self.freeze()
+            fname = f"check_rep{k}.png"
+            self.w(f'SAVe:IMAGe "{self.temp_dir}/{fname}"')
+            self.wait_opc("화면 저장", 60)
+            self.errors()
+            self.fetch(fname, 30)
+            self.q("*OPC?", timeout=5)
 
     def s8_curve(self):
         """파형 데이터 전송(CURVe?) - CH1 앞부분 1000 포인트, 이후 전체"""
