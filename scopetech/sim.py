@@ -132,6 +132,8 @@ class SimScope:
         if h == "MAINWINDOW:RRBDISPLAYSTATE" and not q:
             self.rrb = arg.upper() in ("ON", "1")
             return None
+        if h == "BUSY" and q:
+            return resp(0)
         if h in ("HEADER", "VERBOSE"):
             return None
         if h == "CLEAR":

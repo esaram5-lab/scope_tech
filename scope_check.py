@@ -196,10 +196,23 @@ class Checker:
         self.q("*OPC?", timeout=5)
 
     def s7_stop_screenshot(self):
-        """획득 정지(STOP) 후 화면 캡처 - capture 명령과 같은 순서"""
-        self.w("ACQuire:STATE STOP")
-        self.wait_opc("정지", 10)
-        self.q("ACQuire:STATE?")
+        """Single 획득으로 멈춘 뒤 BUSY? 대기 후 화면 캡처 (수정된 capture 순서)"""
+        if self.q("ACQuire:STATE?") != "0":
+            self.w("ACQuire:STOPAfter SEQuence")
+            self.w("ACQuire:STATE ON")
+            t0 = time.monotonic()
+            while self.t.query("ACQuire:STATE?") != "0":
+                if time.monotonic() - t0 > 30:
+                    self.w("ACQuire:STATE STOP")
+                    self.out("    트리거 없음 -> STOP")
+                    break
+                time.sleep(0.1)
+            self.out(f"    Single 완료 ({time.monotonic() - t0:.2f}s)")
+        t0 = time.monotonic()
+        while self.t.query("BUSY?") not in ("0", ""):
+            time.sleep(0.1)
+        self.out(f"    BUSY? 0 까지 {time.monotonic() - t0:.2f}s, 1초 추가 대기")
+        time.sleep(1)
         fname = "check_screen2.png"
         self.w(f'SAVe:IMAGe "{self.temp_dir}/{fname}"')
         self.wait_opc("화면 저장", 60)

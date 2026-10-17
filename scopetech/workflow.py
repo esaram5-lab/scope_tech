@@ -242,7 +242,7 @@ class Bench:
     def capture(self) -> list[Path]:
         rec = self._ensure_record()
         s = self.scope
-        s.stop()  # 두 캡처와 저장 파형이 같은 획득이 되도록
+        s.freeze(self.cfg.getfloat("measure", "single_timeout_s"))  # 두 캡처와 저장 파형이 같은 획득이 되도록
         ink = self.cfg.getbool("capture", "ink_saver")
         out = []
         if rec.meas or rec.cursor:
@@ -268,7 +268,7 @@ class Bench:
     def save(self, chans: list[int] | None = None) -> list[Path]:
         rec = self._ensure_record()
         s, cfg = self.scope, self.cfg
-        s.stop()
+        s.freeze(cfg.getfloat("measure", "single_timeout_s"))
         if not chans:
             setting = cfg.get("save", "channels").lower()
             if setting in ("", "displayed", "all"):

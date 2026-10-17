@@ -77,8 +77,30 @@ class MSO5B:
         return self.query("ACQuire:STATE?") != "0"
 
     def stop(self) -> None:
-        self.write("ACQuire:STATE STOP")
-        self.t.sync()
+        """획득을 멈추고 스코프가 처리를 끝낼 때까지 기다린다."""
+        if self.is_running():
+            self.write("ACQuire:STATE STOP")
+            deadline = time.monotonic() + 10
+            while self.query("ACQuire:STATE?") != "0" and time.monotonic() < deadline:
+                time.sleep(0.1)
+        self.wait_idle()
+
+    def freeze(self, timeout: float) -> None:
+        """캡처/저장 전 화면 고정. 실행 중이면 강제 STOP 대신 Single 로 한 획득을 끝까지 받고 멈춘다
+        (실장비에서 실행 중 STOP 직후 화면 저장 시 TekScope 가 멈춘 사례가 있음)."""
+        if self.is_running():
+            try:
+                self.single(timeout)
+            except ScopeTimeout:
+                self.stop()
+        self.wait_idle()
+
+    def wait_idle(self, timeout: float = 15) -> None:
+        """BUSY? 가 0 이 될 때까지 기다린 뒤 화면 갱신 시간을 준다."""
+        deadline = time.monotonic() + timeout
+        while self.query("BUSY?") not in ("0", "") and time.monotonic() < deadline:
+            time.sleep(0.1)
+        time.sleep(self.settle_s)
 
     def run(self) -> None:
         self.write("ACQuire:STOPAfter RUNSTop")
@@ -117,7 +139,6 @@ class MSO5B:
             if n >= count or time.monotonic() > deadline:
                 break
         self.stop()
-        time.sleep(self.settle_s)
         if n == 0:
             raise ScopeTimeout("획득이 한 번도 되지 않았습니다. 트리거 설정을 확인하세요.")
         return n

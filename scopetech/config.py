@@ -25,7 +25,7 @@ DEFAULTS = {
         "out_cross": "0.5",
         "voh_cursor": "yes",
     },
-    "capture": {"ink_saver": "yes", "settle_s": "0.5"},
+    "capture": {"ink_saver": "yes", "settle_s": "1.0"},
     "save": {"channels": "displayed", "csv": "yes", "wfm": "yes", "setup": "yes"},
     "scope": {"temp_dir": "C:/scope_tech_tmp", "num_channels": "8"},
     "output": {"base_dir": "captures", "sim_dir": "captures_sim", "log_dir": "logs"},
