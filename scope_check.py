@@ -122,8 +122,11 @@ class Checker:
         self.w(f"SAVe:IMAGe:COMPosition {'INVErted' if INK else 'NORMal'}")
 
     def fetch(self, fname: str, timeout: float) -> bytes:
-        """READFile 로 가져온다. 실장비 멈춤과 관련된 CWD 변경/LDIR? 는 쓰지 않는다."""
-        path = f"{self.temp_dir}/{fname}"
+        return self.fetch_from(self.temp_dir, fname, timeout)
+
+    def fetch_from(self, folder: str, fname: str, timeout: float) -> bytes:
+        """READFile 로 가져온 뒤 삭제한다. 실장비 멈춤과 관련된 CWD 변경/LDIR? 는 쓰지 않는다."""
+        path = f"{folder}/{fname}"
         self.w(f'FILESystem:READFile "{path}"')
         t0 = time.monotonic()
         data, how = self.raw_read(timeout)
@@ -183,40 +186,63 @@ class Checker:
             raise ScopeError("READFile 응답이 없습니다.")
         self.q("*OPC?", timeout=5)  # 남은 바이트가 있으면 여기서 드러남
 
-    def s5_screenshot(self):
-        """Single 로 고정 후 화면 캡처 저장(SAVe:IMAGe) - 저장만, 전송 없음"""
-        self.freeze()
+    def aoe_capture(self) -> str:
+        """Act On Event 로 화면 저장: 트리거 1회에 스코프가 스스로 PNG 저장. 저장된 파일 이름 반환."""
+        prefix = f"chk{datetime.now():%H%M%S%f}"[:12]
         self.w(f"SAVe:IMAGe:COMPosition {'INVErted' if INK else 'NORMal'}")
-        fname = "check_screen.png"
-        self.w(f'SAVe:IMAGe "{self.temp_dir}/{fname}"')
-        dt = self.wait_opc("화면 저장", 60)
+        self.w(f'SAVEONEVent:FILEDest "{self.orig_cwd}"')
+        self.w(f'SAVEONEVent:FILEName "{prefix}"')
+        self.w("SAVEONEVent:IMAGe:FILEFormat PNG")
+        self.w("ACTONEVent:LIMit UNLIMITED")
+        self.w("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON")
+        self.w("ACTONEVent:ENable 1")
+        self.wait_opc("Act On Event 설정", 10)
+        self.w("ACQuire:STOPAfter SEQuence")
+        self.w("ACQuire:STATE ON")
+        t0 = time.monotonic()
+        while self.t.query("ACQuire:STATE?") != "0" and time.monotonic() - t0 < 30:
+            time.sleep(0.2)
+        name = ""
+        while time.monotonic() - t0 < 30 and not name:
+            time.sleep(0.5)
+            names = sorted(n.strip().strip('"') for n in self.t.query("FILESystem:DIR?").split(",") if prefix in n)
+            name = names[-1] if names else ""
+        self.out(f"    Single+저장 {time.monotonic() - t0:.1f}s -> {name or '파일 없음'}")
+        self.w("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF")
+        self.w("ACTONEVent:ENable 0")
+        self.wait_opc("Act On Event 해제", 10)
         self.errors()
-        if dt > 10:
-            self.out(f"    [주의] 화면 저장에 {dt:.0f}초 걸렸습니다.")
+        if not name:
+            raise ScopeError("화면 캡처 파일이 만들어지지 않았습니다.")
+        return name
+
+    def s5_screenshot(self):
+        """화면 캡처 저장 (Act On Event 방식) - 저장만, 전송 없음"""
+        if not self.orig_cwd:
+            self.orig_cwd = self.q("FILESystem:CWD?").strip().strip('"')
+        self.last_capture = self.aoe_capture()
 
     def s6_screenshot_transfer(self):
-        """화면 캡처 파일 PC 로 전송(READFile)"""
-        fname = "check_screen.png"
-        data = self.fetch(fname, 30)
-        self.out(f"    PNG 형식: {'정상' if data.startswith(bytes([0x89]) + b'PNG') else '아님'}")
+        """화면 캡처 파일 PC 로 전송(READFile) 후 삭제"""
+        name = getattr(self, "last_capture", "") or self.aoe_capture()
+        time.sleep(1)
+        data = self.fetch_from(self.orig_cwd, name, 30)
+        self.out(f"    PNG 형식: {'정상' if data[1:4] == b'PNG' and data[-8:-4] == b'IEND' else '아님/불완전'}")
         out = HERE / "logs" / "check_screen.png"
         out.write_bytes(data)
         self.out(f"    저장: {out}")
         self.q("*OPC?", timeout=5)
 
     def s7_stop_screenshot(self):
-        """반복 시험: 실행 -> Single 로 고정 -> 화면 캡처, 5회"""
+        """반복 시험: 실행 -> 화면 캡처(Act On Event) -> 전송, 5회"""
         for k in range(1, 6):
             self.out(f"    --- {k}/5")
             self.w("ACQuire:STOPAfter RUNSTop")
             self.w("ACQuire:STATE RUN")
             time.sleep(2)
-            self.freeze()
-            fname = f"check_rep{k}.png"
-            self.w(f'SAVe:IMAGe "{self.temp_dir}/{fname}"')
-            self.wait_opc("화면 저장", 60)
-            self.errors()
-            self.fetch(fname, 30)
+            name = self.aoe_capture()
+            time.sleep(1)
+            self.fetch_from(self.orig_cwd, name, 30)
             self.q("*OPC?", timeout=5)
 
     def s8_curve(self):
@@ -267,17 +293,19 @@ class Checker:
         self.errors()
 
     def s10_results_bar(self):
-        """결과 바 숨김/표시 + 캡처 (capture 의 clean.png 방식)"""
+        """결과 바 숨김/표시 + 화면 캡처 (capture 의 clean.png 방식)"""
+        if not self.orig_cwd:
+            self.orig_cwd = self.q("FILESystem:CWD?").strip().strip('"')
         self.w("MAINWindow:RRBDisplaystate OFF")
         self.wait_opc("결과 바 숨김", 10)
         time.sleep(0.5)
-        fname = "check_clean.png"
-        self.w(f'SAVe:IMAGe "{self.temp_dir}/{fname}"')
-        self.wait_opc("화면 저장", 60)
-        self.w("MAINWindow:RRBDisplaystate ON")
-        self.wait_opc("결과 바 표시", 10)
-        self.errors()
-        data = self.fetch(fname, 30)
+        try:
+            name = self.aoe_capture()
+        finally:
+            self.w("MAINWindow:RRBDisplaystate ON")
+            self.wait_opc("결과 바 표시", 10)
+        time.sleep(1)
+        data = self.fetch_from(self.orig_cwd, name, 30)
         (HERE / "logs" / "check_clean.png").write_bytes(data)
         self.out("    저장: logs/check_clean.png (결과 바가 없어야 정상)")
         self.q("*OPC?", timeout=5)

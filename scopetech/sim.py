@@ -50,6 +50,7 @@ class SimScope:
         self.cwd = "C:/"
         self.composition = "NORMAL"
         self.rrb = True
+        self.aoe = {"ENABLE": "0", "SAVEIMAGE": "OFF", "FILEDEST": "C:/", "FILENAME": "img"}
         self.esr = 0
         self.events: list[str] = []
         self.log: list[str] = []
@@ -86,6 +87,10 @@ class SimScope:
             7: [3.3 + rng.gauss(0, 0.002) for _ in t],
             8: [0.0] * n,
         }
+
+    def _screen_png(self) -> bytes:
+        overlay = int(self.cursor.get("STATE", "0") == "1") + (len(self.meas) if self.rrb else 0)
+        return _png((min(255, 40 * overlay), 128, 255 if self.composition.startswith("INV") else 0))
 
     def _codes(self, ch: int) -> array:
         return array("h", (max(-32768, min(32767, round((v - self.yzero) / self.ymult))) for v in self.volts[ch]))
@@ -129,6 +134,13 @@ class SimScope:
         if q and h in ("*OPT", "HORIZONTAL:MODE", "TRIGGER:A:MODE", "ACQUIRE:STOPAFTER"):
             return resp({"*OPT": "NONE", "HORIZONTAL:MODE": "AUTO", "TRIGGER:A:MODE": "AUTO",
                          "ACQUIRE:STOPAFTER": self.stopafter}[h])
+        aoe_keys = {"ACTONEVENT:ENABLE": "ENABLE", "ACTONEVENT:TRIGGER:ACTION:SAVEIMAGE:STATE": "SAVEIMAGE",
+                    "SAVEONEVENT:FILEDEST": "FILEDEST", "SAVEONEVENT:FILENAME": "FILENAME"}
+        if h in aoe_keys and not q:
+            self.aoe[aoe_keys[h]] = arg.upper() if aoe_keys[h] in ("ENABLE", "SAVEIMAGE") else arg
+            return None
+        if h in ("ACTONEVENT:LIMIT", "SAVEONEVENT:IMAGE:FILEFORMAT") and not q:
+            return None
         if h == "MAINWINDOW:RRBDISPLAYSTATE" and not q:
             self.rrb = arg.upper() in ("ON", "1")
             return None
@@ -189,6 +201,10 @@ class SimScope:
                 self.acq_state = 0  # 즉시 트리거된 것으로 처리
                 self.numacq += 1
                 self._make_waves()
+                if self.aoe["ENABLE"] == "1" and self.aoe["SAVEIMAGE"] in ("ON", "1"):
+                    dest = self.aoe["FILEDEST"].strip('"').rstrip("/")
+                    name = self.aoe["FILENAME"].strip('"') + f"_{self.numacq:017d}.png"
+                    self.files[f"{dest}/{name}".upper()] = self._screen_png()
             else:
                 self.acq_state = 1
                 self.numacq = 0
@@ -275,8 +291,7 @@ class SimScope:
                 data = b"WFM#" + src.encode() + b"\x00" * 1500
             elif h == "SAVE:IMAGE":
                 p = path_of(arg)
-                overlay = int(self.cursor.get("STATE", "0") == "1") + (len(self.meas) if self.rrb else 0)
-                data = _png((min(255, 40 * overlay), 128, 255 if self.composition.startswith("INV") else 0))
+                data = self._screen_png()
             else:
                 p = path_of(arg)
                 data = b":HEADER 1;:ACQUIRE:MODE " + self.acq_mode.encode() + b"\n"
@@ -294,6 +309,10 @@ class SimScope:
             else:
                 self.dirs.add(p)
             return None
+        if h == "FILESYSTEM:DIR" and q:
+            d = self.cwd.rstrip("/").upper()
+            names = [k.rsplit("/", 1)[1].lower() for k in self.files if parent(k) == d]
+            return (",".join(f'"{n}"' for n in names) or '""').encode() + b"\n"
         if h == "FILESYSTEM:HOMEDIR" and q:
             return b'"C:/Users/Public"\n'
         if h == "FILESYSTEM:CWD":

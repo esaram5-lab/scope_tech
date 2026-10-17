@@ -244,6 +244,7 @@ class Bench:
         s = self.scope
         s.freeze(self.cfg.getfloat("measure", "single_timeout_s"))  # 두 캡처와 저장 파형이 같은 획득이 되도록
         ink = self.cfg.getbool("capture", "ink_saver")
+        self.echo("  화면 캡처: Single 획득으로 스코프가 직접 저장(Act On Event)")
         out = []
         if rec.meas or rec.cursor:
             p = rec.folder / "meas.png"
