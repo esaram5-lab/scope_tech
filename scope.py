@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import signal
 from datetime import datetime
 from pathlib import Path
 
@@ -33,6 +34,7 @@ def make_logger(log_dir: Path, echo: bool):
         if echo:
             print("   " + line)
 
+    log.close = f.close
     return log
 
 
@@ -67,6 +69,12 @@ def main(argv: list[str] | None = None) -> int:
     out_dir = HERE / cfg.get("output", "sim_dir" if args.sim else "base_dir")
     logger = make_logger(HERE / cfg.get("output", "log_dir"), args.debug)
 
+    transport = None
+    scope = None
+    status = 1
+    previous_break = None
+    if hasattr(signal, "SIGBREAK"):
+        previous_break = signal.signal(signal.SIGBREAK, signal.default_int_handler)
     try:
         transport = open_transport(cfg, args.sim, logger)
         scope = MSO5B(
@@ -76,39 +84,56 @@ def main(argv: list[str] | None = None) -> int:
             num_channels=cfg.getint("scope", "num_channels"),
         )
         idn = scope.connect()
-    except ScopeError as e:
-        print(f"[연결 실패] {e}")
-        return 1
-    print(f"연결됨: {idn}  ({transport.description})")
-    if "MSO5" not in idn.upper() and not args.sim:
-        print("  [주의] MSO 5 시리즈가 아닌 것 같습니다. 명령이 맞지 않을 수 있습니다.")
-
-    bench = Bench(scope, cfg, out_dir)
-    if args.temp:
-        bench.temp = args.temp
-    if args.name:
-        bench.name = args.name
-    if args.spec:
-        bench.spec_name = args.spec
-    if args.type:
-        bench.out_type = args.type.upper()
-
-    bench.explicit_options = {key for key, value in (("temp", args.temp), ("name", args.name), ("out_type", args.type)) if value}
-    shell = ScopeShell(bench)
-    try:
+        print(f"연결됨: {idn}  ({transport.description})")
+        if "MSO5" not in idn.upper() and not args.sim:
+            print("  [주의] MSO 5 시리즈가 아닌 것 같습니다. 명령이 맞지 않을 수 있습니다.")
+    
+        bench = Bench(scope, cfg, out_dir)
+        if args.temp:
+            bench.temp = args.temp
+        if args.name:
+            bench.name = args.name
+        if args.spec:
+            bench.spec_name = args.spec
+        if args.type:
+            bench.out_type = args.type.upper()
+    
+        bench.explicit_options = {key for key, value in (("temp", args.temp), ("name", args.name), ("out_type", args.type)) if value}
         if args.command:
-            shell.onecmd(" ".join(args.command))
+            ScopeShell(bench).onecmd(" ".join(args.command))
+            status = 0
         elif args.shell:
-            shell.cmdloop()
+            ScopeShell(bench).cmdloop()
+            status = 0
         else:
             from scopetech.wizard import Wizard
             state_path = HERE / (".session_sim.json" if args.sim else ".session.json")
-            return Wizard(bench, state_path).run()
-    except KeyboardInterrupt:
-        print()
+            status = Wizard(bench, state_path).run()
+    except (KeyboardInterrupt, EOFError):
+        print("\n[중단] 작업을 취소했습니다. 저장 중이었다면 결과가 불완전할 수 있습니다.")
+        status = 130
+    except (ScopeError, OSError, ValueError, KeyError) as e:
+        print(f"[오류] {e}")
+        status = 1
     finally:
-        transport.close()
-    return 0
+        try:
+            if scope is not None and (status != 0 or scope.aoe_active):
+                errors = scope.abort_capture()
+                logger("!", "종료 정리 요청" + (": " + "; ".join(errors) if errors else ""))
+                print("획득 정지·필요한 이벤트 해제를 요청했습니다. TekScope 화면 상태를 확인해주세요.")
+                if errors:
+                    print("[경고] 종료 정리 일부 실패: " + "; ".join(errors))
+        except Exception as e:
+            logger("!", f"종료 정리 실패: {e}")
+        finally:
+            try:
+                if transport is not None:
+                    transport.close()
+            finally:
+                logger.close()
+                if previous_break is not None:
+                    signal.signal(signal.SIGBREAK, previous_break)
+    return status
 
 
 if __name__ == "__main__":

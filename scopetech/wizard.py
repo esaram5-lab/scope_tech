@@ -90,6 +90,9 @@ class Wizard:
                         b.capture()
                         self.echo('[3/3] 파형·설정 저장')
                         b.save()
+                    except KeyboardInterrupt:
+                        self.echo('\n[중단] 측정을 취소했습니다. 일부 파일만 저장됐을 수 있습니다.')
+                        return 130
                     except (ScopeError, OSError, ValueError, KeyError) as e:
                         self.echo(f'[중단] {e}\n완료되지 않았습니다. TekScope 화면 상태와 logs 폴더를 확인해주세요.')
                         return 1

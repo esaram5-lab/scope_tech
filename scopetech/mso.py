@@ -21,6 +21,7 @@ class MSO5B:
         self.settle_s = settle_s
         self.num_channels = num_channels
         self.idn = ""
+        self.aoe_active = False
 
     # ------------------------------------------------------------------ 기본
     def connect(self) -> str:
@@ -283,16 +284,17 @@ class MSO5B:
         self.stop()
         dest = self.query("FILESystem:CWD?").strip().strip('"').rstrip("/")
         prefix = f"scopetech{time.time_ns() // 1_000_000 % 10**9}"
-        self.write(f"SAVe:IMAGe:COMPosition {'INVErted' if ink_saver else 'NORMal'}")
-        self.write(f'SAVEONEVent:FILEDest "{dest}"')
-        self.write(f'SAVEONEVent:FILEName "{prefix}"')
-        self.write("SAVEONEVent:IMAGe:FILEFormat PNG")
-        self.write("ACTONEVent:LIMit UNLIMITED")
-        self.write("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON")
-        self.write("ACTONEVent:ENable 1")
-        self.pace()
         name = None
+        self.aoe_active = True  # 설정 중 중단되어도 정리 대상
         try:
+            self.write(f"SAVe:IMAGe:COMPosition {'INVErted' if ink_saver else 'NORMal'}")
+            self.write(f'SAVEONEVent:FILEDest "{dest}"')
+            self.write(f'SAVEONEVent:FILEName "{prefix}"')
+            self.write("SAVEONEVent:IMAGe:FILEFormat PNG")
+            self.write("ACTONEVent:LIMit UNLIMITED")
+            self.write("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON")
+            self.write("ACTONEVent:ENable 1")
+            self.pace()
             self.single(timeout)
             deadline = time.monotonic() + 15
             while time.monotonic() < deadline:
@@ -301,10 +303,14 @@ class MSO5B:
                     name = names[-1]
                     break
                 time.sleep(0.5)
-        finally:
+        except BaseException:
+            self.abort_capture()
+            raise
+        else:
             self.write("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF")
             self.write("ACTONEVent:ENable 0")
             self.pace()
+            self.aoe_active = False
         if not name:
             raise ScopeTimeout("화면 캡처 파일이 만들어지지 않았습니다(트리거/Act On Event 확인).")
         path = f"{dest}/{name}"
@@ -324,6 +330,36 @@ class MSO5B:
         self.write(f'FILESystem:DELEte "{path}"')
         self.check("캡처 파일 삭제", raise_=False)
         return data
+
+    def abort_capture(self) -> list[str]:
+        """중단 시 최선 노력 정리. 새 획득/완료 대기는 하지 않는다.
+
+        통신 중단 후 잔여 응답을 비우고 정지/이벤트 해제를 요청한다.
+        명령 전송 성공은 TekScope UI 복구를 보장하지 않는다.
+        """
+        errors = []
+        old = self.t.timeout
+        try:
+            self.t.timeout = 2
+            self.t._apply_timeout(2)
+            try:
+                self.t.recover()
+            except Exception as e:
+                errors.append(str(e))
+            commands = ["ACQuire:STATE STOP"]
+            if self.aoe_active:
+                commands += ["ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF", "ACTONEVent:ENable 0"]
+            for cmd in commands:
+                try:
+                    self.write(cmd)
+                except Exception as e:
+                    errors.append(f"{cmd}: {e}")
+            if not errors:
+                self.aoe_active = False
+        finally:
+            self.t.timeout = old
+            self.t._apply_timeout(old)
+        return errors
 
     def save_wfm(self, ch: int, timeout: float = 60) -> bytes:
         fname = f"scope_tech_CH{ch}.wfm"
