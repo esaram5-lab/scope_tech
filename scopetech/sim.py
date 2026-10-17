@@ -49,6 +49,7 @@ class SimScope:
         self.dirs = {"C:"}
         self.cwd = "C:/"
         self.composition = "NORMAL"
+        self.rrb = True
         self.esr = 0
         self.events: list[str] = []
         self.log: list[str] = []
@@ -128,6 +129,9 @@ class SimScope:
         if q and h in ("*OPT", "HORIZONTAL:MODE", "TRIGGER:A:MODE", "ACQUIRE:STOPAFTER"):
             return resp({"*OPT": "NONE", "HORIZONTAL:MODE": "AUTO", "TRIGGER:A:MODE": "AUTO",
                          "ACQUIRE:STOPAFTER": self.stopafter}[h])
+        if h == "MAINWINDOW:RRBDISPLAYSTATE" and not q:
+            self.rrb = arg.upper() in ("ON", "1")
+            return None
         if h in ("HEADER", "VERBOSE"):
             return None
         if h == "CLEAR":
@@ -269,7 +273,7 @@ class SimScope:
                 data = b"WFM#" + src.encode() + b"\x00" * 1500
             elif h == "SAVE:IMAGE":
                 p = path_of(arg)
-                overlay = int(self.cursor.get("STATE", "0") == "1") + len(self.meas)
+                overlay = int(self.cursor.get("STATE", "0") == "1") + (len(self.meas) if self.rrb else 0)
                 data = _png((min(255, 40 * overlay), 128, 255 if self.composition.startswith("INV") else 0))
             else:
                 p = path_of(arg)

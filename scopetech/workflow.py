@@ -224,18 +224,17 @@ class Bench:
 
     # ------------------------------------------------------------------ 2) 화면 캡처
     def _hide_overlay(self, rec: Record) -> None:
-        for name, _, _ in rec.meas:
-            self.scope.delete_measurement(name)
-        self.scope.cursor_on(False)
+        # 측정을 지우면 통계가 사라지고 TekScope 가 불안정해질 수 있어 결과 바만 숨긴다
+        self.scope.results_bar(False)
+        if rec.cursor:
+            self.scope.cursor_on(False)
+        self.scope.t.sync()
 
     def _restore_overlay(self, rec: Record) -> None:
-        for name, mtype, ch in rec.meas:
-            self.scope.add_measurement(name, mtype, ch)
-        c = rec.cursor
-        if c and c["kind"] == "waveform":
-            self.scope.cursor_waveform(c["ch"], c["a"], c["b"])
-        elif c and c["kind"] == "hbars":
-            self.scope.cursor_hbars(c["ch"], c["a"], c["b"])
+        self.scope.results_bar(True)
+        if rec.cursor:
+            self.scope.cursor_on(True)
+        self.scope.t.sync()
         err = self.scope.check("측정/커서 복원", raise_=False)
         if err:
             self.echo(f"  [경고] {err}")

@@ -131,15 +131,14 @@ class MSO5B:
 
     def fetch_waveform(self, ch: int) -> Waveform:
         src = f"CH{ch}"
-        reclen = int(float(self.query("HORizontal:RECOrdlength?")))
         self.write(f"DATa:SOUrce {src}")
         self.write("DATa:ENCdg SRIbinary")
         self.write("WFMOutpre:BYT_Nr 2")
         self.write("DATa:STARt 1")
-        self.write(f"DATa:STOP {reclen}")
+        self.write("DATa:STOP 2000000000")  # 레코드 끝까지 (멈춘 레코드가 현재 설정보다 길어도 잘리지 않게)
         pre = {k: float(self.query(f"WFMOutpre:{k}?")) for k in ("NR_Pt", "XINcr", "XZEro", "PT_Off", "YMUlt", "YOFf", "YZEro")}
         self.write("CURVe?")
-        with self.t.temp_timeout(10 + 2 * reclen / 1e6):
+        with self.t.temp_timeout(10 + 2 * pre["NR_Pt"] / 1e6):
             data = self.t.read_block()
         raw = array("h")
         raw.frombytes(data[: len(data) // 2 * 2])
@@ -168,6 +167,7 @@ class MSO5B:
 
     def delete_all_measurements(self) -> None:
         self.write("MEASUrement:DELETEALL")
+        self.pace()
 
     def delete_measurement(self, name: str) -> None:
         self.write(f'MEASUrement:DELete "{name}"')
@@ -178,6 +178,7 @@ class MSO5B:
         self.write(f"MEASUrement:{name}:SOUrce1 CH{ch}")
         if show_stats:
             self.write(f"MEASUrement:{name}:DISPlaystat:ENABle ON")
+        self.pace()
 
     def measurement_results(self, name: str) -> dict:
         base = f"MEASUrement:{name}:RESUlts"
@@ -191,6 +192,14 @@ class MSO5B:
         }
 
     # ------------------------------------------------------------------ 커서
+    def results_bar(self, on: bool) -> None:
+        self.write(f"MAINWindow:RRBDisplaystate {'ON' if on else 'OFF'}")
+
+    def pace(self) -> None:
+        """TekScope 가 앞 명령을 처리할 때까지 기다린다(연속 명령 폭주 방지)."""
+        self.t.sync()
+        time.sleep(0.1)
+
     def cursor_on(self, on: bool) -> None:
         self.write(f"{CURSOR}:STATE {'ON' if on else 'OFF'}")
 
@@ -207,6 +216,7 @@ class MSO5B:
         self.write(f"{CURSOR}:MODe INDEPENDENT")
         self.write(f"{CURSOR}:WAVEform:APOSition {ta:.6E}")
         self.write(f"{CURSOR}:WAVEform:BPOSition {tb:.6E}")
+        self.pace()
 
     def cursor_hbars(self, ch: int, va: float, vb: float) -> None:
         """수평 커서: 지정 전압 위치에 가로선."""
@@ -217,6 +227,7 @@ class MSO5B:
         self.write(f"{CURSOR}:MODe INDEPENDENT")
         self.write(f"{CURSOR}:HBArs:APOSition {va:.6E}")
         self.write(f"{CURSOR}:HBArs:BPOSition {vb:.6E}")
+        self.pace()
 
     # ------------------------------------------------------------------ 파일
     def _file_size(self, fname: str) -> int | None:

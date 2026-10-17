@@ -236,11 +236,13 @@ class Checker:
         self.w("MEASUrement:MEAS8:TYPe TOP")
         self.w("MEASUrement:MEAS8:SOUrce1 CH1")
         self.w("MEASUrement:MEAS8:DISPlaystat:ENABle ON")
+        self.wait_opc("측정 추가", 10)
         self.errors()
         time.sleep(1)
         for k in ("ALLAcqs:MEAN", "ALLAcqs:MINimum", "ALLAcqs:MAXimum", "ALLAcqs:POPUlation", "CURRentacq:MEAN"):
             self.q(f"MEASUrement:MEAS8:RESUlts:{k}?")
         self.w('MEASUrement:DELete "MEAS8"')
+        self.wait_opc("측정 삭제", 10)
         cur = self.q(f"{CURSOR}:STATE?")
         self.w(f"{CURSOR}:STATE ON")
         self.w(f"{CURSOR}:FUNCtion WAVEFORM")
@@ -249,12 +251,29 @@ class Checker:
         self.w(f"{CURSOR}:WAVEform:APOSition 0")
         self.q(f"{CURSOR}:WAVEform:APOSition?")
         self.w(f"{CURSOR}:STATE {'ON' if cur not in ('0', 'OFF') else 'OFF'}")
+        self.wait_opc("커서", 10)
         self.errors()
+
+    def s10_results_bar(self):
+        """결과 바 숨김/표시 + 캡처 (capture 의 clean.png 방식)"""
+        self.w("MAINWindow:RRBDisplaystate OFF")
+        self.wait_opc("결과 바 숨김", 10)
+        time.sleep(0.5)
+        fname = "check_clean.png"
+        self.w(f'SAVe:IMAGe "{self.temp_dir}/{fname}"')
+        self.wait_opc("화면 저장", 60)
+        self.w("MAINWindow:RRBDisplaystate ON")
+        self.wait_opc("결과 바 표시", 10)
+        self.errors()
+        data = self.fetch(fname, 30)
+        (HERE / "logs" / "check_clean.png").write_bytes(data)
+        self.out("    저장: logs/check_clean.png (결과 바가 없어야 정상)")
+        self.q("*OPC?", timeout=5)
 
 
 STEPS = [Checker.s1_identify, Checker.s2_state, Checker.s3_filesystem, Checker.s4_small_file,
          Checker.s5_screenshot, Checker.s6_screenshot_transfer, Checker.s7_stop_screenshot,
-         Checker.s8_curve, Checker.s9_measure_cursor]
+         Checker.s8_curve, Checker.s9_measure_cursor, Checker.s10_results_bar]
 
 
 def main(argv=None) -> int:
