@@ -1,0 +1,101 @@
+
+===== 2026-10-17 19:08:36 시작 =====
+19:08:36.917 > *CLS
+19:08:36.919 > HEADer OFF
+19:08:36.919 > VERBose ON
+19:08:36.919 > *IDN?
+19:08:36.922 < TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14
+19:08:36.922 > *OPT?
+19:08:36.925 < SUP5-SREMBD:License; Embedded serial triggering and analysis (I2C, SPI); Node locked,SUP5-SRI3C:License; I3C Serial Analysis (I3C); Node Locked,BW5-2000:License; 2 GHz bandwidth on 5 Series Oscilloscopes; Node locked
+19:08:36.925 > *ESR?
+19:08:36.932 < 0
+19:08:37.888 > ACQuire:STATE?
+19:08:37.890 < 1
+19:08:37.890 > ACQuire:STOPAfter?
+19:08:37.892 < RUNSTOP
+19:08:37.898 > ACQuire:MODe?
+19:08:37.900 < SAMPLE
+19:08:37.900 > ACQuire:NUMACq?
+19:08:37.901 < 4664
+19:08:37.906 > HORizontal:RECOrdlength?
+19:08:37.908 < 2500
+19:08:37.909 > HORizontal:MODe?
+19:08:37.911 < AUTO
+19:08:37.912 > TRIGger:A:MODe?
+19:08:37.913 < AUTO
+19:08:37.913 > MEASUrement:LIST?
+19:08:37.915 < NONE
+19:08:37.916 > DISplay:GLObal:CH1:STATE?
+19:08:37.918 < 1
+19:08:37.918 > DISplay:GLObal:CH2:STATE?
+19:08:37.920 < 0
+19:08:37.920 > DISplay:GLObal:CH3:STATE?
+19:08:37.922 < 0
+19:08:37.923 > DISplay:GLObal:CH4:STATE?
+19:08:37.924 < 0
+19:08:37.925 > DISplay:GLObal:CH5:STATE?
+19:08:37.927 < 0
+19:08:37.928 > DISplay:GLObal:CH6:STATE?
+19:08:37.929 < 0
+19:08:37.930 > DISplay:GLObal:CH7:STATE?
+19:08:37.932 < 0
+19:08:37.932 > DISplay:GLObal:CH8:STATE?
+19:08:37.934 < 0
+19:08:37.935 > *ESR?
+19:08:37.947 < 0
+19:08:39.200 > FILESystem:CWD?
+19:08:39.202 < "C:/Users/Public/Tektronix/TekScope"
+19:08:39.203 > FILESystem:HOMEDir?
+19:08:39.205 < "C:/Users/Tek_Local_Admin"
+19:08:39.205 > FILESystem:MKDir "C:/scope_tech_tmp"
+19:08:39.206 > *OPC?
+19:08:39.222 < 1
+19:08:39.223 > *ESR?
+19:08:39.230 < 16
+19:08:39.230 > ALLEv?
+19:08:39.233 < 257,"File name error; The destination already contains a folder named; FILESystem:MKDir ""C:/scope_tech_tmp""\n",257,"File name error; The destination already contains a folder named"
+19:08:39.233 > FILESystem:CWD "C:/scope_tech_tmp"
+19:08:39.234 > *ESR?
+19:08:39.243 < 0
+19:08:39.243 > FILESystem:LDIR?
+19:08:39.246 < "check_screen.png;FILE;76431;2026-10-17;03:06:43","scope_tech_screen.png;FILE;111753;2026-10-17;02:29:19"
+19:08:39.246 > FILESystem:CWD "C:/Users/Public/Tektronix/TekScope"
+19:08:40.457 > SAVe:SETUp "C:/scope_tech_tmp/check_setup.set"
+19:08:43.910 > *OPC?
+19:08:44.041 < 1
+19:08:44.041 > *ESR?
+19:08:44.058 < 0
+19:08:44.058 > FILESystem:CWD "C:/scope_tech_tmp"
+19:08:44.061 > FILESystem:LDIR?
+19:08:44.065 < "check_screen.png;FILE;76431;2026-10-17;03:06:43","check_setup.set;FILE;10530;2026-10-17;03:12:46","scope_tech_screen.png;FILE;111753;2026-10-17;02:29:19"
+19:08:44.066 > FILESystem:CWD "C:/Users/Public/Tektronix/TekScope"
+19:08:44.068 > FILESystem:READFile "C:/scope_tech_tmp/check_setup.set"
+19:08:44.074 > FILESystem:DELEte "C:/scope_tech_tmp/check_setup.set"
+19:08:44.074 > *ESR?
+19:08:44.088 < 0
+19:08:44.088 > *OPC?
+19:08:44.106 < 1
+19:08:46.537 > ACQuire:STATE?
+19:08:46.539 < 1
+19:08:46.540 > ACQuire:STOPAfter SEQuence
+19:08:46.540 > ACQuire:STATE ON
+19:08:46.541 > ACQuire:STATE?
+19:08:46.546 < 1
+19:08:46.648 > ACQuire:STATE?
+19:08:46.650 < 1
+19:08:46.750 > ACQuire:STATE?
+19:08:46.752 < 0
+19:08:46.753 > BUSY?
+19:08:46.755 < 0
+19:08:47.756 > SAVe:IMAGe:COMPosition INVErted
+19:08:47.757 > SAVe:IMAGe "C:/scope_tech_tmp/check_screen.png"
+19:08:47.758 > *OPC?
+19:08:47.884 < 1
+19:08:47.884 > *ESR?
+19:08:47.890 < 0
+19:08:47.891 > FILESystem:CWD "C:/scope_tech_tmp"
+19:08:47.891 > FILESystem:LDIR?
+19:08:47.894 < "check_screen.png;FILE;74621;2026-10-17;03:12:50","scope_tech_screen.png;FILE;111753;2026-10-17;02:29:19"
+19:08:47.895 > FILESystem:CWD "C:/Users/Public/Tektronix/TekScope"
+19:08:57.141 > FILESystem:CWD "C:/scope_tech_tmp"
+19:08:57.142 > FILESystem:LDIR?
