@@ -1,4 +1,4 @@
-scope_check 2026-10-17 19:08:36  interface=usb  timeout_s=10  python=3.13.15
+scope_check 2026-10-17 19:32:02  interface=usb  timeout_s=10  python=3.13.16
 연결: USB USB0::0x0699::0x0522::C081164::INSTR
 
 [1/10] 연결 확인 (*IDN?)
@@ -13,7 +13,7 @@ scope_check 2026-10-17 19:08:36  interface=usb  timeout_s=10  python=3.13.15
     ACQuire:STATE?                                -> 1   (0.00s)
     ACQuire:STOPAfter?                            -> RUNSTOP   (0.00s)
     ACQuire:MODe?                                 -> SAMPLE   (0.00s)
-    ACQuire:NUMACq?                               -> 4664   (0.01s)
+    ACQuire:NUMACq?                               -> 81865   (0.00s)
     HORizontal:RECOrdlength?                      -> 2500   (0.00s)
     HORizontal:MODe?                              -> AUTO   (0.00s)
     TRIGger:A:MODe?                               -> AUTO   (0.00s)
@@ -27,47 +27,43 @@ scope_check 2026-10-17 19:08:36  interface=usb  timeout_s=10  python=3.13.15
     DISplay:GLObal:CH7:STATE?                     -> 0   (0.00s)
     DISplay:GLObal:CH8:STATE?                     -> 0   (0.00s)
     화면에 켜진 채널: [1]
-  => 통과 (0.1s)
+  => 통과 (0.0s)
 
-[3/10] 파일 시스템: 현재 폴더, 홈 폴더, 임시 폴더 생성
+[3/10] 파일 시스템: 현재 폴더 조회, 임시 폴더 생성 (폴더 이동/목록 조회는 하지 않음)
     FILESystem:CWD?                               -> "C:/Users/Public/Tektronix/TekScope"   (0.00s)
     FILESystem:HOMEDir?                           -> "C:/Users/Tek_Local_Admin"   (0.00s)
     FILESystem:MKDir "C:/scope_tech_tmp"
-    *OPC?                                         -> 1   (0.02s)
+    *OPC?                                         -> 1   (0.01s)
     [스코프 오류] ESR=16  257,"File name error; The destination already contains a folder named; FILESystem:MKDir ""C:/scope_tech_tmp""\n",257,"File name error; The destination already contains a folder named"
-    FILESystem:CWD "C:/scope_tech_tmp"
-    FILESystem:LDIR?                              -> "check_screen.png;FILE;76431;2026-10-17;03:06:43","scope_tech_screen.png;FILE;111753;2026-10-17;02:29:19"   (0.00s)
-    FILESystem:CWD "C:/Users/Public/Tektronix/TekScope"
-  => 통과 (0.0s)
+    FILESystem:DELEte "C:/scope_tech_tmp/scope_tech_screen.png"
+    FILESystem:DELEte "C:/scope_tech_tmp/check_screen.png"
+    FILESystem:DELEte "C:/scope_tech_tmp/check_screen2.png"
+    FILESystem:DELEte "C:/scope_tech_tmp/check_clean.png"
+    *OPC?                                         -> 1   (0.01s)
+  => 통과 (0.1s)
 
 [4/10] 작은 파일 왕복: 설정 저장(SAVe:SETUp) -> PC 로 전송(READFile)
     SAVe:SETUp "C:/scope_tech_tmp/check_setup.set"
     설정 저장 완료 대기(*OPC?) -> 1  (0.13s)
-    FILESystem:CWD "C:/scope_tech_tmp"
-    FILESystem:LDIR?                              -> "check_screen.png;FILE;76431;2026-10-17;03:06:43","check_setup.set;FILE;10530;2026-10-17;03:12:46","scope_tech_screen.png;FILE;111753;2026-10-17;02:29   (0.00s)
-    FILESystem:CWD "C:/Users/Public/Tektronix/TekScope"
-    LDIR 에서 읽은 check_setup.set 크기: 10530
     FILESystem:READFile "C:/scope_tech_tmp/check_setup.set"
-    READFile 수신 10531 bytes, END 수신(정상), 0.00s  (LDIR 크기와 차이 +1)
-    마지막 바이트가 줄바꿈(\n)입니다.
+    READFile 수신 10174 bytes, END 수신(정상), 0.00s
     FILESystem:DELEte "C:/scope_tech_tmp/check_setup.set"
-    *OPC?                                         -> 1   (0.02s)
-  => 통과 (3.6s)
+    파일 삭제 완료 대기(*OPC?) -> 1  (0.01s)
+    *OPC?                                         -> 1   (0.01s)
+  => 통과 (0.2s)
 
 [5/10] Single 로 고정 후 화면 캡처 저장(SAVe:IMAGe) - 저장만, 전송 없음
     ACQuire:STATE?                                -> 1   (0.00s)
     ACQuire:STOPAfter SEQuence
     ACQuire:STATE ON
-    Single 완료 (0.21s)
+    Single 완료 (0.22s)
     BUSY? 0 까지 0.00s, 1초 추가 대기
     SAVe:IMAGe:COMPosition INVErted
     SAVe:IMAGe "C:/scope_tech_tmp/check_screen.png"
-    화면 저장 완료 대기(*OPC?) -> 1  (0.13s)
-    FILESystem:CWD "C:/scope_tech_tmp"
-    FILESystem:LDIR?                              -> "check_screen.png;FILE;74621;2026-10-17;03:12:50","scope_tech_screen.png;FILE;111753;2026-10-17;02:29:19"   (0.00s)
-    FILESystem:CWD "C:/Users/Public/Tektronix/TekScope"
-    LDIR 에서 읽은 check_screen.png 크기: 74621
+    화면 저장 완료 대기(*OPC?) -> 1  (0.17s)
   => 통과 (1.4s)
 
 [6/10] 화면 캡처 파일 PC 로 전송(READFile)
-    FILESystem:CWD "C:/scope_tech_tmp"
+    FILESystem:READFile "C:/scope_tech_tmp/check_screen.png"
+    READFile 수신 75162 bytes, END 수신(정상), 0.00s
+    FILESystem:DELEte "C:/scope_tech_tmp/check_screen.png"
