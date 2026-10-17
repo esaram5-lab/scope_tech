@@ -26,6 +26,7 @@ TESTS = [
     ("기본폴더_OPC", "기본 폴더에 저장, *OPC? 로 완료 대기, 전송 안 함", None, True, False),
     ("임시폴더_대기만", "C:/scope_tech_tmp 에 저장, *OPC? 없이 5초 대기, 전송 안 함", "C:/scope_tech_tmp", False, False),
     ("기본폴더_전송", "기본 폴더에 저장, 5초 대기 후 PC 로 전송(READFile), 삭제 안 함", None, False, True),
+    ("트리거저장_AOE", "SAVe:IMAGe 를 쓰지 않고 Act On Event(트리거 시 스코프가 스스로 화면 저장) + Single", "AOE", False, True),
 ]
 
 
@@ -62,8 +63,64 @@ class Session:
         self.out(f"    화면 반응: {'예' if a == 'y' else '아니오'}, 원격 응답: {'예' if remote else '아니오'}")
         return remote and a == "y"
 
+    def run_aoe(self) -> bool:
+        """Act On Event: 트리거가 걸리면 스코프 내부 기능으로 화면 저장 (원격 SAVe:IMAGe 미사용)."""
+        self.out("  2) Act On Event 설정")
+        cwd = self.q("FILESystem:CWD?").strip().strip('"')
+        prefix = f"aoe{datetime.now():%H%M%S}"
+        self.w("ACQuire:STATE STOP")
+        time.sleep(1)
+        self.w(f'SAVEONEVent:FILEDest "{cwd}"')
+        self.w(f'SAVEONEVent:FILEName "{prefix}"')
+        self.w("SAVEONEVent:IMAGe:FILEFormat PNG")
+        self.w("SAVe:IMAGe:COMPosition NORMal")
+        self.w("ACTONEVent:LIMit SPECIFY_MAXIMUM")
+        self.w("ACTONEVent:LIMITCount 1")
+        self.w("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON")
+        self.w("ACTONEVent:ENable 1")
+        self.q("*ESR?")
+        self.q("ALLEv?")
+        self.out("  3) Single 획득 -> 트리거 시 스코프가 화면 저장")
+        self.w("ACQuire:STOPAfter SEQuence")
+        self.w("ACQuire:STATE ON")
+        t0 = time.monotonic()
+        while self.t.query("ACQuire:STATE?") != "0" and time.monotonic() - t0 < 30:
+            time.sleep(0.2)
+        self.out(f"    Single 완료 {time.monotonic() - t0:.1f}s, 저장 대기 5초")
+        time.sleep(5)
+        self.w("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF")
+        self.w("ACTONEVent:ENable 0")
+        self.out("  4) 저장 직후 상태")
+        if not self.alive():
+            return False
+        self.out("  5) 저장된 파일 찾기(DIR?) 및 전송")
+        listing = self.q("FILESystem:DIR?", timeout=10)
+        names = sorted(n.strip().strip('"') for n in listing.split(",") if prefix in n)
+        self.out(f"    찾은 파일: {names}")
+        if not names:
+            self.out("    저장된 파일이 없습니다.")
+            return False
+        self.w(f'FILESystem:READFile "{cwd}/{names[-1]}"')
+        with self.t.temp_timeout(30):
+            data = self.t.read_file(None)
+        if data.endswith(b"\n"):
+            data = data[:-1]
+        out = HERE / "logs" / names[-1]
+        out.write_bytes(data)
+        self.out(f"    {len(data)} bytes, PNG {'정상' if data[1:4] == b'PNG' else '아님'} -> {out}")
+        self.out("  6) 전송 후 상태")
+        return self.alive()
+
     def run(self, name: str, desc: str, folder: str | None, use_opc: bool, transfer: bool) -> bool:
         self.out(f"\n=== 시험 [{name}] {desc}")
+        if folder == "AOE":
+            self.out("  1) 시작 전 상태")
+            if not self.alive():
+                self.out("  시작 전부터 멈춰 있습니다. TekScope 를 재시작한 뒤 다시 실행하세요.")
+                return False
+            ok = self.run_aoe()
+            self.out(f"  => {'정상' if ok else '멈춤/실패'}")
+            return ok
         self.out("  1) 시작 전 상태")
         if not self.alive():
             self.out("  시작 전부터 멈춰 있습니다. TekScope 를 재시작한 뒤 다시 실행하세요.")
