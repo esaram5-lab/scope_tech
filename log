@@ -1,0 +1,42 @@
+[7/10] 반복 시험: 실행 -> 화면 캡처(Act On Event) -> 전송, 5회
+    --- 1/5
+    ACQuire:STOPAfter RUNSTop
+    ACQuire:STATE RUN
+    SAVe:IMAGe:COMPosition NORMal
+    SAVEONEVent:FILEDest "C:/Users/Public/Tektronix/TekScope"
+    SAVEONEVent:FILEName "chk203639971"
+    SAVEONEVent:IMAGe:FILEFormat PNG
+    ACTONEVent:LIMit UNLIMITED
+    ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON
+    ACTONEVent:ENable 1
+    Act On Event 설정 완료 대기(*OPC?) -> 1  (0.15s)
+    ACQuire:STOPAfter SEQuence
+    ACQuire:STATE ON
+    Single+저장 0.7s -> chk203639971_20261017043649677.png
+    ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
+    ACTONEVent:ENable 0
+  => 실패: ScopeTimeout: 읽기: 스코프 응답 시간 초과
+Traceback (most recent call last):
+  File "C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\scope_check.py", line 364, in main
+    step(ck)
+    ~~~~^^^^
+  File "C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\scope_check.py", line 243, in s7_stop_screenshot
+    name = self.aoe_capture()
+  File "C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\scope_check.py", line 213, in aoe_capture
+    self.wait_opc("Act On Event 해제", 10)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\scope_check.py", line 73, in wait_opc
+    r = self.t.query("*OPC?")
+  File "C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\scopetech\transport.py", line 66, in query
+    resp = self.read_line()
+  File "C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\scopetech\transport.py", line 371, in read_line
+    return self._read_message().decode("latin-1").strip()
+           ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\scopetech\transport.py", line 365, in _read_message
+    self._check(st, "읽기")
+    ~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\scopetech\transport.py", line 324, in _check
+    raise ScopeTimeout(f"{what}: 스코프 응답 시간 초과")
+scopetech.transport.ScopeTimeout: 읽기: 스코프 응답 시간 초과
+    *IDN?                                         -> TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14   (0.00s)
+    통신 복구됨, 다음 단계 진행 가능
