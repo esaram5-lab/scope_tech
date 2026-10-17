@@ -1,7 +1,6 @@
 """Tektronix 4/5/6 Series B MSO(MSO58B) 제어. 명령은 077189805 프로그래머 매뉴얼 기준."""
 from __future__ import annotations
 
-import re
 import sys
 import time
 from array import array
@@ -37,16 +36,15 @@ class MSO5B:
         return self.idn
 
     def _make_temp_dir(self) -> bool:
-        """임시 폴더를 만들고(이미 있으면 오류 무시) 실제로 들어갈 수 있는지 확인한다."""
+        """임시 폴더를 만든다. '이미 있음'(257) 은 정상.
+        실장비에서 FILESystem:CWD 변경 + LDIR? 직후 TekScope 가 멈춰서 CWD 는 건드리지 않는다."""
         self.write(f'FILESystem:MKDir "{self.temp_dir}"')
         self.t.sync()
-        self.write("*CLS")
-        orig = self.query("FILESystem:CWD?").strip().strip('"')
-        self.write(f'FILESystem:CWD "{self.temp_dir}"')
-        ok = self.check("임시 폴더 확인", raise_=False) is None
-        if orig:
-            self.write(f'FILESystem:CWD "{orig}"')
-        return ok
+        esr = int(float(self.query("*ESR?")))
+        if not esr & ESR_ERROR_MASK:
+            return True
+        events = self.query("ALLEv?")
+        return "already contains" in events or events.lstrip().startswith("257")
 
     def write(self, cmd: str) -> None:
         self.t.write(cmd)
@@ -251,22 +249,15 @@ class MSO5B:
         self.pace()
 
     # ------------------------------------------------------------------ 파일
-    def _file_size(self, fname: str) -> int | None:
-        orig = self.query("FILESystem:CWD?").strip().strip('"')
-        self.write(f'FILESystem:CWD "{self.temp_dir}"')
-        listing = self.query("FILESystem:LDIR?")
-        if orig:
-            self.write(f'FILESystem:CWD "{orig}"')
-        m = re.search(re.escape(fname) + r";FILE;(\d+)", listing, re.IGNORECASE)
-        return int(m.group(1)) if m else None
-
     def _fetch_file(self, fname: str, timeout: float) -> bytes:
-        size = self._file_size(fname)
         path = f"{self.temp_dir}/{fname}"
         self.write(f'FILESystem:READFile "{path}"')
         with self.t.temp_timeout(timeout):
-            data = self.t.read_file(size)
+            data = self.t.read_file(None)
             self.t.sync()
+        # MSO58B 는 파일 뒤에 줄바꿈 1바이트를 붙여 보낸다(실장비 확인: 항상 파일 크기 +1)
+        if data.endswith(b"\n"):
+            data = data[:-1]
         self.write(f'FILESystem:DELEte "{path}"')
         self.check(f"파일 전송({fname})")
         if not data:

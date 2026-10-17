@@ -119,27 +119,17 @@ class Checker:
         self.out(f"    BUSY? 0 까지 {time.monotonic() - t0:.2f}s, 1초 추가 대기")
         time.sleep(1)
 
-    def file_size(self, fname: str) -> int | None:
-        self.w(f'FILESystem:CWD "{self.temp_dir}"')
-        listing = self.q("FILESystem:LDIR?")
-        if self.orig_cwd:
-            self.w(f'FILESystem:CWD "{self.orig_cwd}"')
-        m = re.search(re.escape(fname) + r";FILE;(\d+)", listing, re.IGNORECASE)
-        size = int(m.group(1)) if m else None
-        self.out(f"    LDIR 에서 읽은 {fname} 크기: {size if size is not None else '찾지 못함'}")
-        return size
-
     def fetch(self, fname: str, timeout: float) -> bytes:
-        size = self.file_size(fname)
+        """READFile 로 가져온다. 실장비 멈춤과 관련된 CWD 변경/LDIR? 는 쓰지 않는다."""
         path = f"{self.temp_dir}/{fname}"
         self.w(f'FILESystem:READFile "{path}"')
         t0 = time.monotonic()
         data, how = self.raw_read(timeout)
-        self.out(f"    READFile 수신 {len(data)} bytes, {how}, {time.monotonic() - t0:.2f}s"
-                 + (f"  (LDIR 크기와 차이 {len(data) - size:+d})" if size is not None else ""))
+        self.out(f"    READFile 수신 {len(data)} bytes, {how}, {time.monotonic() - t0:.2f}s")
         if data[-1:] == b"\n":
-            self.out("    마지막 바이트가 줄바꿈(\\n)입니다.")
+            data = data[:-1]
         self.w(f'FILESystem:DELEte "{path}"')
+        self.wait_opc("파일 삭제", 10)
         self.errors()
         return data
 
@@ -165,18 +155,20 @@ class Checker:
         self.errors()
 
     def s3_filesystem(self):
-        """파일 시스템: 현재 폴더, 홈 폴더, 임시 폴더 생성"""
+        """파일 시스템: 현재 폴더 조회, 임시 폴더 생성 (폴더 이동/목록 조회는 하지 않음)"""
         self.orig_cwd = self.q("FILESystem:CWD?").strip().strip('"')
         self.q("FILESystem:HOMEDir?")
         self.w(f'FILESystem:MKDir "{self.temp_dir}"')
         self.q("*OPC?")
-        self.errors()  # 이미 있으면 오류가 정상
-        self.w(f'FILESystem:CWD "{self.temp_dir}"')
-        if self.errors():
-            raise ScopeError(f"임시 폴더 {self.temp_dir} 에 들어갈 수 없습니다. config.ini [scope] temp_dir 을 바꾸세요.")
-        self.q("FILESystem:LDIR?")
-        if self.orig_cwd:
-            self.w(f'FILESystem:CWD "{self.orig_cwd}"')
+        ev = self.errors()
+        if ev and "already contains" not in ev:
+            raise ScopeError(f"임시 폴더 {self.temp_dir} 를 만들 수 없습니다. config.ini [scope] temp_dir 을 바꾸세요.")
+        # 이전에 멈추며 남은 파일 정리 (없으면 오류가 정상)
+        for f in ("scope_tech_screen.png", "check_screen.png", "check_screen2.png", "check_clean.png"):
+            self.w(f'FILESystem:DELEte "{self.temp_dir}/{f}"')
+        self.q("*OPC?")
+        self.t.query("*ESR?")
+        self.t.query("ALLEv?")
 
     def s4_small_file(self):
         """작은 파일 왕복: 설정 저장(SAVe:SETUp) -> PC 로 전송(READFile)"""
@@ -199,14 +191,10 @@ class Checker:
         self.errors()
         if dt > 10:
             self.out(f"    [주의] 화면 저장에 {dt:.0f}초 걸렸습니다.")
-        self.file_size(fname)
 
     def s6_screenshot_transfer(self):
         """화면 캡처 파일 PC 로 전송(READFile)"""
         fname = "check_screen.png"
-        if self.file_size(fname) is None:
-            self.w(f'SAVe:IMAGe "{self.temp_dir}/{fname}"')
-            self.wait_opc("화면 저장", 60)
         data = self.fetch(fname, 30)
         self.out(f"    PNG 형식: {'정상' if data.startswith(bytes([0x89]) + b'PNG') else '아님'}")
         out = HERE / "logs" / "check_screen.png"
