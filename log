@@ -1,147 +1,73 @@
-scope_check 2026-10-17 18:41:54  interface=usb  timeout_s=10  python=3.13.15
+scope_check 2026-10-17 19:08:36  interface=usb  timeout_s=10  python=3.13.15
 연결: USB USB0::0x0699::0x0522::C081164::INSTR
 
-[1/9] 연결 확인 (*IDN?)
+[1/10] 연결 확인 (*IDN?)
     *CLS
     HEADer OFF
     VERBose ON
-    *IDN?                                         -> TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14   (0.01s)
+    *IDN?                                         -> TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14   (0.00s)
     *OPT?                                         -> SUP5-SREMBD:License; Embedded serial triggering and analysis (I2C, SPI); Node locked,SUP5-SRI3C:License; I3C Serial Analysis (I3C); Node Locked,BW5-20   (0.00s)
   => 통과 (0.0s)
 
-[2/9] 기본 상태 조회 (스코프 변경 없음)
+[2/10] 기본 상태 조회 (스코프 변경 없음)
     ACQuire:STATE?                                -> 1   (0.00s)
     ACQuire:STOPAfter?                            -> RUNSTOP   (0.00s)
     ACQuire:MODe?                                 -> SAMPLE   (0.00s)
-    ACQuire:NUMACq?                               -> 547   (0.00s)
-    HORizontal:RECOrdlength?                      -> 1250000   (0.00s)
+    ACQuire:NUMACq?                               -> 4664   (0.01s)
+    HORizontal:RECOrdlength?                      -> 2500   (0.00s)
     HORizontal:MODe?                              -> AUTO   (0.00s)
     TRIGger:A:MODe?                               -> AUTO   (0.00s)
-    MEASUrement:LIST?                             -> MEAS1,MEAS2   (0.00s)
+    MEASUrement:LIST?                             -> NONE   (0.00s)
     DISplay:GLObal:CH1:STATE?                     -> 1   (0.00s)
-    DISplay:GLObal:CH2:STATE?                     -> 1   (0.00s)
+    DISplay:GLObal:CH2:STATE?                     -> 0   (0.00s)
     DISplay:GLObal:CH3:STATE?                     -> 0   (0.00s)
     DISplay:GLObal:CH4:STATE?                     -> 0   (0.00s)
     DISplay:GLObal:CH5:STATE?                     -> 0   (0.00s)
     DISplay:GLObal:CH6:STATE?                     -> 0   (0.00s)
     DISplay:GLObal:CH7:STATE?                     -> 0   (0.00s)
     DISplay:GLObal:CH8:STATE?                     -> 0   (0.00s)
-    화면에 켜진 채널: [1, 2]
+    화면에 켜진 채널: [1]
   => 통과 (0.1s)
 
-[3/9] 파일 시스템: 현재 폴더, 홈 폴더, 임시 폴더 생성
+[3/10] 파일 시스템: 현재 폴더, 홈 폴더, 임시 폴더 생성
     FILESystem:CWD?                               -> "C:/Users/Public/Tektronix/TekScope"   (0.00s)
     FILESystem:HOMEDir?                           -> "C:/Users/Tek_Local_Admin"   (0.00s)
     FILESystem:MKDir "C:/scope_tech_tmp"
-    *OPC?                                         -> 1   (0.05s)
+    *OPC?                                         -> 1   (0.02s)
     [스코프 오류] ESR=16  257,"File name error; The destination already contains a folder named; FILESystem:MKDir ""C:/scope_tech_tmp""\n",257,"File name error; The destination already contains a folder named"
     FILESystem:CWD "C:/scope_tech_tmp"
-    FILESystem:LDIR?                              -> "scope_tech_screen.png;FILE;111753;2026-10-17;02:29:19"   (0.02s)
+    FILESystem:LDIR?                              -> "check_screen.png;FILE;76431;2026-10-17;03:06:43","scope_tech_screen.png;FILE;111753;2026-10-17;02:29:19"   (0.00s)
     FILESystem:CWD "C:/Users/Public/Tektronix/TekScope"
-  => 통과 (0.1s)
+  => 통과 (0.0s)
 
-[4/9] 작은 파일 왕복: 설정 저장(SAVe:SETUp) -> PC 로 전송(READFile)
+[4/10] 작은 파일 왕복: 설정 저장(SAVe:SETUp) -> PC 로 전송(READFile)
     SAVe:SETUp "C:/scope_tech_tmp/check_setup.set"
-    설정 저장 완료 대기(*OPC?) -> 1  (0.19s)
+    설정 저장 완료 대기(*OPC?) -> 1  (0.13s)
     FILESystem:CWD "C:/scope_tech_tmp"
-    FILESystem:LDIR?                              -> "check_setup.set;FILE;11487;2026-10-17;02:46:08","scope_tech_screen.png;FILE;111753;2026-10-17;02:29:19"   (0.01s)
+    FILESystem:LDIR?                              -> "check_screen.png;FILE;76431;2026-10-17;03:06:43","check_setup.set;FILE;10530;2026-10-17;03:12:46","scope_tech_screen.png;FILE;111753;2026-10-17;02:29   (0.00s)
     FILESystem:CWD "C:/Users/Public/Tektronix/TekScope"
-    LDIR 에서 읽은 check_setup.set 크기: 11487
+    LDIR 에서 읽은 check_setup.set 크기: 10530
     FILESystem:READFile "C:/scope_tech_tmp/check_setup.set"
-    READFile 수신 11488 bytes, END 수신(정상), 0.01s  (LDIR 크기와 차이 +1)
+    READFile 수신 10531 bytes, END 수신(정상), 0.00s  (LDIR 크기와 차이 +1)
     마지막 바이트가 줄바꿈(\n)입니다.
     FILESystem:DELEte "C:/scope_tech_tmp/check_setup.set"
-    *OPC?                                         -> 1   (0.05s)
-  => 통과 (0.3s)
+    *OPC?                                         -> 1   (0.02s)
+  => 통과 (3.6s)
 
-[5/9] 화면 캡처 저장(SAVe:IMAGe) - 저장만, 전송 없음
+[5/10] Single 로 고정 후 화면 캡처 저장(SAVe:IMAGe) - 저장만, 전송 없음
     ACQuire:STATE?                                -> 1   (0.00s)
+    ACQuire:STOPAfter SEQuence
+    ACQuire:STATE ON
+    Single 완료 (0.21s)
+    BUSY? 0 까지 0.00s, 1초 추가 대기
     SAVe:IMAGe:COMPosition INVErted
     SAVe:IMAGe "C:/scope_tech_tmp/check_screen.png"
-    화면 저장 완료 대기(*OPC?) -> 1  (3.20s)
+    화면 저장 완료 대기(*OPC?) -> 1  (0.13s)
     FILESystem:CWD "C:/scope_tech_tmp"
-    FILESystem:LDIR?                              -> "check_screen.png;FILE;115589;2026-10-17;02:46:09","scope_tech_screen.png;FILE;111753;2026-10-17;02:29:19"   (0.01s)
+    FILESystem:LDIR?                              -> "check_screen.png;FILE;74621;2026-10-17;03:12:50","scope_tech_screen.png;FILE;111753;2026-10-17;02:29:19"   (0.00s)
     FILESystem:CWD "C:/Users/Public/Tektronix/TekScope"
-    LDIR 에서 읽은 check_screen.png 크기: 115589
-  => 통과 (3.2s)
+    LDIR 에서 읽은 check_screen.png 크기: 74621
+  => 통과 (1.4s)
 
-[6/9] 화면 캡처 파일 PC 로 전송(READFile)
+[6/10] 화면 캡처 파일 PC 로 전송(READFile)
     FILESystem:CWD "C:/scope_tech_tmp"
-    FILESystem:LDIR?                              -> "check_screen.png;FILE;115589;2026-10-17;02:46:09","scope_tech_screen.png;FILE;111753;2026-10-17;02:29:19"   (0.00s)
-    FILESystem:CWD "C:/Users/Public/Tektronix/TekScope"
-    LDIR 에서 읽은 check_screen.png 크기: 115589
-    FILESystem:CWD "C:/scope_tech_tmp"
-    FILESystem:LDIR?                              -> "check_screen.png;FILE;115589;2026-10-17;02:46:09","scope_tech_screen.png;FILE;111753;2026-10-17;02:29:19"   (0.02s)
-    FILESystem:CWD "C:/Users/Public/Tektronix/TekScope"
-    LDIR 에서 읽은 check_screen.png 크기: 115589
-    FILESystem:READFile "C:/scope_tech_tmp/check_screen.png"
-    READFile 수신 115590 bytes, END 수신(정상), 0.01s  (LDIR 크기와 차이 +1)
-    마지막 바이트가 줄바꿈(\n)입니다.
-    FILESystem:DELEte "C:/scope_tech_tmp/check_screen.png"
-    PNG 형식: 정상
-    저장: C:\Users\mdl\Desktop\허동환\택트로닉스\scope_tech-claude-dreamy-edison-55q1f3\logs\check_screen.png
-    *OPC?                                         -> 1   (0.03s)
-  => 통과 (0.1s)
-
-[7/9] 획득 정지(STOP) 후 화면 캡처 - capture 명령과 같은 순서
-    ACQuire:STATE STOP
-    정지 완료 대기(*OPC?) -> 1  (0.04s)
-    ACQuire:STATE?                                -> 0   (0.00s)
-    SAVe:IMAGe "C:/scope_tech_tmp/check_screen2.png"
-    화면 저장 완료 대기(*OPC?) -> 1  (0.22s)
-    FILESystem:CWD "C:/scope_tech_tmp"
-    FILESystem:LDIR?                              -> "check_screen2.png;FILE;615476;2026-10-17;02:46:15","scope_tech_screen.png;FILE;111753;2026-10-17;02:29:19"   (0.02s)
-    FILESystem:CWD "C:/Users/Public/Tektronix/TekScope"
-    LDIR 에서 읽은 check_screen2.png 크기: 615476
-    FILESystem:READFile "C:/scope_tech_tmp/check_screen2.png"
-    READFile 수신 615477 bytes, END 수신(정상), 0.02s  (LDIR 크기와 차이 +1)
-    마지막 바이트가 줄바꿈(\n)입니다.
-    FILESystem:DELEte "C:/scope_tech_tmp/check_screen2.png"
-    *OPC?                                         -> 1   (0.01s)
-  => 통과 (0.4s)
-
-[8/9] 파형 데이터 전송(CURVe?) - CH1 앞부분 1000 포인트, 이후 전체
-    DATa:SOUrce CH1
-    DATa:ENCdg SRIbinary
-    WFMOutpre:BYT_Nr 2
-    DATa:STARt 1
-    DATa:STOP 1000
-    WFMOutpre:NR_Pt?                              -> 1000   (0.04s)
-    WFMOutpre:XINcr?                              -> 320.00E-12   (0.02s)
-    WFMOutpre:XZEro?                              -> 315.000E-12   (0.01s)
-    WFMOutpre:PT_Off?                             -> 633750   (0.01s)
-    WFMOutpre:YMUlt?                              -> 78.1250E-6   (0.01s)
-    WFMOutpre:YOFf?                               -> 0.0E+0   (0.01s)
-    WFMOutpre:YZEro?                              -> 1.4000   (0.01s)
-    CURVe?
-    CURVe?(1000pt) 수신 2007 bytes, END 수신(정상), 앞부분 b'#42000\xfc\xb9\xd0\xb90\xba'
-    HORizontal:RECOrdlength?                      -> 1250000   (0.00s)
-    DATa:STOP 1250000
-    WFMOutpre:NR_Pt?                              -> 1250000   (0.03s)
-    CURVe?
-    CURVe?(전체 1250000pt) 수신 2500010 bytes, END 수신(정상), 0.10s, 25.8 MB/s
-  => 통과 (0.3s)
-
-[9/9] 측정/커서 명령 (만든 뒤 삭제)
-    MEASUrement:ADDNew "MEAS8"
-    MEASUrement:MEAS8:TYPe TOP
-    MEASUrement:MEAS8:SOUrce1 CH1
-    MEASUrement:MEAS8:DISPlaystat:ENABle ON
-    MEASUrement:MEAS8:RESUlts:ALLAcqs:MEAN?       -> -3.7612612612612E-3   (0.00s)
-    MEASUrement:MEAS8:RESUlts:ALLAcqs:MINimum?    -> -3.7612612612612E-3   (0.00s)
-    MEASUrement:MEAS8:RESUlts:ALLAcqs:MAXimum?    -> -3.7612612612612E-3   (0.00s)
-    MEASUrement:MEAS8:RESUlts:ALLAcqs:POPUlation? -> 1   (0.00s)
-    MEASUrement:MEAS8:RESUlts:CURRentacq:MEAN?    -> -3.7612612612612E-3   (0.00s)
-    MEASUrement:DELete "MEAS8"
-    DISplay:WAVEView1:CURSor:CURSOR1:STATE?       -> 0   (0.02s)
-    DISplay:WAVEView1:CURSor:CURSOR1:STATE ON
-    DISplay:WAVEView1:CURSor:CURSOR1:FUNCtion WAVEFORM
-    DISplay:WAVEView1:CURSor:CURSOR1:ASOUrce CH1
-    DISplay:WAVEView1:CURSor:CURSOR1:BSOUrce CH1
-    DISplay:WAVEView1:CURSor:CURSOR1:WAVEform:APOSition 0
-    DISplay:WAVEView1:CURSor:CURSOR1:WAVEform:APOSition? -> 0.0E+0   (0.06s)
-    DISplay:WAVEView1:CURSor:CURSOR1:STATE OFF
-  => 통과 (1.3s)
-
-모든 단계 통과
-이 파일과 C:\Users\mdl\Desktop\허동환\택트로닉스\scope_tech-claude-dreamy-edison-55q1f3\logs\scpi_20261017.log 를 보내주세요.
