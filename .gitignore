@@ -3,3 +3,7 @@ captures_sim/
 logs/
 __pycache__/
 *.pyc
+
+
+.session.json
+.session_sim.json

@@ -45,6 +45,7 @@ class Bench:
         self.name = cfg.get("session", "name")
         self.spec_name = cfg.get("session", "spec")
         self.out_type = cfg.get("session", "out_type").upper() or "PP"
+        self.dut_pin = ""
         self.record: Record | None = None
 
     # ------------------------------------------------------------------ 공통
@@ -52,6 +53,8 @@ class Bench:
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         chs = "-".join(f"CH{c}" for c in channels)
         base = f"{_safe(self.name)}_{_safe(self.temp)}C" + (f"_{chs}" if chs else "") + f"_{ts}"
+        if self.dut_pin:
+            base = f"PIN{_safe(self.dut_pin)}_{base}"
         folder = self.out_dir / item / base
         n = 2
         while folder.exists():
@@ -62,6 +65,7 @@ class Bench:
 
     def _base_result(self, item: str) -> dict:
         return {
+            "dut_pin": self.dut_pin,
             "item": item,
             "name": self.name,
             "temp": self.temp,
@@ -308,3 +312,4 @@ class Bench:
         else:
             self.scope.cursor_on(False)
         self.scope.check("측정/커서 삭제", raise_=False)
+

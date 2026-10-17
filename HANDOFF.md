@@ -64,3 +64,10 @@ Tektronix **MSO58B** (FV 2.24.4, Windows 내장형, TPP1000 프로브, CH1~7 연
 - 매뉴얼: https://download.tek.com/manual/4-5-6-Series-MSO_Programmer_077189805.pdf (`pdftotext` 후 grep 으로 명령 확인)
 - 커밋 메시지 끝 attribution 은 세션 지침을 따를 것. 모델명은 커밋/PR 에 쓰지 말 것.
 
+
+## 안내형 실행 추가
+- 사용자 보고: AOE 수정 후 사전 점검 및 실제 측정/캡처/저장 정상 동작 확인.
+- 기본 `scope.py` 실행은 `scopetech/wizard.py`의 핀 → 항목 → 채널 → 준비 Enter 안내형 메뉴. 기존 셸은 `--shell`, 단일 명령 인자는 그대로 지원.
+- DUT 핀은 `Bench.dut_pin`, 결과 JSON `dut_pin`, 폴더 `PIN번호_`로 기록. VIL/VIH와 VOH/VOL은 각각 쌍으로 측정.
+- 이전 설정은 .session.json(실장비)/.session_sim.json(연습)에 저장, git 제외. 시험 이름·온도는 준비 화면 s로 변경. 오류 시 종료.
+- 새 안내형 메뉴의 실장비 사용자 테스트는 아직 필요.

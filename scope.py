@@ -54,6 +54,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Tektronix MSO58B VIL/VIH/VOH/VOL 측정 도우미")
     ap.add_argument("--config", default=str(HERE / "config.ini"), help="설정 파일 (기본: config.ini)")
     ap.add_argument("--sim", action="store_true", help="스코프 없이 시뮬레이터로 실행")
+    ap.add_argument("--shell", action="store_true", help="기존 명령어 셸로 실행")
     ap.add_argument("--debug", action="store_true", help="SCPI 송수신을 화면에 출력")
     ap.add_argument("--temp", help="온도 (예: 85)")
     ap.add_argument("--name", help="시험 이름 (예: INV_3V3)")
@@ -92,12 +93,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.type:
         bench.out_type = args.type.upper()
 
+    bench.explicit_options = {key for key, value in (("temp", args.temp), ("name", args.name), ("out_type", args.type)) if value}
     shell = ScopeShell(bench)
     try:
         if args.command:
             shell.onecmd(" ".join(args.command))
-        else:
+        elif args.shell:
             shell.cmdloop()
+        else:
+            from scopetech.wizard import Wizard
+            state_path = HERE / (".session_sim.json" if args.sim else ".session.json")
+            return Wizard(bench, state_path).run()
     except KeyboardInterrupt:
         print()
     finally:
@@ -107,3 +113,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

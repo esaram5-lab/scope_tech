@@ -25,7 +25,13 @@ Tektronix MSO58B로 PLD(SLG4AD4449) 입출력 레벨을 측정하고, 명령 하
 
 ## 2. 실행
 
-- `run_scope.bat`을 더블클릭하거나, 명령창에서 `py scope.py`를 실행합니다.
+- `run_scope.bat`을 더블클릭하거나 `py -3.13 scope.py`를 실행하면 **안내형 메뉴**가 시작됩니다.
+- **DUT 핀 번호 → VIL/VIH 또는 VOH/VOL → 스코프 채널 → 준비 후 Enter** 순서입니다. Enter 한 번으로 측정·캡처·파형 저장을 진행합니다.
+- VIL/VIH는 입력/출력 채널을, VOH/VOL은 출력 채널과 PP/OD를 선택합니다. 핀 번호는 스코프 채널과 별개이며 폴더의 `PIN12_`와 `result.json`의 `dut_pin`에 기록됩니다.
+- 준비 화면에서 `s`를 누르면 시험 이름·온도를 바꿀 수 있습니다. 완료 후 같은 조건 재측정 / 다른 핀·항목 / 종료를 선택합니다. 입력 중 `q`로 종료할 수 있습니다.
+- 직전 핀·채널·시험 이름·온도는 다음 실행의 기본값으로 기억합니다. Enter로 유지합니다. 실장비와 시뮬레이터 설정은 따로 기억하며, `--name`, `--temp`, `--type` 지정값이 우선합니다.
+- 오류가 나면 완료로 표시하지 않고 종료합니다. 장비 화면과 로그를 확인해주세요.
+- 기존 명령어 셸은 `py -3.13 scope.py --shell`로 실행합니다. 아래 명령어 예시는 이 셸 기준입니다.
 - **연습:** `py scope.py --sim`으로 스코프 없이 시뮬레이터로 모든 명령을 해볼 수 있습니다. 결과는 `captures_sim/`에 저장됩니다.
 - **한 번만 실행:** `py scope.py --temp 85 --name INV_3V3 all vih 1 2`처럼 명령 하나만 실행하고 끝낼 수도 있습니다.
 
@@ -135,3 +141,4 @@ logs/scpi_20261017.log                <- 스코프 송수신 기록(문제 확�
 python -m unittest discover -s tests -t .
 ```
 시뮬레이터(`scopetech/sim.py`)와 가짜 TCP 서버, 가짜 VISA DLL로 LAN/USB 전체 흐름을 테스트합니다. SCPI 명령은 Tektronix *4/5/6 Series MSO Programmer Manual* (077-1898-05) 기준입니다.
+
