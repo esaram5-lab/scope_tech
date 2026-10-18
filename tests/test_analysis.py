@@ -64,7 +64,7 @@ class ThresholdTest(unittest.TestCase):
         self.assertAlmostEqual(res.vt_minus_v[0], 1.2, delta=0.005)
         self.assertAlmostEqual(res.vt_plus[0].time, a.time_at(res.vt_plus[0].index), places=9)
 
-    def test_chatter_uses_first_crossing(self):
+    def test_chatter_uses_worst_crossing(self):
         vin = triangle()
         out = schmitt(vin, 1.9, 1.4)
         # 첫 상승 구간 전환 직후 출력이 한 번 되돌아갔다가 다시 전환(떨림)
@@ -73,7 +73,9 @@ class ThresholdTest(unittest.TestCase):
             out[i] = 3.3
         res = find_thresholds(wf("CH1", vin), wf("CH2", out))
         self.assertEqual(res.chatter, 1)
-        self.assertAlmostEqual(res.vt_plus_v[0], 1.9, delta=0.005)
+        # 떨림 구간에서는 입력이 더 올라간 뒤의 마지막 전환(최악값)을 VT+ 로 쓴다
+        self.assertGreater(res.vt_plus_v[0], 1.9 + 0.02)
+        self.assertAlmostEqual(res.vt_plus_v[1], 1.9, delta=0.005)
         self.assertTrue(any("떨림" in w for w in res.warnings))
 
     def test_flat_output_warns(self):

@@ -78,11 +78,21 @@ class Bench:
     def _finish(self, rec: Record) -> None:
         results.write_json(rec.folder / "result.json", rec.result)
         rows = results.rows_for(rec.result, self.cfg.spec(self.spec_name), rec.folder.relative_to(self.out_dir).as_posix())
-        results.append_csv(self.out_dir / "results.csv", rows)
         for r in rows:
             if r["judge"]:
                 self.echo(f"  판정 {r['metric']:<14} worst {r['worst_V']:>8} V  {r['rule']} {r['spec_V'] or '-':>6}  -> {r['judge']}")
         self.echo(f"  폴더: {rec.folder}")
+        try:
+            results.append_csv(self.out_dir / "results.csv", rows)
+        except OSError as e:
+            # 엑셀에서 results.csv 를 열어두면 쓰기가 막힌다. 측정을 중단하지 않고 별도 파일에 남긴다.
+            pending = self.out_dir / f"results_pending_{datetime.now():%Y%m%d_%H%M%S}.csv"
+            try:
+                results.write_csv(pending, rows)
+                where = f"{pending.name} 에 대신 저장"
+            except OSError:
+                where = "result.json 에만 저장(analyze.py 로 요약 재생성 가능)"
+            self.echo(f"  [경고] results.csv 에 기록하지 못했습니다(엑셀에서 열려 있나요?): {e}\n         -> {where}")
 
     def _prepare_overlay(self) -> None:
         """새 측정 전에 이전 측정/커서를 정리한다."""

@@ -19,10 +19,10 @@ class Wizard:
         except (OSError, ValueError):
             pass
 
-    def prompt(self, label, default='', valid=lambda x: True):
+    def prompt(self, label, default='', valid=lambda x: True, allow_quit=True):
         while True:
             value = self.ask(f'{label}' + (f' [{default}]' if default else '') + ' > ').strip()
-            if value.lower() == 'q':
+            if allow_quit and value.lower() == 'q':
                 raise EOFError
             value = value or str(default)
             if valid(value):
@@ -71,7 +71,7 @@ class Wizard:
                     label = self.prompt('시험 항목 이름 (R_pd / R_pu / IOH 등)', self.state.get('manual_label', 'R_pd'), lambda s: bool(s))
                     raw = self.prompt('저장할 채널 번호 (예: 1,2)', self.state.get('manual_channels', '1'), self.valid_channels)
                     chans = list(dict.fromkeys(int(x) for x in raw.replace(',', ' ').split()))
-                    note = self.prompt('조건 메모 (저항·전원·부하 등, 생략 가능)', '')
+                    note = self.prompt('조건 메모 (저항·전원·부하 등, 생략 가능)', '', allow_quit=False)
                     self.state.update({'manual_label': label, 'manual_channels': raw})
                 self.state.update({'pin': pin, 'item': item})
                 while True:

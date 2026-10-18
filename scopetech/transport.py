@@ -345,7 +345,33 @@ class VisaTransport(Transport):
                 + ".\n  - 스코프 뒷면 USB Device 포트(USB 3.0 B 타입)에 연결했는지 확인\n"
                 "  - Utility > I/O > USB Device Port 가 켜져 있는지 확인"
             )
-        return tek[0]
+        if len(tek) == 1:
+            return tek[0]
+        # Tek 함수발생기 등 다른 Tek 장비가 같이 연결된 경우 *IDN? 으로 스코프를 고른다
+        idns = []
+        for r in tek:
+            idn = self._probe_idn(r)
+            idns.append(f"{r} = {idn or '응답 없음'}")
+            if idn and idn.split(",")[1:2] and idn.split(",")[1].strip().upper().startswith(("MSO", "DPO", "LPD")):
+                return r
+        raise ScopeError("USB 에 Tektronix 장비가 여러 대인데 스코프를 고르지 못했습니다:\n  " + "\n  ".join(idns)
+                         + "\n  config.ini 의 usb_resource 에 스코프 주소를 적어주세요.")
+
+    def _probe_idn(self, resource: str) -> str:
+        vi = ctypes.c_uint32()
+        if self.lib.viOpen(self.rm, resource.encode(), 0, 0, ctypes.byref(vi)) < 0:
+            return ""
+        try:
+            self.lib.viSetAttribute(vi, VI_ATTR_TMO_VALUE, 2000)
+            ret = ctypes.c_uint32()
+            if self.lib.viWrite(vi, b"*IDN?\n", 6, ctypes.byref(ret)) < 0:
+                return ""
+            buf = ctypes.create_string_buffer(512)
+            if self.lib.viRead(vi, buf, len(buf), ctypes.byref(ret)) < 0:
+                return ""
+            return ctypes.string_at(buf, ret.value).decode("latin-1").strip()
+        finally:
+            self.lib.viClose(vi)
 
     def _apply_timeout(self, seconds: float) -> None:
         self.lib.viSetAttribute(self.vi, VI_ATTR_TMO_VALUE, int(seconds * 1000))

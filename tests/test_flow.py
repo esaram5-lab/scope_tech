@@ -73,6 +73,17 @@ class SimFlowTest(unittest.TestCase):
         self.bench.vih(1, 2, hold=True)
         self.assertEqual(self.sim.meas, {})
 
+    def test_results_csv_locked_does_not_abort(self):
+        from unittest import mock
+        msgs = []
+        self.bench.echo = msgs.append
+        with mock.patch.object(results, "append_csv", side_effect=PermissionError("locked")):
+            rec = self.bench.vih(1, 2, hold=True)
+        self.assertTrue((rec.folder / "result.json").exists())
+        self.assertTrue(list(self.out.glob("results_pending_*.csv")))
+        self.assertTrue(any("results.csv" in m for m in msgs))
+        self.bench.capture()  # 이후 흐름 계속
+
     def test_capture_without_measure(self):
         shots = self.bench.capture()
         self.assertEqual([p.name for p in shots], ["clean.png"])
@@ -96,6 +107,13 @@ class ResultsTest(unittest.TestCase):
         for metric, out_type, expect in cases:
             self.assertEqual(results.judge(metric, self.spec, out_type)[2], expect, metric)
         self.assertEqual(results.judge(cases[0][0], {}, "PP")[2], "N/A")
+
+    def test_unknown_polarity_not_judged(self):
+        from scopetech.analysis import ThresholdResult, Transition
+        th = ThresholdResult(vt_plus=[Transition(0, 0, 1.9, "rise", "rise")],
+                             vt_minus=[Transition(1, 1, 1.4, "fall", "rise")], polarity="unknown")
+        rows = results.vih_metrics(th, "CH1->CH2", "s")
+        self.assertEqual([results.judge(r, self.spec, "PP")[2] for r in rows[:2]], ["N/A(극성불명)"] * 2)
 
     def test_block_header(self):
         start, length = parse_block_header(b"#41234" + b"x" * 1234 + b"\n")

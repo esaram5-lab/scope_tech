@@ -252,7 +252,8 @@ def find_thresholds(
     elif same * 2 < len(known):
         res.polarity = "inverting"
 
-    # 같은 램프 구간(입력 방향이 같은 연속 전환)은 하나로 묶고, 극성에 맞는 첫 전환을 대표값으로 사용
+    # 같은 램프 구간(입력 방향이 같은 연속 전환)은 하나로 묶고, 극성에 맞는 전환 중 최악값을 대표값으로 사용
+    # (입력 상승: 가장 높은 입력 전압 = VT+ 최악, 입력 하강: 가장 낮은 입력 전압 = VT- 최악)
     groups: list[list[Transition]] = []
     for tr in known:
         if groups and groups[-1][0].input_dir == tr.input_dir:
@@ -270,8 +271,9 @@ def find_thresholds(
         if not match:
             skipped += 1
             continue
-        match[0].extra = len(g) - 1
-        reps.append(match[0])
+        rep = max(match, key=lambda t: t.vin) if g[0].input_dir == "rise" else min(match, key=lambda t: t.vin)
+        rep.extra = len(g) - 1
+        reps.append(rep)
     res.chatter = sum(1 for r in reps if r.extra)
     res.vt_plus = [r for r in reps if r.input_dir == "rise"]
     res.vt_minus = [r for r in reps if r.input_dir == "fall"]
@@ -282,7 +284,7 @@ def find_thresholds(
         res.warnings.append("입력 하강 구간에서 출력 전환이 없습니다. 램프 진폭/시간축(3주기)을 확인하세요.")
     if res.chatter:
         res.warnings.append(
-            f"문턱 근처에서 출력이 여러 번 바뀐 구간이 {res.chatter}곳 있습니다(떨림). 각 구간의 첫 전환을 사용했습니다."
+            f"문턱 근처에서 출력이 여러 번 바뀐 구간이 {res.chatter}곳 있습니다(떨림). 각 구간의 최악 전환(VT+ 최대, VT- 최소)을 사용했습니다."
         )
     if unknown:
         res.warnings.append(f"입력 방향을 판별할 수 없는 전환 {unknown}건(램프 꼭지점 근처)은 제외했습니다.")

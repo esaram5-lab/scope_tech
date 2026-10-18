@@ -153,6 +153,40 @@ class VisaTest(unittest.TestCase):
         self.assertEqual(t.description, "USB USB0::0x0699::0x0522::SIM0001::INSTR")
         run_flow(self, t, sim)
 
+    def test_picks_scope_among_tek_devices(self):
+        fake = FakeVisa(SimScope())
+        afg = b"USB0::0x0699::0x0353::AFG001::INSTR\0"
+        scope = b"USB0::0x0699::0x0522::SIM0001::INSTR\0"
+        names = [afg, scope]
+
+        def find(rm, expr, flist, count, desc):
+            count._obj.value = 2
+            ctypes.memmove(desc, names[0], len(names[0]))
+            return 0
+
+        def find_next(flist, desc):
+            ctypes.memmove(desc, names[1], len(names[1]))
+            return 0
+
+        opened = {}
+
+        def vopen(rm, name, mode, tmo, vi):
+            vi._obj.value = len(opened) + 10
+            opened[vi._obj.value] = name
+            return 0
+
+        def write(vi, data, n, ret):
+            ret._obj.value = n
+            if opened.get(getattr(vi, "value", vi)) == afg.rstrip(b"\0"):
+                fake.pending = b"TEKTRONIX,AFG31022,AFG001,FV:1.0\n"
+                return 0
+            return fake._viWrite(vi, data, n, ret)
+
+        fake.viFindRsrc.fn, fake.viFindNext.fn, fake.viOpen.fn, fake.viWrite.fn = find, find_next, vopen, write
+        with mock.patch.object(transport, "_load_visa_library", return_value=fake):
+            t = VisaTransport(timeout=5)
+        self.assertIn("0x0522", t.description)
+
     def test_timeout_raises(self):
         fake = FakeVisa(SimScope())
         with mock.patch.object(transport, "_load_visa_library", return_value=fake):

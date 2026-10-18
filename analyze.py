@@ -162,7 +162,11 @@ def main(argv: list[str] | None = None) -> int:
         rows += results.rows_for(result, spec, folder.relative_to(base).as_posix())
 
     out = base / "summary.csv"
-    results.write_csv(out, rows)
+    try:
+        results.write_csv(out, rows)
+    except OSError as e:
+        print(f"[오류] {out} 를 쓸 수 없습니다(엑셀에서 열려 있나요?): {e}")
+        return 1
     n_fail = sum(1 for r in rows if r["judge"] == "FAIL")
     n_pass = sum(1 for r in rows if r["judge"] == "PASS")
     print(f"결과 {len(files)}건, 판정 PASS {n_pass} / FAIL {n_fail}  ->  {out}")

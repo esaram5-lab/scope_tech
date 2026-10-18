@@ -27,11 +27,15 @@ def metric(channel: str, signal: str, name: str, key: str | None, typ, worst, n=
 
 def vih_metrics(th: ThresholdResult, pair: str, signal: str) -> list[dict]:
     p, m = summarize(th.vt_plus_v), summarize(th.vt_minus_v)
-    return [
+    rows = [
         metric(pair, signal, "VT+ (VIH측)", "VIH", p and p["mean"], p and p["max"], p and p["n"]),
         metric(pair, signal, "VT- (VIL측)", "VIL", m and m["mean"], m and m["min"], m and m["n"]),
         metric(pair, signal, "Hysteresis", None, th.hysteresis, None),
     ]
+    if th.polarity == "unknown":  # 반전/비반전을 확정하지 못하면 판정하지 않는다
+        for r in rows[:2]:
+            r["invalid"] = "극성불명"
+    return rows
 
 
 def judge(m: dict, spec: dict, out_type: str) -> tuple[float | None, str, str]:
@@ -41,6 +45,8 @@ def judge(m: dict, spec: dict, out_type: str) -> tuple[float | None, str, str]:
         return None, "", ""
     if key == "VOH" and out_type.upper() == "OD":
         return None, "", "N/A(OD)"
+    if m.get("invalid"):
+        return None, "", f"N/A({m['invalid']})"
     spec_key, rule = RULES[key]
     limit = spec.get(spec_key)
     worst = m.get("worst")

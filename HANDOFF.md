@@ -82,3 +82,11 @@ Tektronix **MSO58B** (FV 2.24.4, Windows 내장형, TPP1000 프로브, CH1~7 연
 - 기본 메뉴 3: R_pd/R_pu/IOH 등 자유 항목 이름, 다중 채널, 조건 메모 입력.
 - Bench.save_manual: 자동 측정/판정 없이 현재 파형 CSV → 추가 획득 화면 screen.png 저장. 기존 측정/커서 유지.
 - MANUAL/PIN..._항목 폴더와 result.json에 조건/완료 여부 기록, CSV와 화면은 동일 획득 아님. DC는 Auto 트리거 안내.
+
+## 2026-10-18 리뷰 반영 (완료)
+- `results.csv` 쓰기 실패(엑셀 열림) 시 중단하지 않고 `results_pending_*.csv` 로 저장, 판정 출력은 먼저 표시. `analyze.py` summary 쓰기 실패도 안내 후 종료.
+- 떨림 구간 대표값을 최악값으로(VT+ 최대, VT- 최소). README 반영.
+- 출력 극성 불명이면 VIH/VIL 판정 `N/A(극성불명)`.
+- USB 자동검색: Tek 장비가 여러 대면 `*IDN?` 으로 MSO/DPO/LPD 를 선택, 못 고르면 목록과 함께 `usb_resource` 지정 안내.
+- `waveform.csv` UTF-8 BOM. 안내형 메뉴 조건 메모에서 `q` 는 종료가 아닌 메모로 처리.
+- 테스트 33개 통과. 사용자 업로드 `log` 파일은 사용자 요청으로 유지.

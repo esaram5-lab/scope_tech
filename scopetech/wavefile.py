@@ -22,7 +22,7 @@ def write_csv(folder: Path, wfs: list[Waveform], names: dict[str, str] | None = 
 def _write_group(path: Path, group: list[Waveform], names: dict[str, str]) -> None:
     ref = group[0]
     scales = [(w.raw, w.ymult, w.yoff, w.yzero) for w in group]
-    with path.open("w", newline="", encoding="utf-8") as f:
+    with path.open("w", newline="", encoding="utf-8-sig") as f:  # BOM: 엑셀에서 한글 채널 이름
         # 주석 줄: 채널 이름(엑셀에서 열면 첫 줄에 보임)
         f.write("# " + ", ".join(f"{w.source}={names.get(w.source, w.source)}" for w in group) + "\n")
         f.write("time_s," + ",".join(f"{w.source}_V" for w in group) + "\n")
