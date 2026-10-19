@@ -1,298 +1,276 @@
-seq_test 2026-10-19 16:47:33  python=3.13.16  interface=usb  in=CH1 out=CH2  repeat=5
-capture 대기: aoe_arm_wait_s=2, aoe_save_wait_s=5, aoe_post_wait_s=3
-      16:47:33.511 (+   401ms) > *CLS
-      16:47:33.512 (+     0ms) > HEADer OFF
-      16:47:33.512 (+     0ms) > VERBose ON
-      16:47:33.516 (+     4ms) > *IDN?
-      16:47:33.520 (+     4ms) < TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14
-      16:47:33.520 (+     0ms) > FILESystem:MKDir "C:/scope_tech_tmp"
-      16:47:33.520 (+     0ms) > *OPC?
-      16:47:33.534 (+    14ms) < 1
-      16:47:33.534 (+     0ms) > *ESR?
-      16:47:33.563 (+    28ms) < 16
-      16:47:33.563 (+     0ms) > ALLEv?
-      16:47:33.564 (+     1ms) < 257,"File name error; The destination already contains a folder named; FILESystem:MKDir ""C:/scope_tech_tmp""\n",257,"File name error; The destination already contains a folder named"
-연결: TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14  (USB USB0::0x0699::0x0522::C081164::INSTR)
+scope_check 2026-10-19 16:52:44  interface=usb  timeout_s=10  python=3.13.16
+연결: USB USB0::0x0699::0x0522::C081164::INSTR
 
-===== 1/5 회 =====
-  [0 상태정리] 시작
-      16:47:33.767 (+   204ms) > *CLS
-      16:47:33.768 (+     0ms) > ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
-      16:47:33.772 (+     4ms) > ACTONEVent:ENable 0
-      16:47:33.772 (+     0ms) > MAINWindow:RRBDisplaystate ON
-      16:47:33.772 (+     0ms) > *OPC?
-      16:47:33.795 (+    22ms) < 1
-      16:47:33.795 (+     0ms) > *IDN?
-      16:47:33.796 (+     1ms) < TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14
-      16:47:33.796 (+     0ms) > *CLS
-  [0 상태정리] 통과 (0.2s)
-  [2 화면캡처] 시작
-      16:47:33.797 (+     1ms) > ACQuire:STATE?
-      16:47:33.799 (+     1ms) < 1
-      16:47:33.799 (+     0ms) > ACQuire:STATE STOP
-      16:47:33.799 (+     0ms) > ACQuire:STATE?
-      16:47:33.803 (+     3ms) < 0
-      16:47:33.803 (+     0ms) > BUSY?
-      16:47:33.804 (+     1ms) < 0
-      16:47:34.804 (+  1000ms) > FILESystem:CWD?
-      16:47:34.806 (+     2ms) < "C:/Users/Public/Tektronix/TekScope"
-      16:47:34.806 (+     0ms) > SAVe:IMAGe:COMPosition NORMal
-      16:47:34.806 (+     0ms) > SAVEONEVent:FILEDest "C:/Users/Public/Tektronix/TekScope"
-      16:47:34.806 (+     0ms) > SAVEONEVent:FILEName "scopetech396054806"
-      16:47:34.806 (+     0ms) > SAVEONEVent:IMAGe:FILEFormat PNG
-      16:47:34.807 (+     0ms) > ACTONEVent:LIMit UNLIMITED
-      16:47:34.807 (+     0ms) > ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON
-      16:47:34.807 (+     0ms) > ACTONEVent:ENable 1
-      16:47:34.807 (+     0ms) > *OPC?
-      16:47:34.830 (+    23ms) < 1
-      16:47:36.941 (+  2111ms) > ACQuire:STOPAfter SEQuence
-      16:47:36.942 (+     1ms) > ACQuire:STATE ON
-      16:47:36.942 (+     0ms) > ACQuire:STATE?
-      16:47:36.954 (+    12ms) < 1
-      16:47:37.054 (+   101ms) > ACQuire:STATE?
-      16:47:37.056 (+     2ms) < 1
-      16:47:37.157 (+   101ms) > ACQuire:STATE?
-      16:47:37.158 (+     2ms) < 0
-      16:47:37.159 (+     0ms) > *ESR?
-      16:47:37.165 (+     6ms) < 0
-      16:47:42.165 (+  5001ms) > BUSY?
-      16:47:42.167 (+     2ms) < 0
-      16:47:46.186 (+  4018ms) > ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
-      16:47:46.186 (+     1ms) > ACTONEVent:ENable 0
-      16:47:46.186 (+     0ms) > *OPC?
-      16:47:46.201 (+    14ms) < 1
-  [2 화면캡처] 통과 (15.5s)
+[1/10] 연결 확인 (*IDN?)
+    *CLS
+    HEADer OFF
+    VERBose ON
+    *IDN?                                         -> TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14   (0.00s)
+    *OPT?                                         -> SUP5-SREMBD:License; Embedded serial triggering and analysis (I2C, SPI); Node locked,SUP5-SRI3C:License; I3C Serial Analysis (I3C); Node Locked,BW5-20   (0.00s)
+  => 통과 (0.0s)
 
-===== 2/5 회 =====
-  [0 상태정리] 시작
-      16:47:49.519 (+  3318ms) > *CLS
-      16:47:49.520 (+     0ms) > ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
-      16:47:49.520 (+     0ms) > ACTONEVent:ENable 0
-      16:47:49.520 (+     0ms) > MAINWindow:RRBDisplaystate ON
-      16:47:49.521 (+     0ms) > *OPC?
-      16:47:49.529 (+     8ms) < 1
-      16:47:49.529 (+     0ms) > *IDN?
-      16:47:49.531 (+     2ms) < TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14
-      16:47:49.531 (+     0ms) > *CLS
-  [0 상태정리] 통과 (0.2s)
-  [2 화면캡처] 시작
-      16:47:49.532 (+     1ms) > ACQuire:STATE?
-      16:47:49.533 (+     1ms) < 0
-      16:47:49.533 (+     0ms) > BUSY?
-      16:47:49.534 (+     1ms) < 0
-      16:47:50.539 (+  1005ms) > FILESystem:CWD?
-      16:47:50.541 (+     2ms) < "C:/Users/Public/Tektronix/TekScope"
-      16:47:50.541 (+     0ms) > SAVe:IMAGe:COMPosition NORMal
-      16:47:50.541 (+     0ms) > SAVEONEVent:FILEDest "C:/Users/Public/Tektronix/TekScope"
-      16:47:50.542 (+     0ms) > SAVEONEVent:FILEName "scopetech396070541"
-      16:47:50.542 (+     0ms) > SAVEONEVent:IMAGe:FILEFormat PNG
-      16:47:50.542 (+     0ms) > ACTONEVent:LIMit UNLIMITED
-      16:47:50.542 (+     0ms) > ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON
-      16:47:50.543 (+     0ms) > ACTONEVent:ENable 1
-      16:47:50.543 (+     0ms) > *OPC?
-      16:47:50.568 (+    25ms) < 1
-      16:47:52.669 (+  2101ms) > ACQuire:STOPAfter SEQuence
-      16:47:52.669 (+     1ms) > ACQuire:STATE ON
-      16:47:52.670 (+     1ms) > ACQuire:STATE?
-      16:47:52.674 (+     4ms) < 1
-      16:47:52.775 (+   101ms) > ACQuire:STATE?
-      16:47:52.776 (+     2ms) < 0
-      16:47:52.777 (+     0ms) > *ESR?
-      16:47:52.784 (+     7ms) < 0
-      16:47:57.785 (+  5001ms) > BUSY?
-      16:47:57.787 (+     2ms) < 0
-      16:48:01.805 (+  4018ms) > ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
-      16:48:01.806 (+     1ms) > ACTONEVent:ENable 0
-      16:48:01.806 (+     1ms) > *OPC?
-      16:48:01.826 (+    20ms) < 1
-  [2 화면캡처] 통과 (15.4s)
+[2/10] 기본 상태 조회 (스코프 변경 없음)
+    ACQuire:STATE?                                -> 0   (0.00s)
+    ACQuire:STOPAfter?                            -> SEQUENCE   (0.00s)
+    ACQuire:MODe?                                 -> SAMPLE   (0.00s)
+    ACQuire:NUMACq?                               -> 1   (0.00s)
+    HORizontal:RECOrdlength?                      -> 1250000   (0.00s)
+    HORizontal:MODe?                              -> AUTO   (0.00s)
+    TRIGger:A:MODe?                               -> NORMAL   (0.00s)
+    MEASUrement:LIST?                             -> NONE   (0.00s)
+    DISplay:GLObal:CH1:STATE?                     -> 1   (0.00s)
+    DISplay:GLObal:CH2:STATE?                     -> 1   (0.00s)
+    DISplay:GLObal:CH3:STATE?                     -> 0   (0.00s)
+    DISplay:GLObal:CH4:STATE?                     -> 0   (0.00s)
+    DISplay:GLObal:CH5:STATE?                     -> 0   (0.00s)
+    DISplay:GLObal:CH6:STATE?                     -> 0   (0.00s)
+    DISplay:GLObal:CH7:STATE?                     -> 0   (0.00s)
+    DISplay:GLObal:CH8:STATE?                     -> 0   (0.00s)
+    화면에 켜진 채널: [1, 2]
+  => 통과 (0.0s)
 
-===== 3/5 회 =====
-  [0 상태정리] 시작
-      16:48:05.154 (+  3328ms) > *CLS
-      16:48:05.155 (+     0ms) > ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
-      16:48:05.155 (+     0ms) > ACTONEVent:ENable 0
-      16:48:05.155 (+     0ms) > MAINWindow:RRBDisplaystate ON
-      16:48:05.156 (+     0ms) > *OPC?
-      16:48:05.164 (+     9ms) < 1
-      16:48:05.165 (+     0ms) > *IDN?
-      16:48:05.166 (+     2ms) < TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14
-      16:48:05.167 (+     0ms) > *CLS
-  [0 상태정리] 통과 (0.2s)
-  [2 화면캡처] 시작
-      16:48:05.168 (+     1ms) > ACQuire:STATE?
-      16:48:05.169 (+     1ms) < 0
-      16:48:05.169 (+     0ms) > BUSY?
-      16:48:05.171 (+     2ms) < 0
-      16:48:06.171 (+  1001ms) > FILESystem:CWD?
-      16:48:06.173 (+     2ms) < "C:/Users/Public/Tektronix/TekScope"
-      16:48:06.173 (+     0ms) > SAVe:IMAGe:COMPosition NORMal
-      16:48:06.173 (+     0ms) > SAVEONEVent:FILEDest "C:/Users/Public/Tektronix/TekScope"
-      16:48:06.173 (+     0ms) > SAVEONEVent:FILEName "scopetech396086173"
-      16:48:06.174 (+     0ms) > SAVEONEVent:IMAGe:FILEFormat PNG
-      16:48:06.174 (+     0ms) > ACTONEVent:LIMit UNLIMITED
-      16:48:06.174 (+     0ms) > ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON
-      16:48:06.174 (+     0ms) > ACTONEVent:ENable 1
-      16:48:06.174 (+     0ms) > *OPC?
-      16:48:06.198 (+    24ms) < 1
-      16:48:08.299 (+  2101ms) > ACQuire:STOPAfter SEQuence
-      16:48:08.300 (+     0ms) > ACQuire:STATE ON
-      16:48:08.300 (+     0ms) > ACQuire:STATE?
-      16:48:08.305 (+     5ms) < 1
-      16:48:08.405 (+   101ms) > ACQuire:STATE?
-      16:48:08.407 (+     2ms) < 0
-      16:48:08.407 (+     0ms) > *ESR?
-      16:48:08.414 (+     7ms) < 0
-      16:48:13.415 (+  5001ms) > BUSY?
-      16:48:13.417 (+     2ms) < 0
-      16:48:17.435 (+  4018ms) > ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
-      16:48:17.435 (+     0ms) > ACTONEVent:ENable 0
-      16:48:17.436 (+     0ms) > *OPC?
-      16:48:17.452 (+    16ms) < 1
-  [2 화면캡처] 통과 (15.4s)
+[3/10] 파일 시스템: 현재 폴더 조회, 임시 폴더 생성 (폴더 이동/목록 조회는 하지 않음)
+    FILESystem:CWD?                               -> "C:/Users/Public/Tektronix/TekScope"   (0.00s)
+    FILESystem:HOMEDir?                           -> "C:/Users/Tek_Local_Admin"   (0.00s)
+    FILESystem:MKDir "C:/scope_tech_tmp"
+    *OPC?                                         -> 1   (0.02s)
+    [스코프 오류] ESR=16  257,"File name error; The destination already contains a folder named; FILESystem:MKDir ""C:/scope_tech_tmp""\n",257,"File name error; The destination already contains a folder named"
+    FILESystem:DELEte "C:/scope_tech_tmp/scope_tech_screen.png"
+    FILESystem:DELEte "C:/scope_tech_tmp/check_screen.png"
+    FILESystem:DELEte "C:/scope_tech_tmp/check_screen2.png"
+    FILESystem:DELEte "C:/scope_tech_tmp/check_clean.png"
+    *OPC?                                         -> 1   (0.01s)
+  => 통과 (0.1s)
 
-===== 4/5 회 =====
-  [0 상태정리] 시작
-      16:48:20.772 (+  3320ms) > *CLS
-      16:48:20.773 (+     1ms) > ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
-      16:48:20.774 (+     1ms) > ACTONEVent:ENable 0
-      16:48:20.774 (+     1ms) > MAINWindow:RRBDisplaystate ON
-      16:48:20.775 (+     1ms) > *OPC?
-      16:48:20.782 (+     7ms) < 1
-      16:48:20.783 (+     0ms) > *IDN?
-      16:48:20.784 (+     1ms) < TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14
-      16:48:20.784 (+     0ms) > *CLS
-  [0 상태정리] 통과 (0.2s)
-  [2 화면캡처] 시작
-      16:48:20.787 (+     2ms) > ACQuire:STATE?
-      16:48:20.788 (+     2ms) < 0
-      16:48:20.788 (+     0ms) > BUSY?
-      16:48:20.790 (+     2ms) < 0
-      16:48:21.791 (+  1001ms) > FILESystem:CWD?
-      16:48:21.793 (+     2ms) < "C:/Users/Public/Tektronix/TekScope"
-      16:48:21.793 (+     0ms) > SAVe:IMAGe:COMPosition NORMal
-      16:48:21.794 (+     1ms) > SAVEONEVent:FILEDest "C:/Users/Public/Tektronix/TekScope"
-      16:48:21.794 (+     1ms) > SAVEONEVent:FILEName "scopetech396101793"
-      16:48:21.795 (+     1ms) > SAVEONEVent:IMAGe:FILEFormat PNG
-      16:48:21.796 (+     1ms) > ACTONEVent:LIMit UNLIMITED
-      16:48:21.796 (+     1ms) > ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON
-      16:48:21.797 (+     1ms) > ACTONEVent:ENable 1
-      16:48:21.797 (+     1ms) > *OPC?
-      16:48:21.817 (+    20ms) < 1
-      16:48:23.918 (+  2101ms) > ACQuire:STOPAfter SEQuence
-      16:48:23.919 (+     0ms) > ACQuire:STATE ON
-      16:48:23.919 (+     0ms) > ACQuire:STATE?
-      16:48:23.923 (+     4ms) < 1
-      16:48:24.029 (+   106ms) > ACQuire:STATE?
-      16:48:24.030 (+     1ms) < 0
-      16:48:24.030 (+     0ms) > *ESR?
-      16:48:24.036 (+     6ms) < 0
-      16:48:29.037 (+  5001ms) > BUSY?
-      16:48:29.039 (+     2ms) < 0
-      16:48:33.048 (+  4010ms) > ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
-      16:48:33.048 (+     0ms) > ACTONEVent:ENable 0
-      16:48:33.049 (+     0ms) > *OPC?
-      16:48:33.066 (+    17ms) < 1
-  [2 화면캡처] 통과 (15.4s)
+[4/10] 작은 파일 왕복: 설정 저장(SAVe:SETUp) -> PC 로 전송(READFile)
+    SAVe:SETUp "C:/scope_tech_tmp/check_setup.set"
+    설정 저장 완료 대기(*OPC?) -> 1  (0.11s)
+    FILESystem:READFile "C:/scope_tech_tmp/check_setup.set"
+    READFile 수신 10211 bytes, END 수신(정상), 0.00s
+    FILESystem:DELEte "C:/scope_tech_tmp/check_setup.set"
+    파일 삭제 완료 대기(*OPC?) -> 1  (0.01s)
+    *OPC?                                         -> 1   (0.01s)
+  => 통과 (0.2s)
 
-===== 5/5 회 =====
-  [0 상태정리] 시작
-      16:48:36.385 (+  3319ms) > *CLS
-      16:48:36.385 (+     0ms) > ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
-      16:48:36.386 (+     0ms) > ACTONEVent:ENable 0
-      16:48:36.386 (+     0ms) > MAINWindow:RRBDisplaystate ON
-      16:48:36.386 (+     0ms) > *OPC?
-      16:48:36.395 (+     9ms) < 1
-      16:48:36.395 (+     0ms) > *IDN?
-      16:48:36.397 (+     2ms) < TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14
-      16:48:36.397 (+     0ms) > *CLS
-  [0 상태정리] 통과 (0.2s)
-  [2 화면캡처] 시작
-      16:48:36.398 (+     1ms) > ACQuire:STATE?
-      16:48:36.400 (+     2ms) < 0
-      16:48:36.400 (+     0ms) > BUSY?
-      16:48:36.401 (+     1ms) < 0
-      16:48:37.401 (+  1001ms) > FILESystem:CWD?
-      16:48:37.403 (+     2ms) < "C:/Users/Public/Tektronix/TekScope"
-      16:48:37.403 (+     0ms) > SAVe:IMAGe:COMPosition NORMal
-      16:48:37.403 (+     0ms) > SAVEONEVent:FILEDest "C:/Users/Public/Tektronix/TekScope"
-      16:48:37.403 (+     0ms) > SAVEONEVent:FILEName "scopetech396117403"
-      16:48:37.403 (+     0ms) > SAVEONEVent:IMAGe:FILEFormat PNG
-      16:48:37.404 (+     0ms) > ACTONEVent:LIMit UNLIMITED
-      16:48:37.404 (+     0ms) > ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON
-      16:48:37.404 (+     0ms) > ACTONEVent:ENable 1
-      16:48:37.404 (+     0ms) > *OPC?
-      16:48:37.430 (+    25ms) < 1
-      16:48:39.545 (+  2115ms) > ACQuire:STOPAfter SEQuence
-      16:48:39.545 (+     0ms) > ACQuire:STATE ON
-      16:48:39.546 (+     0ms) > ACQuire:STATE?
-      16:48:39.550 (+     4ms) < 1
-      16:48:39.655 (+   106ms) > ACQuire:STATE?
-      16:48:39.656 (+     1ms) < 0
-      16:48:39.657 (+     0ms) > *ESR?
-      16:48:39.662 (+     6ms) < 0
-      16:48:44.663 (+  5000ms) > BUSY?
-      16:48:44.664 (+     2ms) < 0
-      16:48:48.665 (+  4001ms) > ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
-      16:48:48.665 (+     0ms) > ACTONEVent:ENable 0
-      16:48:48.666 (+     0ms) > *OPC?
-      16:48:48.680 (+    14ms) < 1
-  [2 화면캡처] 통과 (15.4s)
+[5/10] 화면 캡처 저장 (Act On Event 방식) - 저장만, 전송 없음
+    AOE 활성화 전 획득 정지 및 BUSY 해제 확인
+    SAVe:IMAGe:COMPosition NORMal
+    SAVEONEVent:FILEDest "C:/Users/Public/Tektronix/TekScope"
+    SAVEONEVent:FILEName "chk165252088"
+    SAVEONEVent:IMAGe:FILEFormat PNG
+    ACTONEVent:LIMit UNLIMITED
+    ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON
+    ACTONEVent:ENable 1
+    Act On Event 설정 완료 대기(*OPC?) -> 1  (0.02s)
+    ACQuire:STOPAfter SEQuence
+    ACQuire:STATE ON
+    Single+저장 0.7s -> chk165252088_20261019005301077.png
+    ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
+    ACTONEVent:ENable 0
+    Act On Event 해제 완료 대기(*OPC?) -> 1  (0.02s)
+  => 통과 (3.8s)
 
-===== 캡처 파일 한 번에 가져오기 =====
-  [5 가져오기(5개)] 시작
-    [캡처 파일 가져오기] 5개 (파일 사이 1초 간격)
-      16:48:51.796 (+  3116ms) > ACQuire:STATE?
-      16:48:51.798 (+     2ms) < 0
-      16:48:51.798 (+     0ms) > BUSY?
-      16:48:51.799 (+     2ms) < 0
-      16:48:52.800 (+  1001ms) > FILESystem:CWD?
-      16:48:52.802 (+     2ms) < "C:/Users/Public/Tektronix/TekScope"
-      16:48:52.802 (+     0ms) > FILESystem:DIR?
-      16:48:52.804 (+     2ms) < "Applications","Masks","PICompatibility","aoe201925_20261017041936087.png","cap_200921.png","chk083635022_20261018164110612.png","chk083651676_20261018164117299.png","chk083651676_20261018164117510.pn
-      16:48:53.805 (+  1001ms) > FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/scopetech396054806_20261019004746032.png"
-      16:48:53.811 (+     6ms) < <file 120287 bytes>
-      16:48:53.811 (+     0ms) > *OPC?
-      16:48:53.820 (+     9ms) < 1
-      16:48:54.821 (+  1001ms) > FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/scopetech396054806_20261019004746032.png"
-      16:48:54.822 (+     1ms) > *ESR?
-      16:48:54.833 (+    12ms) < 0
-      16:48:55.834 (+  1001ms) > FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/scopetech396070541_20261019004801616.png"
-      16:48:55.840 (+     6ms) < <file 120885 bytes>
-      16:48:55.840 (+     0ms) > *OPC?
-      16:48:55.850 (+     9ms) < 1
-      16:48:56.850 (+  1001ms) > FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/scopetech396070541_20261019004801616.png"
-      16:48:56.851 (+     1ms) > *ESR?
-      16:48:56.872 (+    21ms) < 0
-      16:48:57.881 (+  1009ms) > FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/scopetech396086173_20261019004817246.png"
-      16:48:57.888 (+     7ms) < <file 120402 bytes>
-      16:48:57.888 (+     0ms) > *OPC?
-      16:48:57.898 (+    10ms) < 1
-      16:48:58.900 (+  1001ms) > FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/scopetech396086173_20261019004817246.png"
-      16:48:58.900 (+     1ms) > *ESR?
-      16:48:58.917 (+    16ms) < 0
-      16:48:59.917 (+  1001ms) > FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/scopetech396101793_20261019004832869.png"
-      16:48:59.924 (+     7ms) < <file 120643 bytes>
-      16:48:59.925 (+     0ms) > *OPC?
-      16:48:59.934 (+     9ms) < 1
-      16:49:00.935 (+  1001ms) > FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/scopetech396101793_20261019004832869.png"
-      16:49:00.936 (+     1ms) > *ESR?
-      16:49:00.947 (+    11ms) < 0
-      16:49:01.956 (+  1009ms) > FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/scopetech396117403_20261019004848488.png"
-      16:49:01.962 (+     6ms) < <file 122358 bytes>
-      16:49:01.962 (+     0ms) > *OPC?
-      16:49:01.971 (+     9ms) < 1
-      16:49:02.972 (+  1001ms) > FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/scopetech396117403_20261019004848488.png"
-      16:49:02.973 (+     0ms) > *ESR?
-      16:49:02.984 (+    11ms) < 0
-      C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3 (23)\scope_tech-claude-dreamy-edison-55q1f3\captures\_seqtest\shots\shot_001.png
-      C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3 (23)\scope_tech-claude-dreamy-edison-55q1f3\captures\_seqtest\shots\shot_002.png
-      C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3 (23)\scope_tech-claude-dreamy-edison-55q1f3\captures\_seqtest\shots\shot_003.png
-      C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3 (23)\scope_tech-claude-dreamy-edison-55q1f3\captures\_seqtest\shots\shot_004.png
-      C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3 (23)\scope_tech-claude-dreamy-edison-55q1f3\captures\_seqtest\shots\shot_005.png
-    가져옴 5개, 남음 0개
-  [5 가져오기(5개)] 통과 (12.2s)
-      16:49:04.223 (+  1239ms) > ACQuire:STATE STOP
+[6/10] 화면 캡처 파일 PC 로 전송(READFile) 후 삭제
+    FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/chk165252088_20261019005301077.png"
+    READFile 수신 120710 bytes, END 수신(정상), 0.00s
+    FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/chk165252088_20261019005301077.png"
+    파일 삭제 완료 대기(*OPC?) -> 1  (0.01s)
+    PNG 형식: 정상
+    저장: C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3 (23)\scope_tech-claude-dreamy-edison-55q1f3\logs\check_screen.png
+    *OPC?                                         -> 1   (0.01s)
+  => 통과 (1.0s)
 
-결과: 5/5 회 성공
-이 파일을 올려주세요: C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3 (23)\scope_tech-claude-dreamy-edison-55q1f3\logs\seqtest_20261019_164733.txt
+[7/10] 반복 시험: 실행 -> 화면 캡처(Act On Event) -> 전송, 5회
+    --- 1/5
+    ACQuire:STOPAfter RUNSTop
+    ACQuire:STATE RUN
+    AOE 활성화 전 획득 정지 및 BUSY 해제 확인
+    SAVe:IMAGe:COMPosition NORMal
+    SAVEONEVent:FILEDest "C:/Users/Public/Tektronix/TekScope"
+    SAVEONEVent:FILEName "chk165304500"
+    SAVEONEVent:IMAGe:FILEFormat PNG
+    ACTONEVent:LIMit UNLIMITED
+    ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON
+    ACTONEVent:ENable 1
+    Act On Event 설정 완료 대기(*OPC?) -> 1  (0.02s)
+    ACQuire:STOPAfter SEQuence
+    ACQuire:STATE ON
+    Single+저장 0.7s -> chk165304500_20261019005313623.png
+    ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
+    ACTONEVent:ENable 0
+    Act On Event 해제 완료 대기(*OPC?) -> 1  (0.01s)
+    FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/chk165304500_20261019005313623.png"
+    READFile 수신 120503 bytes, END 수신(정상), 0.00s
+    FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/chk165304500_20261019005313623.png"
+    파일 삭제 완료 대기(*OPC?) -> 1  (0.01s)
+    *OPC?                                         -> 1   (0.01s)
+    --- 2/5
+    ACQuire:STOPAfter RUNSTop
+    ACQuire:STATE RUN
+    AOE 활성화 전 획득 정지 및 BUSY 해제 확인
+    SAVe:IMAGe:COMPosition NORMal
+    SAVEONEVent:FILEDest "C:/Users/Public/Tektronix/TekScope"
+    SAVEONEVent:FILEName "chk165311399"
+    SAVEONEVent:IMAGe:FILEFormat PNG
+    ACTONEVent:LIMit UNLIMITED
+    ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON
+    ACTONEVent:ENable 1
+    Act On Event 설정 완료 대기(*OPC?) -> 1  (0.02s)
+    ACQuire:STOPAfter SEQuence
+    ACQuire:STATE ON
+    Single+저장 0.7s -> chk165311399_20261019005320514.png
+    ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
+    ACTONEVent:ENable 0
+    Act On Event 해제 완료 대기(*OPC?) -> 1  (0.01s)
+    FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/chk165311399_20261019005320514.png"
+    READFile 수신 121283 bytes, END 수신(정상), 0.00s
+    FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/chk165311399_20261019005320514.png"
+    파일 삭제 완료 대기(*OPC?) -> 1  (0.01s)
+    *OPC?                                         -> 1   (0.00s)
+    --- 3/5
+    ACQuire:STOPAfter RUNSTop
+    ACQuire:STATE RUN
+    AOE 활성화 전 획득 정지 및 BUSY 해제 확인
+    SAVe:IMAGe:COMPosition NORMal
+    SAVEONEVent:FILEDest "C:/Users/Public/Tektronix/TekScope"
+    SAVEONEVent:FILEName "chk165318228"
+    SAVEONEVent:IMAGe:FILEFormat PNG
+    ACTONEVent:LIMit UNLIMITED
+    ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON
+    ACTONEVent:ENable 1
+    Act On Event 설정 완료 대기(*OPC?) -> 1  (0.02s)
+    ACQuire:STOPAfter SEQuence
+    ACQuire:STATE ON
+    Single+저장 0.7s -> chk165318228_20261019005327347.png
+    ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
+    ACTONEVent:ENable 0
+    Act On Event 해제 완료 대기(*OPC?) -> 1  (0.02s)
+    FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/chk165318228_20261019005327347.png"
+    READFile 수신 120458 bytes, END 수신(정상), 0.00s
+    FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/chk165318228_20261019005327347.png"
+    파일 삭제 완료 대기(*OPC?) -> 1  (0.01s)
+    *OPC?                                         -> 1   (0.01s)
+    --- 4/5
+    ACQuire:STOPAfter RUNSTop
+    ACQuire:STATE RUN
+    AOE 활성화 전 획득 정지 및 BUSY 해제 확인
+    SAVe:IMAGe:COMPosition NORMal
+    SAVEONEVent:FILEDest "C:/Users/Public/Tektronix/TekScope"
+    SAVEONEVent:FILEName "chk165325110"
+    SAVEONEVent:IMAGe:FILEFormat PNG
+    ACTONEVent:LIMit UNLIMITED
+    ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON
+    ACTONEVent:ENable 1
+    Act On Event 설정 완료 대기(*OPC?) -> 1  (0.01s)
+    ACQuire:STOPAfter SEQuence
+    ACQuire:STATE ON
+    Single+저장 0.7s -> chk165325110_20261019005334246.png
+    ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
+    ACTONEVent:ENable 0
+    Act On Event 해제 완료 대기(*OPC?) -> 1  (0.02s)
+    FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/chk165325110_20261019005334246.png"
+    READFile 수신 120241 bytes, END 수신(정상), 0.00s
+    FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/chk165325110_20261019005334246.png"
+    파일 삭제 완료 대기(*OPC?) -> 1  (0.01s)
+    *OPC?                                         -> 1   (0.01s)
+    --- 5/5
+    ACQuire:STOPAfter RUNSTop
+    ACQuire:STATE RUN
+    AOE 활성화 전 획득 정지 및 BUSY 해제 확인
+    SAVe:IMAGe:COMPosition NORMal
+    SAVEONEVent:FILEDest "C:/Users/Public/Tektronix/TekScope"
+    SAVEONEVent:FILEName "chk165331960"
+    SAVEONEVent:IMAGe:FILEFormat PNG
+    ACTONEVent:LIMit UNLIMITED
+    ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON
+    ACTONEVent:ENable 1
+    Act On Event 설정 완료 대기(*OPC?) -> 1  (0.01s)
+    ACQuire:STOPAfter SEQuence
+    ACQuire:STATE ON
+    Single+저장 0.7s -> chk165331960_20261019005341084.png
+    ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
+    ACTONEVent:ENable 0
+    Act On Event 해제 완료 대기(*OPC?) -> 1  (0.02s)
+    FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/chk165331960_20261019005341084.png"
+    READFile 수신 120383 bytes, END 수신(정상), 0.00s
+    FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/chk165331960_20261019005341084.png"
+    파일 삭제 완료 대기(*OPC?) -> 1  (0.01s)
+    *OPC?                                         -> 1   (0.01s)
+  => 통과 (34.3s)
+
+[8/10] 파형 데이터 전송(CURVe?) - CH1 앞부분 1000 포인트, 이후 전체
+    DATa:SOUrce CH1
+    DATa:ENCdg SRIbinary
+    WFMOutpre:BYT_Nr 2
+    DATa:STARt 1
+    DATa:STOP 1000
+    WFMOutpre:NR_Pt?                              -> 1000   (0.06s)
+    WFMOutpre:XINcr?                              -> 16.00E-9   (0.01s)
+    WFMOutpre:XZEro?                              -> 7.4350000005215E-9   (0.01s)
+    WFMOutpre:PT_Off?                             -> 625000   (0.01s)
+    WFMOutpre:YMUlt?                              -> 78.1250E-6   (0.02s)
+    WFMOutpre:YOFf?                               -> 0.0E+0   (0.02s)
+    WFMOutpre:YZEro?                              -> 1.1300   (0.01s)
+    CURVe?
+    CURVe?(1000pt) 수신 2007 bytes, END 수신(정상), 앞부분 b'#42000\xb0\xc9\xb0\xc90\xca'
+    HORizontal:RECOrdlength?                      -> 1250000   (0.00s)
+    DATa:STOP 1250000
+    WFMOutpre:NR_Pt?                              -> 1250000   (0.01s)
+    CURVe?
+    CURVe?(전체 1250000pt) 수신 2500010 bytes, END 수신(정상), 0.08s, 30.4 MB/s
+  => 통과 (0.3s)
+
+[9/10] 측정/커서 명령 (만든 뒤 삭제)
+    MEASUrement:ADDNew "MEAS8"
+    MEASUrement:MEAS8:TYPe TOP
+    MEASUrement:MEAS8:SOUrce1 CH1
+    MEASUrement:MEAS8:DISPlaystat:ENABle ON
+    측정 추가 완료 대기(*OPC?) -> 1  (0.23s)
+    MEASUrement:MEAS8:RESUlts:ALLAcqs:MEAN?       -> 1.9951883133133   (0.00s)
+    MEASUrement:MEAS8:RESUlts:ALLAcqs:MINimum?    -> 1.9951883133133   (0.00s)
+    MEASUrement:MEAS8:RESUlts:ALLAcqs:MAXimum?    -> 1.9951883133133   (0.00s)
+    MEASUrement:MEAS8:RESUlts:ALLAcqs:POPUlation? -> 1   (0.00s)
+    MEASUrement:MEAS8:RESUlts:CURRentacq:MEAN?    -> 1.9951883133133   (0.00s)
+    MEASUrement:DELete "MEAS8"
+    측정 삭제 완료 대기(*OPC?) -> 1  (0.03s)
+    DISplay:WAVEView1:CURSor:CURSOR1:STATE?       -> 0   (0.00s)
+    DISplay:WAVEView1:CURSor:CURSOR1:STATE ON
+    DISplay:WAVEView1:CURSor:CURSOR1:FUNCtion WAVEFORM
+    DISplay:WAVEView1:CURSor:CURSOR1:ASOUrce CH1
+    DISplay:WAVEView1:CURSor:CURSOR1:BSOUrce CH1
+    DISplay:WAVEView1:CURSor:CURSOR1:WAVEform:APOSition 0
+    DISplay:WAVEView1:CURSor:CURSOR1:WAVEform:APOSition? -> 0.0E+0   (0.03s)
+    DISplay:WAVEView1:CURSor:CURSOR1:STATE OFF
+    커서 완료 대기(*OPC?) -> 1  (0.03s)
+  => 통과 (1.4s)
+
+[10/10] 결과 바 숨김/표시 + 화면 캡처 (capture 의 clean.png 방식)
+    MAINWindow:RRBDisplaystate OFF
+    결과 바 숨김 완료 대기(*OPC?) -> 1  (0.01s)
+    AOE 활성화 전 획득 정지 및 BUSY 해제 확인
+    SAVe:IMAGe:COMPosition NORMal
+    SAVEONEVent:FILEDest "C:/Users/Public/Tektronix/TekScope"
+    SAVEONEVent:FILEName "chk165354119"
+    SAVEONEVent:IMAGe:FILEFormat PNG
+    ACTONEVent:LIMit UNLIMITED
+    ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON
+    ACTONEVent:ENable 1
+    Act On Event 설정 완료 대기(*OPC?) -> 1  (0.02s)
+    ACQuire:STOPAfter SEQuence
+    ACQuire:STATE ON
+    Single+저장 0.7s -> chk165354119_20261019005403116.png
+    ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
+    ACTONEVent:ENable 0
+    Act On Event 해제 완료 대기(*OPC?) -> 1  (0.01s)
+    MAINWindow:RRBDisplaystate ON
+    결과 바 표시 완료 대기(*OPC?) -> 1  (0.02s)
+    FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/chk165354119_20261019005403116.png"
+    READFile 수신 112415 bytes, END 수신(정상), 0.00s
+    FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/chk165354119_20261019005403116.png"
+    파일 삭제 완료 대기(*OPC?) -> 1  (0.01s)
+    저장: logs/check_clean.png (결과 바가 없어야 정상)
+    *OPC?                                         -> 1   (0.01s)
+  => 통과 (5.4s)
+
+모든 단계 통과
+이 파일과 C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3 (23)\scope_tech-claude-dreamy-edison-55q1f3\logs\scpi_20261019.log 를 보내주세요.
