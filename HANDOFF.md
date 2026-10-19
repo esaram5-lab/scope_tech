@@ -109,3 +109,4 @@ Tektronix **MSO58B** (FV 2.24.4, Windows 내장형, TPP1000 프로브, CH1~7 연
 - 수정: AOE 는 켠 채로 BUSY 해제 + PNG 를 끝(IEND)까지 읽은 뒤에 해제(`_read_png_when_complete`), 해제 후 `*OPC?` 대기 30초. 점검 도구도 BUSY 해제 + 2초 뒤 해제.
 - 참고: TekScope 기본 폴더에 예전 캡처 PNG(cap_/chk_/aoe_*)가 쌓여 있음. 실패 시 남은 파일이며 스코프에서 지워도 됨.
 - 매 측정 전 상태 정리 추가(`[measure] reset_each_run`, `MSO5B.reset_state`, 안내형 메뉴 [0/3], 셸 `all`): 통신 버퍼 비우기(viClear)·*CLS·남은 AOE 해제·결과 바 ON·*IDN? 응답 확인(10초). *RST 는 사용자 스코프 설정을 지우므로 쓰지 않음. TekScope 가 이미 멈췄으면 측정 전에 "재시작 필요"로 중단.
+- 2026-10-19 실제 환경(트리거 250Hz)에서 캡처 중 멈춤(사용자 보고, 로그 미수신). 캡처 단계별 대기 추가: AOE 켠 뒤 `aoe_arm_wait_s`(2), Single 후 질의 없이 `aoe_save_wait_s`(5), 파일 확인 후·AOE 해제 후 `aoe_post_wait_s`(3), DIR? 폴링 1초 간격. config [capture] 에서 조절. 테스트는 tests/__init__.py 에서 대기 0.

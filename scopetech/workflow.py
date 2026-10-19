@@ -270,6 +270,15 @@ class Bench:
         if err:
             self.echo(f"  [경고] {err}")
 
+    def _shot(self, ink: bool) -> bytes:
+        c = self.cfg
+        return self.scope.screenshot(
+            ink, timeout=c.getfloat("measure", "single_timeout_s"),
+            arm_wait=c.getfloat("capture", "aoe_arm_wait_s"),
+            save_wait=c.getfloat("capture", "aoe_save_wait_s"),
+            post_wait=c.getfloat("capture", "aoe_post_wait_s"),
+        )
+
     def capture(self) -> list[Path]:
         rec = self._ensure_record()
         s = self.scope
@@ -279,18 +288,18 @@ class Bench:
         out = []
         if rec.meas or rec.cursor:
             p = rec.folder / "meas.png"
-            p.write_bytes(s.screenshot(ink))
+            p.write_bytes(self._shot(ink))
             out.append(p)
             self._hide_overlay(rec)
             try:
                 p = rec.folder / "clean.png"
-                p.write_bytes(s.screenshot(ink))
+                p.write_bytes(self._shot(ink))
                 out.append(p)
             finally:
                 self._restore_overlay(rec)
         else:
             p = rec.folder / "clean.png"
-            p.write_bytes(s.screenshot(ink))
+            p.write_bytes(self._shot(ink))
             out.append(p)
             self.echo("  측정/커서가 없어 clean.png 만 저장했습니다.")
         self.echo("[캡처] " + ", ".join(x.name for x in out) + f"  -> {rec.folder}")
@@ -362,7 +371,7 @@ class Bench:
         wfs = [s.fetch_waveform(c) for c in chans]
         wavefile.write_csv(rec.folder, wfs, {f"CH{c}": self.cfg.channel_name(c) for c in chans})
         self.echo("[2/2] 기존 측정·커서를 표시한 화면 저장 (추가 Single 획득)")
-        (rec.folder / "screen.png").write_bytes(s.screenshot(self.cfg.getbool("capture", "ink_saver")))
+        (rec.folder / "screen.png").write_bytes(self._shot(self.cfg.getbool("capture", "ink_saver")))
         rec.result.update({"status": "complete", "saved_channels": [f"CH{c}" for c in chans]})
         results.write_json(rec.folder / "result.json", rec.result)
         return rec

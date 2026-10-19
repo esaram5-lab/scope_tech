@@ -288,7 +288,8 @@ class MSO5B:
             self.t.sync()
         self.check(context)
 
-    def screenshot(self, ink_saver: bool = False, timeout: float = 30) -> bytes:
+    def screenshot(self, ink_saver: bool = False, timeout: float = 30, arm_wait: float = 2.0,
+                   save_wait: float = 5.0, post_wait: float = 3.0) -> bytes:
         """화면 캡처. 원격 SAVe:IMAGe 는 실장비(MSO58B FV 2.24.4)에서 TekScope 화면을 멈추게 해서 쓰지 않는다.
         대신 Act On Event(트리거 시 스코프가 스스로 화면 저장)를 켜고 Single 1회로 저장시킨 뒤 파일을 가져온다.
         Single 이 새로 한 번 획득하므로 캡처 화면은 직전 화면과 다른 획득이다(반복 트리거 신호면 같은 모양)."""
@@ -308,20 +309,25 @@ class MSO5B:
             self.write("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON")
             self.write("ACTONEVent:ENable 1")
             self.pace()
+            # 실장비(트리거 250Hz)에서 캡처 중 멈춤 -> 단계마다 넉넉히 기다리고, 저장 중에는 질의하지 않는다
+            time.sleep(arm_wait)
             self.single(timeout)
-            deadline = time.monotonic() + 15
+            time.sleep(save_wait)  # 이 동안 스코프가 PNG 를 쓴다. 아무 명령도 보내지 않음
+            deadline = time.monotonic() + 30
             while time.monotonic() < deadline:
                 names = sorted(n.strip().strip('"') for n in self.query("FILESystem:DIR?").split(",") if prefix in n)
                 if names:
                     name = names[-1]
                     break
-                time.sleep(0.5)
+                time.sleep(1.0)
             if not name:
                 raise ScopeTimeout("화면 캡처 파일이 만들어지지 않았습니다(트리거/Act On Event 확인).")
             # 실장비: 파일이 목록에 보인 직후(아직 쓰는 중) AOE 를 끄면 TekScope 가 멈췄다.
             # 저장이 끝날 때까지(BUSY 해제 + PNG 끝 IEND 확인) AOE 는 켠 채로 기다린다.
             path = f"{dest}/{name}"
+            time.sleep(post_wait)
             data = self._read_png_when_complete(path)
+            time.sleep(1.0)
         except BaseException:
             self.abort_capture()
             raise
@@ -330,6 +336,7 @@ class MSO5B:
         with self.t.temp_timeout(30):
             self.pace()
         self.aoe_active = False
+        time.sleep(post_wait)  # 다음 캡처/명령 전 여유
         self.write(f'FILESystem:DELEte "{path}"')
         self.check("캡처 파일 삭제", raise_=False)
         return data
