@@ -27,7 +27,7 @@ DEFAULTS = {
         "vih_output_meas": "yes",
         "reset_each_run": "yes",
     },
-    "capture": {"ink_saver": "no", "settle_s": "1.0", "aoe_arm_wait_s": "2", "aoe_save_wait_s": "5", "aoe_post_wait_s": "3",
+    "capture": {"ink_saver": "no", "settle_s": "1.0", "aoe_arm_wait_s": "1", "aoe_save_wait_s": "2", "aoe_post_wait_s": "1",
                 "image_fetch": "end", "fetch_gap_s": "1", "delete_after_fetch": "yes"},
     "save": {"channels": "displayed", "csv": "yes", "wfm": "yes", "setup": "yes"},
     "scope": {"temp_dir": "C:/scope_tech_tmp", "num_channels": "8"},
