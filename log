@@ -1,233 +1,100 @@
-seq_test 2026-10-19 19:51:21  python=3.13.16  interface=usb  in=CH1 out=CH2  repeat=10
-capture 대기: aoe_arm_wait_s=1, aoe_save_wait_s=2, aoe_post_wait_s=3
-      19:51:21.521 (+     6ms) # VISA 라이브러리 불러오기
-      19:51:21.539 (+    18ms) # VISA 시작
-      19:51:22.086 (+   547ms) # USB 장치 찾기
-      19:51:22.094 (+     8ms) # 장치 열기 USB0::0x0699::0x0522::C081164::INSTR
-      19:51:22.103 (+     9ms) # USB Device Clear
-      19:51:22.104 (+     1ms) > (USB Device Clear) OK
-      19:51:22.310 (+   206ms) > *CLS
-      19:51:22.311 (+     0ms) > HEADer OFF
-      19:51:22.311 (+     0ms) > VERBose ON
-      19:51:22.311 (+     0ms) > *IDN?
-      19:51:22.313 (+     2ms) < TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14
-      19:51:22.313 (+     0ms) > FILESystem:MKDir "C:/scope_tech_tmp"
-      19:51:22.314 (+     0ms) > *OPC?
-      19:51:22.338 (+    25ms) < 1
-      19:51:22.338 (+     0ms) > *ESR?
-      19:51:22.355 (+    16ms) < 16
-      19:51:22.355 (+     0ms) > ALLEv?
-      19:51:22.358 (+     2ms) < 257,"File name error; The destination already contains a folder named; FILESystem:MKDir ""C:/scope_tech_tmp""\n",257,"File name error; The destination already contains a folder named"
-연결: TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14  (USB USB0::0x0699::0x0522::C081164::INSTR)
-      19:51:22.358 (+     0ms) > TIME?
-      19:51:22.360 (+     2ms) < "03:51:31"
-      19:51:22.360 (+     0ms) > TIME?
-      19:51:22.362 (+     2ms) < "03:51:31"
-      19:51:22.390 (+    28ms) > TIME?
-      19:51:22.391 (+     1ms) < "03:51:31"
-      19:51:22.420 (+    28ms) > TIME?
-      19:51:22.421 (+     1ms) < "03:51:31"
-      19:51:22.450 (+    29ms) > TIME?
-      19:51:22.451 (+     1ms) < "03:51:31"
-      19:51:22.480 (+    29ms) > TIME?
-      19:51:22.485 (+     5ms) < "03:51:31"
-      19:51:22.510 (+    25ms) > TIME?
-      19:51:22.513 (+     3ms) < "03:51:31"
-      19:51:22.540 (+    27ms) > TIME?
-      19:51:22.542 (+     2ms) < "03:51:31"
-      19:51:22.570 (+    28ms) > TIME?
-      19:51:22.572 (+     2ms) < "03:51:31"
-      19:51:22.600 (+    28ms) > TIME?
-      19:51:22.602 (+     2ms) < "03:51:31"
-      19:51:22.630 (+    28ms) > TIME?
-      19:51:22.632 (+     2ms) < "03:51:31"
-      19:51:22.660 (+    28ms) > TIME?
-      19:51:22.662 (+     2ms) < "03:51:31"
-      19:51:22.690 (+    28ms) > TIME?
-      19:51:22.692 (+     2ms) < "03:51:31"
-      19:51:22.720 (+    28ms) > TIME?
-      19:51:22.722 (+     2ms) < "03:51:31"
-      19:51:22.750 (+    28ms) > TIME?
-      19:51:22.752 (+     2ms) < "03:51:31"
-      19:51:22.780 (+    28ms) > TIME?
-      19:51:22.782 (+     2ms) < "03:51:31"
-      19:51:22.810 (+    28ms) > TIME?
-      19:51:22.812 (+     2ms) < "03:51:31"
-      19:51:22.840 (+    28ms) > TIME?
-      19:51:22.841 (+     2ms) < "03:51:31"
-      19:51:22.870 (+    28ms) > TIME?
-      19:51:22.871 (+     1ms) < "03:51:31"
-      19:51:22.900 (+    29ms) > TIME?
-      19:51:22.901 (+     1ms) < "03:51:31"
-      19:51:22.930 (+    28ms) > TIME?
-      19:51:22.931 (+     2ms) < "03:51:31"
-      19:51:22.960 (+    28ms) > TIME?
-      19:51:22.962 (+     2ms) < "03:51:31"
-      19:51:22.990 (+    28ms) > TIME?
-      19:51:22.992 (+     2ms) < "03:51:31"
-      19:51:23.020 (+    28ms) > TIME?
-      19:51:23.023 (+     3ms) < "03:51:31"
-      19:51:23.050 (+    27ms) > TIME?
-      19:51:23.053 (+     2ms) < "03:51:31"
-      19:51:23.080 (+    28ms) > TIME?
-      19:51:23.082 (+     2ms) < "03:51:32"
-      19:51:23.082 (+     0ms) > DATE?
-      19:51:23.084 (+     2ms) < "2026-10-19"
-스코프 시계 - PC 시계 = -57591.08s (캡처 파일 이름의 시각을 PC 시각으로 바꿔 저장 소요 시간을 계산)
+tmd_test 2026-10-19 20:13:50  python=3.13.16
+tm_devices 3.7.0
+발견: USB0::0x0699::0x0522::C081164::INSTR
+주소: USB0::0x0699::0x0522::C081164::INSTR
+2026-10-19 20:14:01.631589 - Opening DeviceManager
 
-===== 1/10 회 =====
-  [0 상태정리] 시작
-      19:51:23.106 (+    21ms) > *OPC?
-      19:51:23.129 (+    24ms) < 1
-      19:51:23.130 (+     0ms) > *CLS
-      19:51:23.130 (+     1ms) > ACTONEVent:ENable?
-      19:51:23.132 (+     2ms) < 0
-      19:51:23.133 (+     0ms) > MAINWindow:RRBDisplaystate?
-      19:51:23.134 (+     2ms) < 1
-      19:51:23.135 (+     0ms) > *IDN?
-      19:51:23.136 (+     2ms) < TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14
-  [0 상태정리] 통과 (0.0s)
-  [2 화면캡처] 시작
-      19:51:23.138 (+     2ms) > ACQuire:STATE?
-      19:51:23.142 (+     4ms) < 1
-      19:51:23.142 (+     0ms) > ACQuire:STATE STOP
-      19:51:23.143 (+     0ms) > ACQuire:STATE?
-      19:51:23.151 (+     8ms) < 0
-      19:51:23.151 (+     1ms) > BUSY?
-      19:51:23.153 (+     2ms) < 0
-      19:51:24.160 (+  1007ms) > FILESystem:CWD?
-      19:51:24.162 (+     2ms) < "C:/Users/Public/Tektronix/TekScope"
-      19:51:24.162 (+     0ms) > SAVe:IMAGe:COMPosition NORMal
-      19:51:24.163 (+     0ms) > SAVEONEVent:FILEDest "C:/Users/Public/Tektronix/TekScope"
-      19:51:24.163 (+     1ms) > SAVEONEVent:FILEName "scopetech407084162"
-      19:51:24.164 (+     1ms) > SAVEONEVent:IMAGe:FILEFormat PNG
-      19:51:24.164 (+     1ms) > ACTONEVent:LIMit UNLIMITED
-      19:51:24.165 (+     1ms) > ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON
-      19:51:24.165 (+     1ms) > ACTONEVent:ENable 1
-      19:51:24.166 (+     1ms) > *OPC?
-      19:51:24.184 (+    18ms) < 1
-      19:51:25.299 (+  1115ms) > ACQuire:STOPAfter SEQuence
-      19:51:25.299 (+     0ms) > ACQuire:STATE ON
-      19:51:25.300 (+     0ms) > ACQuire:STATE?
-      19:51:25.310 (+    10ms) < 1
-      19:51:25.420 (+   109ms) > ACQuire:STATE?
-      19:51:25.421 (+     2ms) < 1
-      19:51:25.529 (+   108ms) > ACQuire:STATE?
-      19:51:25.532 (+     2ms) < 0
-      19:51:25.532 (+     1ms) > *ESR?
-      19:51:25.539 (+     7ms) < 0
-      19:51:27.548 (+  2009ms) > BUSY?
-      19:51:27.551 (+     2ms) < 0
-      19:51:31.558 (+  4008ms) > ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
-      19:51:31.559 (+     1ms) > ACTONEVent:ENable 0
-      19:51:31.559 (+     1ms) > *OPC?
-      19:51:31.583 (+    24ms) < 1
-  [2 화면캡처] 통과 (11.6s)
+[1 연결(*IDN?)] 시작 20:14:01.631
+2026-10-19 20:14:01.632419 - Creating Connection to SCOPE 1
+2026-10-19 20:14:01.690828 - (SCOPE 1) Query >>  '*IDN?'
+2026-10-19 20:14:01.692909 - Response from '*IDN?' >>  'TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14'
+    연결: TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14
+[1 연결(*IDN?)] 통과 (0.1s)
 
+[2 파형 받기 curve_query(CH1)] 시작 20:14:01.694
+2026-10-19 20:14:01.695429 - (SCOPE 1) Query >>  ':DATA:SOURCE:AVAIL?'
+2026-10-19 20:14:01.708245 - Response from ':DATA:SOURCE:AVAIL?' >>  'CH1,CH2'
+2026-10-19 20:14:01.708683 - (SCOPE 1) Write >>  'DATA:SOURCE CH1'
+2026-10-19 20:14:01.709425 - (SCOPE 1) Query >>  'DATA:SOURCE?'
+2026-10-19 20:14:01.710830 - Response from 'DATA:SOURCE?' >>  'CH1'
+2026-10-19 20:14:01.711203 - (SCOPE 1) Write >>  ':DATA:ENC ASCII'
+2026-10-19 20:14:01.711714 - (SCOPE 1) Query >>  ':DATA:ENC?'
+2026-10-19 20:14:01.716057 - Response from ':DATA:ENC?' >>  'ASCII'
+2026-10-19 20:14:01.716452 - (SCOPE 1) Query >>  ':CURVE?'
+2026-10-19 20:14:01.795959 - Response from ':CURVE?' >>  '3,3,3,3,3,3,3,2,3,3,5,5,4,3,2,2,3,3,3,3,3,3,2,2,3,4,4,3,2,2,4,4,3,3,4,5,4,3,2,3,4,4,4,3,2,3,3,3,2,2,2,3,3,3,4,4,3,2,2,2,3,3,3,3,3,2,2,4,4,3,3,3,3,2,2,2,3,3,3,4,4,4,3,3,3,3,3,3,3,3,4,3,3,3,2,3,3,3,3,4,3,3,3,3,3,3,4,3,2,2,3,3,3,4,4,4,4,3,2,2,2,3,4,4,3,2,2,3,3,3,3,3,2,2,3,4,3,2,2,4,4,3,2,2,3,4,4,3,2,3,4,4,4,4,3,3,3,2,3,4,5,5,4,2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,4,3,2,2,1,1,2,3,3,3,2,3,4,4,4,3,2,2,3,3,3,2,3,3,3,3,3,3,3,3,3,2,2,3,4,4,2,2,3,4,4,3,3,3,4,4,2,2,3,4,3,3,3,3,4,3,2,3,3,4,4,4,3,4,4,3,3,4,3,3,3,4,4,4,3,3,3,3,4,3,3,2,2,2,3,3,3,3,3,3,3,3,5,5,3,4,4,3,3,2,1,2,3,3,3,3,3,3,3,3,3,2,2,3,4,4,3,2,3,3,3,3,4,4,3,4,5,4,3,4,5,5,3,2,2,3,4,4,4,4,4,4,4,3,3,3,3,3,2,3,2,2,2,3,3,3,3,3,3,4,4,3,3,4,4,4,3,3,2,3,4,4,3,2,2,4,5,4,4,3,3,3,4,4,4,4,3,2,3,3,4,4,4,3,3,3,2,2,2,2,3,4,4,4,4,4,4,3,3,3,2,3,3,4,4,3,3,4,4,3,2,2,3,4,3,3,4,4,3,3,3,2,3,4,4,4,3,2,4,3,2,2,4,4,3,3,3,3,3,3,3,4,4,3,3,4,4,4,3,3,3,4,4,5,4,3,3,3,4,3,2,3,4,4,2,1,2,4,4,3,2,3,4,4,3,3,3,2,3,3,3,3,3,3,3,3,3,3,3,3,3,5,5,3,2,2,3,3,2,2,2,3,4,4,3,2,3,5,4,2,2,3,4,3,3,3,5,5,4,2,3,4,4,4,3,2,1,2,2,3,3,4,4,4,3,2,2,4,4,3,3,4,4,3,3,3,3,3,3,3,3,4,5,5,4,4,4,4,3,3,3,4,4,3,3,3,3,3,4,3,2,3,5,6,4,2,2,2,3,3,3,3,3,3,3,3,3,4,4,3,2,3,3,3,3,2,2,3,3,3,3,2,3,4,3,2,3,3,3,4,3,3,4,3,3,4,3,2,2,2,3,4,4,4,3,4,4,3,3,4,3,4,3,4,4,3,2,3,4,4,3,3,3,3,3,3,3,4,4,3,3,3,3,3,3,3,3,3,3,2,3,4,4,3,3,3,3,4,4,3,3,3,3,3,3,3,4,3,3,4,3,3,3,3,3,3,3,2,2,3,3,3,4,5,4,3,3,4,4,4,3,2,4,4,3,4,4,3,2,2,3,4,5,4,4,4,3,3,3,4,3,3,4,3,2,2,3,3,3,3,3,3,3,4,3,2,2,3,3,4,4,5,4,4,3,2,3,4,4,3,2,2,2,3,4,4,3,3,3,4,4,4,4,3,3,2,3,3,3,3,3,2,2,2,3,4,5,4,3,3,4,5,4,3,2,3,3,4,4,4,4,4,3,3,3,3,3,2,3,2,2,3,5,5,4,3,3,4,4,3,3,3,4,3,1,2,4,4,2,3,4,4,3,2,3,4,4,4,3,3,3,3,4,3,2,2,3,3,3,4,4,3,2,2,2,2,2,2,3,3,2,2,3,3,4,5,3,3,4,4,3,3,3,4,5,4,3,2,3,3,4,4,4,4,3,2,2,2,3,3,2,2,3,3,3,3,2,3,3,3,3,4,3,2,2,2,3,3,3,4,4,4,3,3,3,3,3,4,5,5,4,4,3,3,3,3,2,2,3,4,4,4,3,3,4,4,3,3,3,3,3,2,3,3,4,4,3,2,2,3,4,4,3,3,3,3,4,4,4,4,3,2,3,3,3,4,4,3,3,3,3,4,5,4,3,2,3,4,4,3,3,3,3,3,3,3,3,2,2,3,4,3,2,2,2,2,3,4,4,3,3,4,4,3,3,3,3,4,5,4,4,3,3,4,4,3,3,3,3,2,3,3,3,3,4,4,4,3,3,3,3,3,4,3,3,3,2,2,3,4,4,3,4,4,3,2,3,3,4,4,2,2,3,4,3,2,2,3,3,3,4,3,3,3,2,1,3,4,4,3,2,2,2,3,4,3,2,3,3,2,3,4,3,3,3,3,3,2,2,4,5,4,3,3,2,3,4,3,2,3,4,3,2,3,4,4,3,3,4,4,4,3,2,2,2,3,4,3,2,1,2,3,3,3,3,3,3,3,3,3,3,3,3,4,5,4,2,2,3,3,2,3,5,4,3,2,3,3,4,4,4,3,2,3,3,3,3,4,4,4,3,3,4,4,2,2,3,4,4,4,3,2,3,4,4,3,3,3,3,4,4,4,4,4,3,2,2,3,4,3,3,3,3,3,3,4,3,3,3,2,3,4,4,3,3,3,4,4,3,3,3,3,3,2,2,3,4,4,3,3,4,5,4,3,4,4,3,2,3,4,4,3,3,3,2,2,2,3,3,4,2,2,2,3,3,3,2,2,2,2,3,3,3,4,5,4,4,3,3,3,4,5,4,3,3,3,4,4,3,3,1,0,2,4,4,2,2,3,4,4,3,2,2,2,3,4,4,3,4,4,3,3,3,2,1,2,2,3,3,2,3,3,3,2,2,2,3,4,3,2,2,2,2,3,3,4,3,3,3,2,3,4,4,4,4,4,4,3,2,3,2,2,2,2,3,3,3,3,3,2,2,2,3,3,3,3,4,4,4,4,3,2,2,3,3,3,3,3,3,3,3,3,2,1,2,4,4,3,2,3,3,3,3,4,3,2,2,3,4,4,3,3,4,5,3,2,2,3,3,3,4,4,3,4,4,4,3,3,3,4,4,3,3,3,2,2,3,2,2,1,2,3,4,4,4,2,2,2,3,2,2,3,4,4,3,3,2,3,4,4,3,3,4,4,4,3,3,4,4,4,3,3,2,3,3,4,5,5,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,2,2,3,3,4,3,2,2,3,3,3,3,2,3,4,4,3,3,3,4,4,3,3,4,4,4,3,2,3,4,4,4,4,3,2,3,3,3,2,2,4,4,4,3,2,2,3,4,4,3,3,3,4,4,3,4,4,3,2,3,4,4,4,3,2,2,3,4,4,3,3,3,4,3,3,3,3,5,4,3,2,2,3,4,4,3,3,3,3,3,4,3,3,4,4,3,2,2,3,3,3,3,3,4,4,3,3,4,4,3,2,3,3,4,4,4,3,3,3,3,2,3,3,4,4,3,2,3,4,3,3,3,2,2,3,4,4,3,1,2,3,4,4,4,3,3,4,4,3,3,3,4,5,4,3,3,3,3,4,4,3,3,4,4,4,4,3,3,3,4,4,3,2,3,4,4,4,3,3,2,2,3,3,3,3,3,3,4,5,4,3,3,3,3,3,3,4,4,3,3,4,3,1,0,1,3,4,5,4,3,2,2,2,3,4,3,3,2,2,3,3,3,3,4,4,3,3,3,3,3,3,2,3,4,5,4,4,4,4,4,3,3,3,4,4,4,3,3,3,3,3,3,4,6,5,3,1,1,3,3,2,2,3,3,4,4,3,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,4,4,3,4,5,4,4,4,4,3,3,3,4,4,3,3,3,3,5,5,4,3,3,4,3,2,3,5,4,3,3,2,1,2,2,2,2,2,3,4,3,3,2,3,4,4,3,2,2,2,2,1,2,3,4,4,3,3,3,3,4,4,4,5,5,4,5,4,2,2,3,4,3,3,3,3,4,4,3,3,4,3,4,4,4,3,2,2,3,3,2,3,4,3,3,3,4,3,3,4,4,3,4,4,2,2,3,3,3,4,4,3,3,2,3,3,2,2,3,3,3,3,3,3,3,3,3,3,3,3,4,4,3,2,2,3,3,3,3,3,4,4,2,2,3,5,5,3,3,3,3,3,4,4,4,2,2,2,2,3,3,2,3,4,3,3,4,4,3,3,3,3,3,3,3,4,5,4,3,3,2,2,2,2,3,4,4,4,4,3,2,2,4,4,3,2,3,3,3,4,4,3,3,3,3,4,4,4,2,2,3,4,4,3,3,4,5,4,4,4,4,3,3,2,3,4,4,3,3,3,2,3,3,3,3,3,3,4,3,4,4,5,4,3,3,2,3,3,2,3,4,3,2,3,4,4,3,2,3,4,4,3,2,1,2,3,3,3,3,4,5,3,2,2,3,3,2,3,3,1,2,3,3,3,3,3,3,3,3,3,4,4,3,3,3,2,2,3,4,4,2,2,3,4,4,4,4,4,4,4,3,3,3,4,4,3,3,4,4,3,3,3,3,3,2,3,3,4,3,3,4,4,3,2,3,3,3,3,4,4,4,3,4,5,4,3,2,3,2,3,4,4,3,2,2,3,4,3,3,3,2,2,3,4,4,3,3,3,3,3,4,4,3,1,1,3,4,4,4,4,3,3,4,5,4,3,3,4,4,3,4,4,4,3,3,3,3,3,4,4,3,3,3,3,3,3,3,2,2,3,3,4,5,5,4,3,2,3,3,3,3,3,3,3,3,3,4,4,3,3,3,4,4,4,3,2,2,2,3,3,3,3,4,3,3,3,4,4,4,3,2,2,3,4,4,4,4,4,4,4,3,3,2,2,3,5,6,4,2,2,3,2,3,3,3,3,3,3,3,2,3,4,4,3,3,3,3,3,2,2,2,3,3,3,3,4,4,4,4,4,3,3,3,3,3,3,3,3,3,2,2,2,3,3,4,4,3,2,3,3,4,4,4,3,3,3,3,3,3,3,4,4,4,3,3,2,3,4,4,3,3,5,4,3,2,3,4,4,3,3,2,2,2,3,2,2,2,3,3,4,3,2,2,3,3,3,3,3,3,2,2,3,3,3,2,3,4,4,4,4,3,2,3,4,3,3,3,4,4,4,3,4,4,3,3,3,4,4,3,2,3,3,3,3,4,3,3,4,3,2,3,3,3,2,2,3,3,3,3,3,3,2,3,3,3,4,4,4,3,3,3,3,2,3,3,4,4,4,3,3,4,4,4,2,2,2,3,4,4,3,2,2,4,4,3,2,3,3,3,3,3,4,3,3,3,4,3,3,4,4,3,3,3,2,2,2,2,3,3,3,3,3,3,4,4,4,4,3,3,3,5,5,4,4,3,3,2,2,2,2,2,2,2,2,3,2,3,3,2,2,3,3,3,3,3,3,3,3,3,4,3,2,3,3,3,3,3,4,3,2,3,4,3,3,2,4,5,5,4,3,2,2,3,3,4,3,3,3,3,3,3,3,3,4,4,4,3,3,3,3,2,2,3,3,3,2,3,5,5,3,3,4'
+    CH1 2500 포인트, 처음 5개 [3, 3, 3, 3, 3]
+[2 파형 받기 curve_query(CH1)] 통과 (0.1s)
 
-===== 캡처 파일 한 번에 가져오기 =====
-  [5 가져오기(10개)] 시작
-    [캡처 파일 가져오기] 10개 (파일 사이 1초 간격)
-      19:53:17.928 (+  3143ms) > ACQuire:STATE?
-      19:53:17.930 (+     2ms) < 0
-      19:53:17.930 (+     0ms) > BUSY?
-      19:53:17.932 (+     2ms) < 0
-      19:53:18.933 (+  1001ms) > FILESystem:CWD?
-      19:53:18.936 (+     2ms) < "C:/Users/Public/Tektronix/TekScope"
-      19:53:18.936 (+     1ms) > FILESystem:DIR?
-      19:53:18.939 (+     3ms) < "Applications","Masks","PICompatibility","aoe201925_20261017041936087.png","cap_200921.png","chk083635022_20261018164110612.png","chk083651676_20261018164117299.png","chk083651676_20261018164117510.pn
-      19:53:19.940 (+  1001ms) > FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/scopetech407084162_20261019035134392.png"
-      19:53:19.945 (+     5ms) < <file 74797 bytes>
-      19:53:19.946 (+     0ms) > *OPC?
-      19:53:19.956 (+    10ms) < 1
-      19:53:20.957 (+  1001ms) > FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/scopetech407084162_20261019035134392.png"
-      19:53:20.958 (+     1ms) > *ESR?
-      19:53:20.974 (+    16ms) < 0
-      19:53:21.975 (+  1001ms) > FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/scopetech407095738_20261019035145825.png"
-      19:53:21.981 (+     6ms) < <file 74822 bytes>
-      19:53:21.981 (+     1ms) > *OPC?
-      19:53:21.990 (+     9ms) < 1
-      19:53:22.995 (+  1005ms) > FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/scopetech407095738_20261019035145825.png"
-      19:53:22.996 (+     1ms) > *ESR?
-      19:53:23.011 (+    15ms) < 0
-      19:53:24.012 (+  1001ms) > FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/scopetech407107190_20261019035157285.png"
-      19:53:24.017 (+     5ms) < <file 74628 bytes>
-      19:53:24.018 (+     1ms) > *OPC?
-      19:53:24.027 (+     9ms) < 1
-      19:53:25.028 (+  1001ms) > FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/scopetech407107190_20261019035157285.png"
-      19:53:25.028 (+     0ms) > *ESR?
-      19:53:25.040 (+    12ms) < 0
-      19:53:26.048 (+  1007ms) > FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/scopetech407118645_20261019035208752.png"
-      19:53:26.052 (+     4ms) < <file 75179 bytes>
-      19:53:26.052 (+     0ms) > *OPC?
-      19:53:26.061 (+     9ms) < 1
-      19:53:27.067 (+  1006ms) > FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/scopetech407118645_20261019035208752.png"
-      19:53:27.068 (+     1ms) > *ESR?
-      19:53:27.081 (+    13ms) < 0
-      19:53:28.087 (+  1006ms) > FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/scopetech407130093_20261019035220194.png"
-      19:53:28.092 (+     5ms) < <file 75099 bytes>
-      19:53:28.093 (+     0ms) > *OPC?
-      19:53:28.101 (+     9ms) < 1
-      19:53:29.103 (+  1001ms) > FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/scopetech407130093_20261019035220194.png"
-      19:53:29.104 (+     1ms) > *ESR?
-      19:53:29.116 (+    12ms) < 0
-      19:53:30.122 (+  1007ms) > FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/scopetech407141584_20261019035231695.png"
-      19:53:30.127 (+     5ms) < <file 74679 bytes>
-      19:53:30.127 (+     1ms) > *OPC?
-      19:53:30.144 (+    16ms) < 1
-      19:53:31.152 (+  1008ms) > FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/scopetech407141584_20261019035231695.png"
-      19:53:31.153 (+     1ms) > *ESR?
-      19:53:31.171 (+    19ms) < 0
-      19:53:32.181 (+  1010ms) > FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/scopetech407153086_20261019035243187.png"
-      19:53:32.186 (+     5ms) < <file 73433 bytes>
-      19:53:32.187 (+     0ms) > *OPC?
-      19:53:32.196 (+     9ms) < 1
-      19:53:33.201 (+  1005ms) > FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/scopetech407153086_20261019035243187.png"
-      19:53:33.201 (+     1ms) > *ESR?
-      19:53:33.215 (+    13ms) < 0
-      19:53:34.216 (+  1001ms) > FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/scopetech407164557_20261019035254641.png"
-      19:53:34.221 (+     6ms) < <file 74528 bytes>
-      19:53:34.222 (+     1ms) > *OPC?
-      19:53:34.231 (+     9ms) < 1
-      19:53:35.232 (+  1001ms) > FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/scopetech407164557_20261019035254641.png"
-      19:53:35.233 (+     0ms) > *ESR?
-      19:53:35.251 (+    19ms) < 0
-      19:53:36.252 (+  1001ms) > FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/scopetech407176011_20261019035306109.png"
-      19:53:36.256 (+     4ms) < <file 75067 bytes>
-      19:53:36.257 (+     0ms) > *OPC?
-      19:53:36.265 (+     9ms) < 1
-      19:53:37.272 (+  1007ms) > FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/scopetech407176011_20261019035306109.png"
-      19:53:37.272 (+     1ms) > *ESR?
-      19:53:37.279 (+     7ms) < 0
-      19:53:38.280 (+  1001ms) > FILESystem:READFile "C:/Users/Public/Tektronix/TekScope/scopetech407187468_20261019035317566.png"
-      19:53:38.285 (+     5ms) < <file 74511 bytes>
-      19:53:38.285 (+     0ms) > *OPC?
-      19:53:38.294 (+     8ms) < 1
-      19:53:39.301 (+  1007ms) > FILESystem:DELEte "C:/Users/Public/Tektronix/TekScope/scopetech407187468_20261019035317566.png"
-      19:53:39.301 (+     0ms) > *ESR?
-      19:53:39.309 (+     7ms) < 0
-      C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\captures\_seqtest\shots\shot_001.png
-      C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\captures\_seqtest\shots\shot_002.png
-      C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\captures\_seqtest\shots\shot_003.png
-      C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\captures\_seqtest\shots\shot_004.png
-      C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\captures\_seqtest\shots\shot_005.png
-      C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\captures\_seqtest\shots\shot_006.png
-      C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\captures\_seqtest\shots\shot_007.png
-      C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\captures\_seqtest\shots\shot_008.png
-      C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\captures\_seqtest\shots\shot_009.png
-      C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\captures\_seqtest\shots\shot_010.png
-    가져옴 10개, 남음 0개
-    --- 저장 시각 분석 (파일 이름 시각 기준, 시계 오차 약 ±0.1s) ---
-    shot_001.png     Single 시작 -> 파일 시각  0.18s   파일 시각 -> AOE 해제  6.08s
-    shot_002.png     Single 시작 -> 파일 시각  0.03s   파일 시각 -> AOE 해제  6.11s
-    shot_003.png     Single 시작 -> 파일 시각  0.03s   파일 시각 -> AOE 해제  6.11s
-    shot_004.png     Single 시작 -> 파일 시각  0.04s   파일 시각 -> AOE 해제  6.09s
-    shot_005.png     Single 시작 -> 파일 시각  0.04s   파일 시각 -> AOE 해제  6.11s
-    shot_006.png     Single 시작 -> 파일 시각  0.04s   파일 시각 -> AOE 해제  6.11s
-    shot_007.png     Single 시작 -> 파일 시각  0.03s   파일 시각 -> AOE 해제  6.12s
-    shot_008.png     Single 시작 -> 파일 시각  0.03s   파일 시각 -> AOE 해제  6.12s
-    shot_009.png     Single 시작 -> 파일 시각  0.03s   파일 시각 -> AOE 해제  6.10s
-    shot_010.png     Single 시작 -> 파일 시각  0.03s   파일 시각 -> AOE 해제  6.11s
-    가장 늦은 저장: Single 시작 후 0.18s  (aoe_save_wait_s 는 이것보다 길어야 합니다)
-  [5 가져오기(10개)] 통과 (22.5s)
-      19:53:40.607 (+  1298ms) > ACQuire:STATE STOP
+[3 화면 캡처 save_screenshot 1/3] 시작 20:14:01.811
+2026-10-19 20:14:01.821983 - (SCOPE 1) Write >>  'SAVE:IMAGE:COMPOSITION NORMAL'
+2026-10-19 20:14:01.823622 - (SCOPE 1) Query >>  'SAVE:IMAGE:COMPOSITION?'
+2026-10-19 20:14:01.826670 - Response from 'SAVE:IMAGE:COMPOSITION?' >>  'NORMAL'
+2026-10-19 20:14:01.832566 - (SCOPE 1) Write >>  'SAVE:IMAGE "./tmd_001.png"'
+2026-10-19 20:14:01.833621 - (SCOPE 1) Query >>  '*OPC?'
+2026-10-19 20:14:01.986887 - Response from '*OPC?' >>  '1'
+2026-10-19 20:14:01.988267 - (SCOPE 1) Write >>  'FILESYSTEM:READFILE "./tmd_001.png"'
+2026-10-19 20:14:02.008713 - (SCOPE 1) Write >>  'FILESYSTEM:DELETE "./tmd_001.png"'
+2026-10-19 20:14:02.010956 - (SCOPE 1) Query >>  '*OPC?'
+2026-10-19 20:14:47.614715 - The query of SCOPE 1 for '*OPC?' failed with the following message: VisaIOError('VI_ERROR_TMO (-1073807339): Timeout expired before operation completed.')
+[3 화면 캡처 save_screenshot 1/3] 실패 (45.8s): Error: The query of SCOPE 1 for '*OPC?' failed with the following message: VisaIOError('VI_ERROR_TMO (-1073807339): Timeout expired before operation completed.')
+Traceback (most recent call last):
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\tm_devices\driver_mixins\device_control\pi_control.py", line 355, in query
+    response = self._visa_resource.query(query).strip()
+               ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\pyvisa\resources\messagebased.py", line 702, in query
+    return self.read()
+           ~~~~~~~~~^^
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\pyvisa\resources\messagebased.py", line 521, in read
+    message = self._read_raw().decode(enco)
+              ~~~~~~~~~~~~~~^^
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\pyvisa\resources\messagebased.py", line 475, in _read_raw
+    chunk, status = self.visalib.read(self.session, size)
+                    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\pyvisa\ctwrapper\functions.py", line 2339, in read
+    ret = library.viRead(session, buffer, count, byref(return_count))
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\pyvisa\ctwrapper\highlevel.py", line 227, in _return_handler
+    return self.handle_return_value(session, ret_value)  # type: ignore
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\pyvisa\highlevel.py", line 252, in handle_return_value
+    raise errors.VisaIOError(rv)
+pyvisa.errors.VisaIOError: VI_ERROR_TMO (-1073807339): Timeout expired before operation completed.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\tmd_test.py", line 73, in step
+    fn()
+    ~~^^
+  File "C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\tmd_test.py", line 99, in <lambda>
+    lambda name=name: (scope.save_screenshot(name, local_folder=shots_dir),
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\tm_devices\driver_mixins\abstract_device_functionality\screen_capture_mixin.py", line 80, in save_screenshot
+    self._save_screenshot(
+    ~~~~~~~~~~~~~~~~~~~~~^
+        filename=filename_path,
+        ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+        keep_device_file=keep_device_file,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\tm_devices\drivers\scopes\tekscope\tekscope.py", line 743, in _save_screenshot
+    self.write(f"FILESYSTEM:DELETE {device_filepath_string}", opc=True)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\tm_devices\driver_mixins\device_control\pi_control.py", line 918, in write
+    if opc and (result := self.ieee_cmds.opc()) != "1":
+                          ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\tm_devices\driver_mixins\shared_implementations\ieee488_2_commands.py", line 117, in opc
+    return self._pi_control.query("*OPC?")
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\tm_devices\driver_mixins\device_control\pi_control.py", line 365, in query
+    raise visa.Error(msg) from error
+pyvisa.errors.Error: The query of SCOPE 1 for '*OPC?' failed with the following message: VisaIOError('VI_ERROR_TMO (-1073807339): Timeout expired before operation completed.')
+
+=> 여기서 멈춤/실패. 위 기록의 마지막 명령을 확인하세요.
+2026-10-19 20:14:47.661567 - Closing Connections to Devices
+2026-10-19 20:14:47.662167 - Closing Connection to SCOPE 1
+2026-10-19 20:14:47.692636 - DeviceManager Closed
+
+결과: 실패 (총 46s)
+이 파일을 올려주세요: C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\logs\tmd_test_20261019_201350.txt
