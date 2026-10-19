@@ -9,6 +9,7 @@ DEFAULTS = {
         "interface": "usb",
         "usb_resource": "",
         "visa_library": "",
+        "usb_clear": "yes",
         "ip": "192.168.0.10",
         "port": "4000",
         "timeout_s": "10",

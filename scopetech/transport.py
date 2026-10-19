@@ -283,8 +283,11 @@ def _load_visa_library(path: str = ""):
 
 
 class VisaTransport(Transport):
-    def __init__(self, resource: str = "", library: str = "", timeout: float = 10.0, logger: Logger | None = None):
+    def __init__(self, resource: str = "", library: str = "", timeout: float = 10.0, logger: Logger | None = None,
+                 progress=None, clear: bool = True):
         super().__init__(timeout, logger)
+        step = progress or (lambda text: None)  # 멈춘 단계를 알 수 있도록 각 VISA 호출 전에 알림
+        step("VISA 라이브러리 불러오기")
         self.lib = lib = _load_visa_library(library)
         u32, i32 = ctypes.c_uint32, ctypes.c_int32
         attr = ctypes.c_uint64 if ctypes.sizeof(ctypes.c_void_p) == 8 else ctypes.c_uint32
@@ -306,17 +309,23 @@ class VisaTransport(Transport):
             fn.argtypes = args
             fn.restype = i32
         self.rm = u32()
+        step("VISA 시작")
         self._check(lib.viOpenDefaultRM(ctypes.byref(self.rm)), "viOpenDefaultRM")
-        resource = resource or self._find_resource()
+        if not resource:
+            step("USB 장치 찾기")
+            resource = self._find_resource()
         self.vi = u32()
+        step(f"장치 열기 {resource}")
         self._check(lib.viOpen(self.rm, resource.encode(), 0, 0, ctypes.byref(self.vi)), f"viOpen({resource})")
         self.description = f"USB {resource}"
         self._readbuf = ctypes.create_string_buffer(1 << 20)
         # 이전 실행이 강제 종료되며 스코프에 남긴 USB 전송/읽지 않은 응답을 버린다(USBTMC Device Clear)
-        self._apply_timeout(5)
-        st = lib.viClear(self.vi)
-        self._log(">", "(USB Device Clear) " + ("OK" if st >= 0 else f"실패: {self._status_text(st)}"))
-        time.sleep(0.2)
+        if clear:
+            self._apply_timeout(5)
+            step("USB Device Clear")
+            st = lib.viClear(self.vi)
+            self._log(">", "(USB Device Clear) " + ("OK" if st >= 0 else f"실패: {self._status_text(st)}"))
+            time.sleep(0.2)
         self._apply_timeout(timeout)
 
     def _status_text(self, status: int) -> str:
