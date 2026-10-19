@@ -155,6 +155,14 @@ logs/scpi_20261017.log                <- 스코프 송수신 기록(문제 확�
 - `py analyze.py --recompute`: `vin_avg_points`나 `out_cross`를 바꾼 뒤, 저장된 CSV로 VT+/VT−를 다시 계산합니다.
 - `py analyze.py --spec 1V8`: 결과에 기록된 기준 대신 지정한 기준으로 판정합니다.
 
+## tm_devices 비교 시험 (선택)
+Tektronix 공식 Python 라이브러리 `tm_devices` 로 같은 스코프를 시험합니다. 본 프로그램은 표준 라이브러리만 쓰며 이 시험에만 필요합니다.
+1. 인터넷 PC: `get_tm_devices.bat` → `tm_devices_wheels` 폴더 생성(약 13MB, Python 아무 버전이나 있으면 됨)
+2. 그 폴더를 측정 PC 의 scope_tech 폴더에 복사 → `install_tm_devices.bat`
+3. `run_tmd_test.bat` (캡처 횟수: `run_tmd_test.bat --shots 10`) → `logs/tmd_test_*.txt` 업로드
+
+시험 내용: 연결(*IDN?, 스코프 설정 초기화 안 함) → CH1 파형 받기 → tm_devices `save_screenshot()` 반복. 이 함수는 원격 `SAVe:IMAGe` 를 쓰므로 TekScope 가 멈출 수 있습니다(멈추면 재시작).
+
 ## 7. 문제 해결
 | 증상 | 확인 |
 |---|---|
