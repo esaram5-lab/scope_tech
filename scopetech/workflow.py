@@ -118,15 +118,6 @@ class Bench:
     def vih(self, ch_in: int, ch_out: int, hold: bool = False) -> Record:
         s, cfg = self.scope, self.cfg
         self._prepare_overlay()
-        # 화면에도 출력 VOH/VOL 이 보이도록 출력 채널에 TOP/BASE 측정 추가 (값 판정은 같은 파형에서 계산)
-        badges = []
-        if cfg.getbool("measure", "vih_output_meas"):
-            for name, mtype in zip(s.free_measurement_names(2), ("TOP", "BASE")):
-                s.add_measurement(name, mtype, ch_out)
-                badges.append((name, mtype, ch_out))
-            err = s.check("출력 측정 추가", raise_=False)
-            if err:
-                self.echo(f"  [경고] {err}")
         if hold:
             s.stop()
             self.echo("  현재 화면 파형으로 분석합니다(새 획득 없음).")
@@ -143,6 +134,16 @@ class Bench:
             avg_points=cfg.getint("measure", "vin_avg_points"),
             cross=cfg.getfloat("measure", "out_cross"),
         )
+        # 화면에도 출력 VOH/VOL 이 보이도록 출력 채널에 TOP/BASE 측정 추가.
+        # 획득이 끝난 뒤에 추가한다(획득 중 측정 계산 부하/이벤트 방지). 판정 값은 위 파형에서 계산.
+        badges = []
+        if cfg.getbool("measure", "vih_output_meas"):
+            for name, mtype in zip(s.free_measurement_names(2), ("TOP", "BASE")):
+                s.add_measurement(name, mtype, ch_out)
+                badges.append((name, mtype, ch_out))
+            err = s.check("출력 측정 추가", raise_=False)
+            if err:
+                self.echo(f"  [경고] {err}")
 
         rec = self._new_record("VIH", [ch_in, ch_out])
         rec.meas = badges

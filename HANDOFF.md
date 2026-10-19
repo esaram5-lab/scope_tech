@@ -99,3 +99,9 @@ Tektronix **MSO58B** (FV 2.24.4, Windows 내장형, TPP1000 프로브, CH1~7 연
 - 테스트 33개 통과. 실장비 미검증.
 - results.csv 에 `pin` 열 추가: VIL/VIH 결과의 VT 행은 입력 핀, 출력 VOH/VOL 행은 출력 핀. 이전 형식 results.csv 는 `results_old_시각.csv` 로 옮기고 새로 시작.
 - 메뉴 2(VOH/VOL만)는 50회 통계가 필요할 때만 사용. 메뉴 1 한 번으로 입력 VIL/VIH + 출력 VOH/VOL.
+
+## 2026-10-19 VIL/VIH Single 단계 오류 대응 (사용자: 핀 2→12, 20→4 측정 시 Single 에서 오류, 로그 미수신)
+- 추정 원인 1: 직전 변경으로 Single 전에 출력 TOP/BASE 측정을 추가 → 획득 중 측정 이벤트(2200번대: 클리핑/계산 중 등)가 ESR 오류 비트를 세워 `single()` 의 check 가 예외.
+- 추정 원인 2: HiRes + 긴 레코드 처리 중 `ACQuire:STATE?` 응답 지연 → VISA 10초 읽기 타임아웃.
+- 수정: 출력 측정 배지를 획득·파형 전송 후에 추가. `check()` 는 2200번대·400~500번대 이벤트를 경고(`scope.warnings`)로만 처리. Single 상태 폴링 질의 타임아웃을 max(single_timeout_s, 30)초로.
+- 실제 원인 확정은 사용자 로그(오류 메시지 + logs/scpi_날짜.log) 필요.

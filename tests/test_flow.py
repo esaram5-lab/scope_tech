@@ -90,6 +90,17 @@ class SimFlowTest(unittest.TestCase):
         self.assertTrue(any("results.csv" in m for m in msgs))
         self.bench.capture()  # 이후 흐름 계속
 
+    def test_measurement_events_are_not_fatal(self):
+        self.sim.esr |= 0x10
+        self.sim.events.append('2228,"Measurement error, Positive Clipping"')
+        self.scope.check("단일 획득")  # 예외 없음
+        self.assertTrue(self.scope.warnings)
+        self.sim.esr |= 0x20
+        self.sim.events.append('-113,"Undefined header"')
+        with self.assertRaises(Exception):
+            self.scope.check("명령")
+        self.sim.error_log.clear()
+
     def test_capture_without_measure(self):
         shots = self.bench.capture()
         self.assertEqual([p.name for p in shots], ["clean.png"])

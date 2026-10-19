@@ -1,6 +1,7 @@
 """Tektronix 4/5/6 Series B MSO(MSO58B) 제어. 명령은 077189805 프로그래머 매뉴얼 기준."""
 from __future__ import annotations
 
+import re
 import sys
 import time
 from array import array
@@ -21,6 +22,7 @@ class MSO5B:
         self.settle_s = settle_s
         self.num_channels = num_channels
         self.idn = ""
+        self.warnings: list[str] = []  # 치명적이지 않은 스코프 이벤트(측정 경고 등)
         self.aoe_active = False
 
     # ------------------------------------------------------------------ 기본
@@ -58,11 +60,17 @@ class MSO5B:
         return None if abs(v) >= NO_VALUE else v
 
     def check(self, context: str, raise_: bool = True) -> str | None:
-        """*ESR? 로 오류를 확인하고, 있으면 ALLEv? 메시지와 함께 알린다."""
+        """*ESR? 로 오류를 확인하고, 있으면 ALLEv? 메시지와 함께 알린다.
+        측정 계산 이벤트(2200번대: 클리핑, 계산 중 등)와 경고(500번대)는 치명적 오류로 보지 않는다."""
         esr = int(float(self.query("*ESR?")))
         if not esr & ESR_ERROR_MASK:
             return None
-        msg = f"{context} 중 스코프 오류: {self.query('ALLEv?')}"
+        events = self.query("ALLEv?")
+        codes = [abs(int(c)) for c in re.findall(r'(?:^|,)\s*(-?\d+)\s*,\s*"', events)]
+        if codes and all(2200 <= c <= 2299 or 400 <= c <= 599 for c in codes):
+            self.warnings.append(f"{context}: {events}")
+            return None
+        msg = f"{context} 중 스코프 오류: {events}"
         if raise_:
             raise ScopeError(msg)
         return msg
@@ -120,7 +128,12 @@ class MSO5B:
         self.write("ACQuire:STOPAfter SEQuence")
         self.write("ACQuire:STATE ON")
         deadline = time.monotonic() + timeout
-        while self.query("ACQuire:STATE?") != "0":
+        # 긴 레코드/HiRes 처리 중에는 상태 응답이 늦을 수 있어 질의마다 넉넉한 타임아웃을 준다
+        while True:
+            with self.t.temp_timeout(max(timeout, 30)):
+                state = self.query("ACQuire:STATE?")
+            if state == "0":
+                break
             if time.monotonic() > deadline:
                 self.write("ACQuire:STATE STOP")
                 raise ScopeTimeout(
