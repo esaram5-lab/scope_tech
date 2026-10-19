@@ -101,6 +101,12 @@ class Wizard:
                     self.state.update({'name': b.name, 'temp': b.temp, 'out_type': b.out_type})
                     self.remember()
                     b.dut_pin = pin
+                    try:
+                        self.echo('\n[0/3] 스코프 상태 정리')
+                        b.reset()
+                    except (ScopeError, OSError) as e:
+                        self.echo(f'[중단] {e}')
+                        return 1
                     b.out_pin = out_pin
                     try:
                         if item == '3':

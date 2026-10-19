@@ -330,6 +330,12 @@ class Bench:
         self.echo("[저장] " + ", ".join(x.name for x in out) + f"  -> {rec.folder}")
         return out
 
+    def reset(self) -> None:
+        """매 측정 시작 전 스코프 통신/상태 정리 (config [measure] reset_each_run)."""
+        if self.cfg.getbool("measure", "reset_each_run"):
+            self.scope.reset_state()
+            self.echo("  스코프 상태 정리 완료(통신 버퍼·오류·Act On Event)")
+
     def save_manual(self, label: str, chans: list[int], note: str = "") -> Record:
         """수동 시험: 기존 측정/커서는 유지하고 CSV와 화면 1장을 저장한다."""
         if not label.strip() or not chans or any(c < 1 or c > self.scope.num_channels for c in chans):

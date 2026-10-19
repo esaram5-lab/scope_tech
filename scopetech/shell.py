@@ -112,6 +112,7 @@ class ScopeShell(cmd.Cmd):
         if not tokens or tokens[0].lower() not in ("vih", "vil", "voh", "vol"):
             raise ValueError("사용법: all vih 1 2  또는  all voh 2")
         rest = " ".join(tokens[1:])
+        self.bench.reset()
         if tokens[0].lower() in ("vih", "vil"):
             self.do_vih(rest)
         else:

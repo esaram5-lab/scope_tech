@@ -108,3 +108,4 @@ Tektronix **MSO58B** (FV 2.24.4, Windows 내장형, TPP1000 프로브, CH1~7 연
 - 사용자 로그(수정 전, 13:42) 분석: Single·파형 전송·커서는 정상. 화면 캡처(AOE)에서 PNG 가 DIR? 에 보인 0.5초 뒤 AOE 해제 → `*OPC?` 무응답(TekScope 멈춤). 2026-10-17 7단계 멈춤과 같은 패턴.
 - 수정: AOE 는 켠 채로 BUSY 해제 + PNG 를 끝(IEND)까지 읽은 뒤에 해제(`_read_png_when_complete`), 해제 후 `*OPC?` 대기 30초. 점검 도구도 BUSY 해제 + 2초 뒤 해제.
 - 참고: TekScope 기본 폴더에 예전 캡처 PNG(cap_/chk_/aoe_*)가 쌓여 있음. 실패 시 남은 파일이며 스코프에서 지워도 됨.
+- 매 측정 전 상태 정리 추가(`[measure] reset_each_run`, `MSO5B.reset_state`, 안내형 메뉴 [0/3], 셸 `all`): 통신 버퍼 비우기(viClear)·*CLS·남은 AOE 해제·결과 바 ON·*IDN? 응답 확인(10초). *RST 는 사용자 스코프 설정을 지우므로 쓰지 않음. TekScope 가 이미 멈췄으면 측정 전에 "재시작 필요"로 중단.

@@ -350,6 +350,24 @@ class MSO5B:
             if time.monotonic() > deadline:
                 raise ScopeError(f"화면 캡처 파일을 완전히 받지 못했습니다: {path}")
 
+    def reset_state(self) -> None:
+        """매 측정 전 정리: 통신 버퍼/오류 비우기, 남은 Act On Event 해제, 결과 바 표시, 응답 확인.
+        스코프 설정(V/div, 트리거 등)은 건드리지 않는다. TekScope 가 이미 멈춰 있으면 여기서 알려준다."""
+        self.t.recover()
+        self.write("*CLS")
+        self.write("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF")
+        self.write("ACTONEVent:ENable 0")
+        self.write("MAINWindow:RRBDisplaystate ON")
+        self.aoe_active = False
+        try:
+            with self.t.temp_timeout(10):
+                self.t.sync()
+                self.query("*IDN?")
+        except ScopeTimeout as e:
+            raise ScopeError("스코프가 응답하지 않습니다. TekScope 를 재시작한 뒤 다시 시도하세요.") from e
+        self.write("*CLS")
+        self.warnings.clear()
+
     def abort_capture(self) -> list[str]:
         """중단 시 최선 노력 정리. 새 획득/완료 대기는 하지 않는다.
 

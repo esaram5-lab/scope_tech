@@ -25,6 +25,7 @@ DEFAULTS = {
         "out_cross": "0.5",
         "voh_cursor": "yes",
         "vih_output_meas": "yes",
+        "reset_each_run": "yes",
     },
     "capture": {"ink_saver": "no", "settle_s": "1.0"},
     "save": {"channels": "displayed", "csv": "yes", "wfm": "yes", "setup": "yes"},
