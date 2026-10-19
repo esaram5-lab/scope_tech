@@ -54,6 +54,7 @@ class Recorder:
         self.recent.append(line)
         self.base(direction, text)
         self.report.write("      " + line + "\n")
+        self.report.flush()  # 멈춰도 마지막 명령까지 파일에 남도록
 
 
 def main(argv=None) -> int:
