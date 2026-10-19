@@ -443,21 +443,30 @@ class MSO5B:
                 raise ScopeError(f"화면 캡처 파일을 완전히 받지 못했습니다: {path}")
 
     def reset_state(self) -> None:
-        """매 측정 전 정리: 통신 버퍼/오류 비우기, 남은 Act On Event 해제, 결과 바 표시, 응답 확인.
-        스코프 설정(V/div, 트리거 등)은 건드리지 않는다. TekScope 가 이미 멈춰 있으면 여기서 알려준다."""
-        self.t.recover()
-        self.write("*CLS")
-        self.write("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF")
-        self.write("ACTONEVent:ENable 0")
-        self.write("MAINWindow:RRBDisplaystate ON")
-        self.aoe_active = False
+        """매 측정 전 정리: 응답 확인, 남은 Act On Event 해제, 결과 바 표시, 오류 비우기.
+        스코프 설정(V/div, 트리거 등)은 건드리지 않는다. TekScope 가 이미 멈춰 있으면 여기서 알려준다.
+        실장비에서 캡처 직후 매번 USB Device Clear + AOE 해제 명령을 다시 보내다가 USB 응답이 끊긴 사례가 있어,
+        Device Clear 는 응답이 없을 때만, AOE/결과 바 명령은 상태가 다를 때만 보낸다."""
         try:
-            with self.t.temp_timeout(10):
+            with self.t.temp_timeout(5):
                 self.t.sync()
-                self.query("*IDN?")
-        except ScopeTimeout as e:
-            raise ScopeError("스코프가 응답하지 않습니다. TekScope 를 재시작한 뒤 다시 시도하세요.") from e
+        except ScopeTimeout:
+            self.t.recover()  # 응답이 없을 때만 통신 정리(Device Clear) 후 다시 확인
+            try:
+                with self.t.temp_timeout(10):
+                    self.t.sync()
+            except ScopeTimeout as e:
+                raise ScopeError("스코프가 응답하지 않습니다. TekScope 를 재시작한 뒤 다시 시도하세요.") from e
         self.write("*CLS")
+        if self.query("ACTONEVent:ENable?") not in ("0", "OFF"):
+            self.write("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF")
+            self.write("ACTONEVent:ENable 0")
+            self.pace()
+        self.aoe_active = False
+        if self.query("MAINWindow:RRBDisplaystate?") in ("0", "OFF"):
+            self.write("MAINWindow:RRBDisplaystate ON")
+            self.pace()
+        self.query("*IDN?")
         self.warnings.clear()
 
     def abort_capture(self) -> list[str]:

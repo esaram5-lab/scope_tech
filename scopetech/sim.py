@@ -144,6 +144,8 @@ class SimScope:
             return None
         if h in ("ACTONEVENT:LIMIT", "SAVEONEVENT:IMAGE:FILEFORMAT") and not q:
             return None
+        if h == "MAINWINDOW:RRBDISPLAYSTATE" and q:
+            return resp(1 if self.rrb else 0)
         if h == "MAINWINDOW:RRBDISPLAYSTATE" and not q:
             self.rrb = arg.upper() in ("ON", "1")
             return None
