@@ -105,3 +105,6 @@ Tektronix **MSO58B** (FV 2.24.4, Windows 내장형, TPP1000 프로브, CH1~7 연
 - 추정 원인 2: HiRes + 긴 레코드 처리 중 `ACQuire:STATE?` 응답 지연 → VISA 10초 읽기 타임아웃.
 - 수정: 출력 측정 배지를 획득·파형 전송 후에 추가. `check()` 는 2200번대·400~500번대 이벤트를 경고(`scope.warnings`)로만 처리. Single 상태 폴링 질의 타임아웃을 max(single_timeout_s, 30)초로.
 - 실제 원인 확정은 사용자 로그(오류 메시지 + logs/scpi_날짜.log) 필요.
+- 사용자 로그(수정 전, 13:42) 분석: Single·파형 전송·커서는 정상. 화면 캡처(AOE)에서 PNG 가 DIR? 에 보인 0.5초 뒤 AOE 해제 → `*OPC?` 무응답(TekScope 멈춤). 2026-10-17 7단계 멈춤과 같은 패턴.
+- 수정: AOE 는 켠 채로 BUSY 해제 + PNG 를 끝(IEND)까지 읽은 뒤에 해제(`_read_png_when_complete`), 해제 후 `*OPC?` 대기 30초. 점검 도구도 BUSY 해제 + 2초 뒤 해제.
+- 참고: TekScope 기본 폴더에 예전 캡처 PNG(cap_/chk_/aoe_*)가 쌓여 있음. 실패 시 남은 파일이며 스코프에서 지워도 됨.

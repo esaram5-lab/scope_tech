@@ -316,20 +316,29 @@ class MSO5B:
                     name = names[-1]
                     break
                 time.sleep(0.5)
+            if not name:
+                raise ScopeTimeout("화면 캡처 파일이 만들어지지 않았습니다(트리거/Act On Event 확인).")
+            # 실장비: 파일이 목록에 보인 직후(아직 쓰는 중) AOE 를 끄면 TekScope 가 멈췄다.
+            # 저장이 끝날 때까지(BUSY 해제 + PNG 끝 IEND 확인) AOE 는 켠 채로 기다린다.
+            path = f"{dest}/{name}"
+            data = self._read_png_when_complete(path)
         except BaseException:
             self.abort_capture()
             raise
-        else:
-            self.write("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF")
-            self.write("ACTONEVent:ENable 0")
+        self.write("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF")
+        self.write("ACTONEVent:ENable 0")
+        with self.t.temp_timeout(30):
             self.pace()
-            self.aoe_active = False
-        if not name:
-            raise ScopeTimeout("화면 캡처 파일이 만들어지지 않았습니다(트리거/Act On Event 확인).")
-        path = f"{dest}/{name}"
-        data = b""
-        for _ in range(5):  # 파일이 다 써질 때까지(PNG 끝 IEND 확인)
-            time.sleep(0.5)
+        self.aoe_active = False
+        self.write(f'FILESystem:DELEte "{path}"')
+        self.check("캡처 파일 삭제", raise_=False)
+        return data
+
+    def _read_png_when_complete(self, path: str, timeout: float = 30) -> bytes:
+        deadline = time.monotonic() + timeout
+        while True:
+            time.sleep(1.0)
+            self.wait_idle()
             self.write(f'FILESystem:READFile "{path}"')
             with self.t.temp_timeout(30):
                 data = self.t.read_file(None)
@@ -337,12 +346,9 @@ class MSO5B:
             if data.endswith(b"\n"):
                 data = data[:-1]
             if data.startswith(b"\x89PNG") and data[-12:-8] == b"\x00\x00\x00\x00" and data[-8:-4] == b"IEND":
-                break
-        else:
-            raise ScopeError(f"화면 캡처 파일을 완전히 받지 못했습니다: {path}")
-        self.write(f'FILESystem:DELEte "{path}"')
-        self.check("캡처 파일 삭제", raise_=False)
-        return data
+                return data
+            if time.monotonic() > deadline:
+                raise ScopeError(f"화면 캡처 파일을 완전히 받지 못했습니다: {path}")
 
     def abort_capture(self) -> list[str]:
         """중단 시 최선 노력 정리. 새 획득/완료 대기는 하지 않는다.

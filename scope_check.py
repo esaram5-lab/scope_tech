@@ -213,6 +213,11 @@ class Checker:
             names = sorted(n.strip().strip('"') for n in self.t.query("FILESystem:DIR?").split(",") if prefix in n)
             name = names[-1] if names else ""
         self.out(f"    Single+저장 {time.monotonic() - t0:.1f}s -> {name or '파일 없음'}")
+        # 파일이 보인 직후(아직 쓰는 중) AOE 를 끄면 TekScope 가 멈춘 사례 -> BUSY 해제 + 2초 후 해제
+        t1 = time.monotonic()
+        while self.t.query("BUSY?") != "0" and time.monotonic() - t1 < 15:
+            time.sleep(0.2)
+        time.sleep(2)
         self.w("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF")
         self.w("ACTONEVent:ENable 0")
         self.wait_opc("Act On Event 해제", 10)
