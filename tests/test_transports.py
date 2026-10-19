@@ -192,10 +192,11 @@ class VisaTest(unittest.TestCase):
         fake = FakeVisa(SimScope())
         with mock.patch.object(transport, "_load_visa_library", return_value=fake):
             t = VisaTransport(timeout=1)
+        self.assertEqual(fake.cleared, 1)  # 연결 직후 Device Clear
         with self.assertRaises(transport.ScopeTimeout):
             t.read_line()
         t.recover()
-        self.assertEqual(fake.cleared, 1)
+        self.assertEqual(fake.cleared, 2)
 
 
 if __name__ == "__main__":
