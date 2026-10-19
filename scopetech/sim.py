@@ -136,6 +136,8 @@ class SimScope:
                          "ACQUIRE:STOPAFTER": self.stopafter}[h])
         aoe_keys = {"ACTONEVENT:ENABLE": "ENABLE", "ACTONEVENT:TRIGGER:ACTION:SAVEIMAGE:STATE": "SAVEIMAGE",
                     "SAVEONEVENT:FILEDEST": "FILEDEST", "SAVEONEVENT:FILENAME": "FILENAME"}
+        if h in aoe_keys and q:
+            return resp(self.aoe[aoe_keys[h]])
         if h in aoe_keys and not q:
             self.aoe[aoe_keys[h]] = arg.upper() if aoe_keys[h] in ("ENABLE", "SAVEIMAGE") else arg
             return None
