@@ -1,42 +1,146 @@
-[7/10] 반복 시험: 실행 -> 화면 캡처(Act On Event) -> 전송, 5회
-    --- 1/5
-    ACQuire:STOPAfter RUNSTop
-    ACQuire:STATE RUN
-    SAVe:IMAGe:COMPosition NORMal
-    SAVEONEVent:FILEDest "C:/Users/Public/Tektronix/TekScope"
-    SAVEONEVent:FILEName "chk203639971"
-    SAVEONEVent:IMAGe:FILEFormat PNG
-    ACTONEVent:LIMit UNLIMITED
-    ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON
-    ACTONEVent:ENable 1
-    Act On Event 설정 완료 대기(*OPC?) -> 1  (0.15s)
-    ACQuire:STOPAfter SEQuence
-    ACQuire:STATE ON
-    Single+저장 0.7s -> chk203639971_20261017043649677.png
-    ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
-    ACTONEVent:ENable 0
-  => 실패: ScopeTimeout: 읽기: 스코프 응답 시간 초과
-Traceback (most recent call last):
-  File "C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\scope_check.py", line 364, in main
-    step(ck)
-    ~~~~^^^^
-  File "C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\scope_check.py", line 243, in s7_stop_screenshot
-    name = self.aoe_capture()
-  File "C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\scope_check.py", line 213, in aoe_capture
-    self.wait_opc("Act On Event 해제", 10)
-    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\scope_check.py", line 73, in wait_opc
-    r = self.t.query("*OPC?")
-  File "C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\scopetech\transport.py", line 66, in query
-    resp = self.read_line()
-  File "C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\scopetech\transport.py", line 371, in read_line
-    return self._read_message().decode("latin-1").strip()
-           ~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\scopetech\transport.py", line 365, in _read_message
-    self._check(st, "읽기")
-    ~~~~~~~~~~~^^^^^^^^^^^^
-  File "C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\scopetech\transport.py", line 324, in _check
-    raise ScopeTimeout(f"{what}: 스코프 응답 시간 초과")
-scopetech.transport.ScopeTimeout: 읽기: 스코프 응답 시간 초과
-    *IDN?                                         -> TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14   (0.00s)
-    통신 복구됨, 다음 단계 진행 가능
+
+===== 2026-10-19 13:38:52 시작 =====
+13:38:52.458 > *CLS
+13:38:52.459 > HEADer OFF
+13:38:52.459 > VERBose ON
+13:38:52.459 > *IDN?
+13:38:52.461 < TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14
+13:38:52.461 > FILESystem:MKDir "C:/scope_tech_tmp"
+13:38:52.461 > *OPC?
+13:38:52.488 < 1
+13:38:52.488 > *ESR?
+13:38:52.494 < 16
+13:38:52.494 > ALLEv?
+13:38:52.496 < 257,"File name error; The destination already contains a folder named; FILESystem:MKDir ""C:/scope_tech_tmp""\n",257,"File name error; The destination already contains a folder named"
+13:42:10.980 > MEASUrement:DELETEALL
+13:42:10.980 > *OPC?
+13:42:11.046 < 1
+13:42:11.146 > DISplay:WAVEView1:CURSor:CURSOR1:STATE OFF
+13:42:11.146 > *ESR?
+13:42:11.154 < 0
+13:42:11.154 > MEASUrement:LIST?
+13:42:11.161 < NONE
+13:42:11.161 > MEASUrement:ADDNew "MEAS1"
+13:42:11.161 > MEASUrement:MEAS1:TYPe TOP
+13:42:11.161 > MEASUrement:MEAS1:SOUrce1 CH2
+13:42:11.162 > MEASUrement:MEAS1:DISPlaystat:ENABle ON
+13:42:11.168 > *OPC?
+13:42:11.363 < 1
+13:42:11.463 > MEASUrement:ADDNew "MEAS2"
+13:42:11.463 > MEASUrement:MEAS2:TYPe BASE
+13:42:11.463 > MEASUrement:MEAS2:SOUrce1 CH2
+13:42:11.463 > MEASUrement:MEAS2:DISPlaystat:ENABle ON
+13:42:11.464 > *OPC?
+13:42:11.700 < 1
+13:42:11.800 > *ESR?
+13:42:11.816 < 0
+13:42:11.816 > ACQuire:MODe?
+13:42:11.818 < HIRES
+13:42:11.818 > ACQuire:STOPAfter SEQuence
+13:42:11.818 > ACQuire:STATE ON
+13:42:11.818 > ACQuire:STATE?
+13:42:11.844 < 1
+13:42:11.945 > ACQuire:STATE?
+13:42:11.946 < 1
+13:42:12.047 > ACQuire:STATE?
+13:42:12.048 < 0
+13:42:12.048 > *ESR?
+13:42:12.065 < 0
+13:42:12.065 > DATa:SOUrce CH1
+13:42:12.065 > DATa:ENCdg SRIbinary
+13:42:12.065 > WFMOutpre:BYT_Nr 2
+13:42:12.065 > DATa:STARt 1
+13:42:12.065 > DATa:STOP 2000000000
+13:42:12.066 > WFMOutpre:NR_Pt?
+13:42:12.154 < 1250000
+13:42:12.154 > WFMOutpre:XINcr?
+13:42:12.177 < 8.0E-9
+13:42:12.177 > WFMOutpre:XZEro?
+13:42:12.185 < 3.519999997690E-9
+13:42:12.185 > WFMOutpre:PT_Off?
+13:42:12.194 < 1153750
+13:42:12.194 > WFMOutpre:YMUlt?
+13:42:12.201 < 78.1250E-6
+13:42:12.201 > WFMOutpre:YOFf?
+13:42:12.210 < 0.0E+0
+13:42:12.210 > WFMOutpre:YZEro?
+13:42:12.217 < 1.5000
+13:42:12.217 > CURVe?
+13:42:12.300 < <binary 2500000 bytes>
+13:42:12.302 > *ESR?
+13:42:12.317 < 0
+13:42:12.317 > DATa:SOUrce CH2
+13:42:12.318 > DATa:ENCdg SRIbinary
+13:42:12.318 > WFMOutpre:BYT_Nr 2
+13:42:12.318 > DATa:STARt 1
+13:42:12.318 > DATa:STOP 2000000000
+13:42:12.319 > WFMOutpre:NR_Pt?
+13:42:12.328 < 1250000
+13:42:12.328 > WFMOutpre:XINcr?
+13:42:12.339 < 8.0E-9
+13:42:12.339 > WFMOutpre:XZEro?
+13:42:12.346 < 3.519999997690E-9
+13:42:12.346 > WFMOutpre:PT_Off?
+13:42:12.353 < 1153750
+13:42:12.353 > WFMOutpre:YMUlt?
+13:42:12.362 < 78.1250E-6
+13:42:12.362 > WFMOutpre:YOFf?
+13:42:12.369 < 0.0E+0
+13:42:12.369 > WFMOutpre:YZEro?
+13:42:12.389 < 1.5000
+13:42:12.390 > CURVe?
+13:42:12.477 < <binary 2500000 bytes>
+13:42:12.479 > *ESR?
+13:42:12.500 < 0
+13:42:13.550 > ACQuire:MODe?
+13:42:13.551 < HIRES
+13:42:13.552 > DISplay:WAVEView1:CURSor:CURSOR1:STATE ON
+13:42:13.552 > DISplay:WAVEView1:CURSor:CURSOR1:FUNCtion WAVEFORM
+13:42:13.552 > DISplay:WAVEView1:CURSor:CURSOR1:SPLITMODE SAME
+13:42:13.552 > DISplay:WAVEView1:CURSor:CURSOR1:ASOUrce CH1
+13:42:13.552 > DISplay:WAVEView1:CURSor:CURSOR1:BSOUrce CH1
+13:42:13.553 > DISplay:WAVEView1:CURSor:CURSOR1:MODe INDEPENDENT
+13:42:13.553 > DISplay:WAVEView1:CURSor:CURSOR1:WAVEform:APOSition -8.260312E-03
+13:42:13.553 > DISplay:WAVEView1:CURSor:CURSOR1:WAVEform:BPOSition -5.699321E-03
+13:42:13.553 > *OPC?
+13:42:13.667 < 1
+13:42:13.768 > *ESR?
+13:42:13.784 < 0
+13:42:13.809 > ACQuire:STATE?
+13:42:13.811 < 0
+13:42:13.811 > BUSY?
+13:42:13.812 < 0
+13:42:14.812 > ACQuire:STATE?
+13:42:14.814 < 0
+13:42:14.814 > BUSY?
+13:42:14.815 < 0
+13:42:15.815 > FILESystem:CWD?
+13:42:15.817 < "C:/Users/Public/Tektronix/TekScope"
+13:42:15.817 > SAVe:IMAGe:COMPosition NORMal
+13:42:15.817 > SAVEONEVent:FILEDest "C:/Users/Public/Tektronix/TekScope"
+13:42:15.817 > SAVEONEVent:FILEName "scopetech384935817"
+13:42:15.817 > SAVEONEVent:IMAGe:FILEFormat PNG
+13:42:15.818 > ACTONEVent:LIMit UNLIMITED
+13:42:15.818 > ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON
+13:42:15.818 > ACTONEVent:ENable 1
+13:42:15.818 > *OPC?
+13:42:15.860 < 1
+13:42:15.960 > ACQuire:STOPAfter SEQuence
+13:42:15.961 > ACQuire:STATE ON
+13:42:15.961 > ACQuire:STATE?
+13:42:15.964 < 1
+13:42:16.065 > ACQuire:STATE?
+13:42:16.066 < 0
+13:42:16.066 > *ESR?
+13:42:16.073 < 0
+13:42:16.073 > FILESystem:DIR?
+13:42:16.074 < "Applications","Masks","PICompatibility","aoe201925_20261017041936087.png","cap_200921.png","chk083635022_20261018164110612.png","chk083651676_20261018164117299.png","chk083651676_20261018164117510.png","chk110231343_20261018190421626.png","chk110257538_20261018190447272.png","chk203624538_202610170
+13:42:16.574 > FILESystem:DIR?
+13:42:16.575 < "Applications","Masks","PICompatibility","aoe201925_20261017041936087.png","cap_200921.png","chk083635022_20261018164110612.png","chk083651676_20261018164117299.png","chk083651676_20261018164117510.png","chk110231343_20261018190421626.png","chk110257538_20261018190447272.png","chk203624538_202610170
+13:42:16.575 > ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
+13:42:16.575 > ACTONEVent:ENable 0
+13:42:16.575 > *OPC?
+13:42:31.785 > ACQuire:STATE STOP
+13:42:31.786 > ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF
+13:42:31.786 > ACTONEVent:ENable 0
+13:42:31.786 ! 종료 정리 요청
