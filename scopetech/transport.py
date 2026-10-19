@@ -311,8 +311,13 @@ class VisaTransport(Transport):
         self.vi = u32()
         self._check(lib.viOpen(self.rm, resource.encode(), 0, 0, ctypes.byref(self.vi)), f"viOpen({resource})")
         self.description = f"USB {resource}"
-        self._apply_timeout(timeout)
         self._readbuf = ctypes.create_string_buffer(1 << 20)
+        # 이전 실행이 강제 종료되며 스코프에 남긴 USB 전송/읽지 않은 응답을 버린다(USBTMC Device Clear)
+        self._apply_timeout(5)
+        st = lib.viClear(self.vi)
+        self._log(">", "(USB Device Clear) " + ("OK" if st >= 0 else f"실패: {self._status_text(st)}"))
+        time.sleep(0.2)
+        self._apply_timeout(timeout)
 
     def _status_text(self, status: int) -> str:
         buf = ctypes.create_string_buffer(256)

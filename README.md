@@ -161,6 +161,7 @@ logs/scpi_20261017.log                <- 스코프 송수신 기록(문제 확�
 | `VISA 라이브러리를 찾을 수 없습니다` | TekVISA/NI-VISA를 설치하거나 LAN으로 바꾸세요. |
 | `USB 에서 Tektronix 스코프를 찾지 못했습니다` | 뒷면 USB Device 포트에 연결했는지, USB Device Port가 On인지 확인하세요. |
 | `LAN 연결 실패` | IP 대역, Socket Server On, Protocol None을 확인하세요. |
+| 프로그램을 강제 종료한 뒤 다음 실행이 멈춤/응답 없음 | 연결할 때마다 USB Device Clear 로 남은 통신을 자동으로 버립니다. 그래도 멈추면 순서대로: ① 작업 관리자에서 남은 `python.exe`/`py.exe` 종료 ② 스코프 뒷면 USB 케이블을 뽑고 10초 뒤 다시 연결 ③ 스코프 Utility > I/O > USB Device Port Off → On ④ TekScope 프로그램 재시작. |
 | `트리거가 걸리지 않았습니다` | 트리거 설정을 확인하세요. `config.ini`의 `single_timeout_s`로 대기 시간을 늘릴 수 있습니다. |
 | `… 중 스코프 오류: …` | 스코프가 거부한 명령입니다. `logs/` 파일을 보내주세요. |
 
