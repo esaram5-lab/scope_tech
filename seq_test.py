@@ -20,10 +20,11 @@ from __future__ import annotations
 
 import argparse
 import collections
+import re
 import sys
 import time
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -137,8 +138,16 @@ def main(argv=None) -> int:
         out(f"  [{label}] 통과 ({time.monotonic() - t0:.1f}s)")
         return True
 
+    try:
+        offset = scope.clock_offset()
+        out(f"스코프 시계 - PC 시계 = {offset:+.2f}s (캡처 파일 이름의 시각을 PC 시각으로 바꿔 저장 소요 시간을 계산)")
+    except Exception as e:  # noqa: BLE001
+        offset = None
+        out(f"스코프 시계 확인 실패({type(e).__name__}: {e}) -> 저장 시각 분석 생략")
+    fetch = lambda: _fetch_all(bench, out, scope, offset)  # noqa: E731
+
     if args.sweep:
-        return sweep(args, cfg, scope, bench, t, step, out, path, report)
+        return sweep(args, cfg, scope, bench, t, step, out, path, report, fetch)
 
     ok_runs = 0
     try:
@@ -166,7 +175,7 @@ def main(argv=None) -> int:
             ok_runs += 1
         if ok_runs == args.repeat and bench.pending_count():
             out("\n===== 캡처 파일 한 번에 가져오기 =====")
-            if not step(f"5 가져오기({bench.pending_count()}개)", lambda: _fetch_all(bench, out)):
+            if not step(f"5 가져오기({bench.pending_count()}개)", fetch):
                 ok_runs -= 1
     except KeyboardInterrupt:
         out("\n사용자 중단")
@@ -182,17 +191,39 @@ def main(argv=None) -> int:
     return 0 if ok_runs == args.repeat else 2
 
 
-def _fetch_all(bench, out) -> None:
+def _fetch_all(bench, out, scope=None, offset=None) -> None:
+    items = bench._load_pending()
     got, left = bench.fetch_pending()
     out(f"    가져옴 {got}개, 남음 {left}개")
+    if offset is not None:
+        _timing_report(items, getattr(scope, "fetched_names", {}), offset, out)
     if left:
         raise RuntimeError(f"캡처 {left}개를 가져오지 못했습니다")
+
+
+def _timing_report(items, names, offset, out) -> None:
+    """캡처 파일 이름의 시각(스코프 시계)을 PC 시각으로 바꿔 Single 시작 -> 파일 시각 -> AOE 해제 간격을 보여준다."""
+    rows = []
+    for it in items:
+        m = re.search(r"_(\d{17})\.png$", names.get(it["prefix"], ""), re.I)
+        if not m or "single_at" not in it or "disarm_at" not in it:
+            continue
+        file_dt = datetime.strptime(m.group(1)[:14], "%Y%m%d%H%M%S") + timedelta(milliseconds=int(m.group(1)[14:]))
+        file_at = (file_dt - timedelta(seconds=offset)).timestamp()
+        rows.append((Path(it["local"]).name, file_at - it["single_at"], it["disarm_at"] - file_at))
+    if not rows:
+        return
+    out("    --- 저장 시각 분석 (파일 이름 시각 기준, 시계 오차 약 ±0.1s) ---")
+    for name, lat, margin in rows:
+        out(f"    {name:<16} Single 시작 -> 파일 시각 {lat:5.2f}s   파일 시각 -> AOE 해제 {margin:5.2f}s")
+    worst = max(r[1] for r in rows)
+    out(f"    가장 늦은 저장: Single 시작 후 {worst:.2f}s  (aoe_save_wait_s 는 이것보다 길어야 합니다)")
 
 
 WAIT_KEYS = {"arm": "aoe_arm_wait_s", "save": "aoe_save_wait_s", "post": "aoe_post_wait_s"}
 
 
-def sweep(args, cfg, scope, bench, t, step, out, path, report) -> int:
+def sweep(args, cfg, scope, bench, t, step, out, path, report, fetch) -> int:
     """대기 시간을 비율로 줄여가며 캡처를 반복. 처음 실패한 단계에서 멈추고 직전 단계를 권장값으로 제시."""
     keys = list(WAIT_KEYS.values()) if args.sweep_param == "all" else [WAIT_KEYS[args.sweep_param]]
     base = {k: cfg.getfloat("capture", k) for k in WAIT_KEYS.values()}
@@ -224,7 +255,7 @@ def sweep(args, cfg, scope, bench, t, step, out, path, report) -> int:
             passed.append((lv, vals))
         if failed_at is None and bench.pending_count():
             out("\n===== 캡처 파일 한 번에 가져오기 =====")
-            if not step(f"가져오기({bench.pending_count()}개)", lambda: _fetch_all(bench, out)):
+            if not step(f"가져오기({bench.pending_count()}개)", fetch):
                 rows.append(("가져오기", {}, "실패"))
     except KeyboardInterrupt:
         out("\n사용자 중단")

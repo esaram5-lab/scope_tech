@@ -12,6 +12,7 @@ import re
 import struct
 import zlib
 from array import array
+from datetime import datetime
 
 from .analysis import Waveform, levels
 from .transport import ScopeTimeout, StreamTransport
@@ -146,6 +147,8 @@ class SimScope:
         if h == "MAINWINDOW:RRBDISPLAYSTATE" and not q:
             self.rrb = arg.upper() in ("ON", "1")
             return None
+        if h in ("TIME", "DATE") and q:
+            return resp(f'"{datetime.now():%H:%M:%S}"' if h == "TIME" else f'"{datetime.now():%Y-%m-%d}"')
         if h == "BUSY" and q:
             return resp(0)
         if h in ("HEADER", "VERBOSE"):
@@ -205,7 +208,7 @@ class SimScope:
                 self._make_waves()
                 if self.aoe["ENABLE"] == "1" and self.aoe["SAVEIMAGE"] in ("ON", "1"):
                     dest = self.aoe["FILEDEST"].strip('"').rstrip("/")
-                    name = self.aoe["FILENAME"].strip('"') + f"_{self.numacq:017d}.png"
+                    name = self.aoe["FILENAME"].strip('"') + f"_{datetime.now():%Y%m%d%H%M%S%f}"[:-3] + ".png"
                     self.files[f"{dest}/{name}".upper()] = self._screen_png()
             else:
                 self.acq_state = 1

@@ -5,6 +5,7 @@ import re
 import sys
 import time
 from array import array
+from datetime import datetime
 
 from .analysis import Waveform
 from .transport import ScopeError, ScopeTimeout, Transport
@@ -360,6 +361,7 @@ class MSO5B:
             self.write("ACTONEVent:ENable 1")
             self.pace()
             time.sleep(arm_wait)
+            self.last_capture = {"single_at": time.time()}
             self.single(timeout)
             time.sleep(save_wait)  # 스코프가 PNG 를 쓰는 동안 아무 명령도 보내지 않음
             self.wait_idle()
@@ -367,6 +369,7 @@ class MSO5B:
         except BaseException:
             self.abort_capture()
             raise
+        self.last_capture["disarm_at"] = time.time()
         self.write("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF")
         self.write("ACTONEVent:ENable 0")
         with self.t.temp_timeout(30):
@@ -375,10 +378,25 @@ class MSO5B:
         time.sleep(post_wait)
         return dest, prefix
 
+    def clock_offset(self, timeout: float = 3.0) -> float:
+        """스코프 시계 - PC 시계(초). TIME? 의 초가 바뀌는 순간을 잡아 수십 ms 정밀도로 잰다.
+        캡처 파일 이름의 시각(AOE 가 붙임)을 PC 시각으로 바꿔 실제 저장 소요 시간을 계산할 때 쓴다."""
+        first = self.query("TIME?").strip().strip('"')
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            cur = self.query("TIME?").strip().strip('"')
+            if cur != first:
+                pc = datetime.now()
+                day = self.query("DATE?").strip().strip('"')
+                return (datetime.strptime(f"{day} {cur}", "%Y-%m-%d %H:%M:%S") - pc).total_seconds()
+            time.sleep(0.02)
+        raise ScopeError("스코프 TIME? 의 초가 바뀌지 않습니다.")
+
     def fetch_images(self, items: list[dict], delete: bool = True, gap: float = 1.0) -> dict[str, bytes]:
         """capture_deferred 로 저장해 둔 PNG 들을 한 번에 가져온다. {prefix: PNG bytes}.
         파일 사이에 gap 초씩 쉬고, 못 찾거나 불완전한 파일은 결과에서 빠진다(나중에 다시 시도 가능)."""
         found: dict[str, bytes] = {}
+        self.fetched_names: dict[str, str] = {}
         listings: dict[str, list[str]] = {}
         for it in items:
             dest = it["dest"]
@@ -400,6 +418,7 @@ class MSO5B:
                 data = data[:-1]
             if data.startswith(b"\x89PNG") and data[-8:-4] == b"IEND":
                 found[it["prefix"]] = data
+                self.fetched_names[it["prefix"]] = names[-1]
                 if delete:
                     time.sleep(gap)
                     self.write(f'FILESystem:DELEte "{path}"')

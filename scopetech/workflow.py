@@ -314,7 +314,8 @@ class Bench:
             post_wait=c.getfloat("capture", "aoe_post_wait_s"),
         )
         items = self._load_pending()
-        items.append({"dest": dest, "prefix": prefix, "local": str(local), "time": datetime.now().isoformat(timespec="seconds")})
+        items.append({"dest": dest, "prefix": prefix, "local": str(local), "time": datetime.now().isoformat(timespec="seconds"),
+                      **getattr(self.scope, "last_capture", {})})
         self._save_pending(items)
         return local
 
