@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import csv
 import json
+from datetime import datetime
 from pathlib import Path
 
 from .analysis import ThresholdResult, summarize
@@ -16,7 +17,7 @@ RULES = {
 }
 
 FIELDS = [
-    "timestamp", "item", "name", "temp_C", "out_type", "spec", "channel", "signal",
+    "timestamp", "item", "name", "temp_C", "out_type", "spec", "pin", "channel", "signal",
     "metric", "typ_V", "worst_V", "spec_V", "rule", "judge", "n", "folder",
 ]
 
@@ -41,10 +42,13 @@ def vih_metrics(th: ThresholdResult, pair: str, signal: str) -> list[dict]:
 def vih_output_metrics(th: ThresholdResult, out_label: str, signal: str) -> list[dict]:
     """VIL/VIH 측정 중 같은 파형에서 본 출력 VOH/VOL. 최악값: VOH 는 가장 낮은 High, VOL 은 가장 높은 Low."""
     h, lo = summarize(th.out_highs), summarize(th.out_lows)
-    return [
+    rows = [
         metric(out_label, signal, "VOH (출력 High)", "VOH", h and h["mean"], h and h["min"], h and h["n"]),
         metric(out_label, signal, "VOL (출력 Low)", "VOL", lo and lo["mean"], lo and lo["max"], lo and lo["n"]),
     ]
+    for r in rows:
+        r["output"] = True
+    return rows
 
 
 def judge(m: dict, spec: dict, out_type: str) -> tuple[float | None, str, str]:
@@ -76,6 +80,8 @@ def rows_for(result: dict, spec: dict, folder: str) -> list[dict]:
             "temp_C": result.get("temp", ""),
             "out_type": result.get("out_type", ""),
             "spec": result.get("spec", ""),
+            # VIL/VIH 결과의 출력 VOH/VOL 행은 출력 핀, 나머지는 측정 핀
+            "pin": result.get("out_pin") if m.get("output") and result.get("out_pin") else result.get("dut_pin", ""),
             "channel": m["channel"],
             "signal": m["signal"],
             "metric": m["metric"],
@@ -99,8 +105,13 @@ def write_json(path: Path, data: dict) -> None:
 
 
 def append_csv(path: Path, rows: list[dict]) -> None:
-    new = not path.exists()
     path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        with path.open(newline="", encoding="utf-8-sig") as f:
+            header = next(csv.reader(f), [])
+        if header != FIELDS:  # 이전 버전 형식(열 구성 다름)은 옆으로 옮기고 새로 시작
+            path.rename(path.with_name(f"{path.stem}_old_{datetime.now():%Y%m%d_%H%M%S}{path.suffix}"))
+    new = not path.exists()
     # utf-8-sig: 엑셀에서 한글이 깨지지 않도록 BOM 포함
     with path.open("a", newline="", encoding="utf-8-sig" if new else "utf-8") as f:
         w = csv.DictWriter(f, fieldnames=FIELDS)

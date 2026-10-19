@@ -53,7 +53,7 @@ class Wizard:
             while True:
                 pin = self.prompt('측정할 DUT 핀 번호 (VIL/VIH 는 입력 핀)', self.state.get('pin', ''),
                                   lambda s: s.isascii() and s.isdigit() and int(s) > 0)
-                item = self.prompt('측정 항목: 1 VIL/VIH(+출력 VOH/VOL)  2 VOH/VOL  3 데이터·화면 저장만',
+                item = self.prompt('측정 항목: 1 VIL/VIH + 출력 VOH/VOL  2 VOH/VOL만(50회 통계)  3 데이터·화면 저장만',
                                    self.state.get('item', '1'), lambda s: s in ('1', '2', '3'))
                 out_pin = ''
                 if item == '1':

@@ -97,3 +97,5 @@ Tektronix **MSO58B** (FV 2.24.4, Windows 내장형, TPP1000 프로브, CH1~7 연
 - VIH 측정 시 출력 채널에 TOP/BASE 측정 배지 추가(`[measure] vih_output_meas`).
 - 안내형 메뉴 1번: 입력 핀 → 항목 → 출력 핀 → 채널 → PP/OD. `Bench.out_pin`, 결과 `out_pin`, 폴더 `PIN입력_OUT출력_`.
 - 테스트 33개 통과. 실장비 미검증.
+- results.csv 에 `pin` 열 추가: VIL/VIH 결과의 VT 행은 입력 핀, 출력 VOH/VOL 행은 출력 핀. 이전 형식 results.csv 는 `results_old_시각.csv` 로 옮기고 새로 시작.
+- 메뉴 2(VOH/VOL만)는 50회 통계가 필요할 때만 사용. 메뉴 1 한 번으로 입력 VIL/VIH + 출력 VOH/VOL.
