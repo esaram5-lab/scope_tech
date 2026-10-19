@@ -214,11 +214,9 @@ def _timing_report(items, names, offset, out) -> None:
         rows.append((Path(it["local"]).name, file_at - it["single_at"], it["disarm_at"] - file_at))
     if not rows:
         return
-    out("    --- 저장 시각 분석 (파일 이름 시각 기준, 시계 오차 약 ±0.1s) ---")
+    out("    --- 파일 이름 시각 분석 (시계 오차 약 ±0.1s). 실측 결과 이 시각은 트리거 시각이며 저장 완료 시각이 아님 ---")
     for name, lat, margin in rows:
-        out(f"    {name:<16} Single 시작 -> 파일 시각 {lat:5.2f}s   파일 시각 -> AOE 해제 {margin:5.2f}s")
-    worst = max(r[1] for r in rows)
-    out(f"    가장 늦은 저장: Single 시작 후 {worst:.2f}s  (aoe_save_wait_s 는 이것보다 길어야 합니다)")
+        out(f"    {name:<16} Single 시작 -> 트리거 {lat:5.2f}s   트리거 -> AOE 해제 {margin:5.2f}s")
 
 
 WAIT_KEYS = {"arm": "aoe_arm_wait_s", "save": "aoe_save_wait_s", "post": "aoe_post_wait_s"}
