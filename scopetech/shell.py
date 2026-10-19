@@ -203,8 +203,15 @@ class ScopeShell(cmd.Cmd):
             err = self.bench.scope.check(arg.strip(), raise_=False)
             print(err or "OK")
 
+    def do_fetch(self, arg: str) -> None:
+        """fetch   스코프에 저장해 둔 캡처 PNG 를 한 번에 가져옵니다."""
+        got, left = self.bench.fetch_pending()
+        print(f"가져옴 {got}개, 남음 {left}개")
+
     def do_quit(self, arg: str) -> bool:
-        """quit   종료"""
+        """quit   종료 (가져오지 않은 캡처가 있으면 먼저 가져옵니다)"""
+        if self.bench.pending_count():
+            self.do_fetch("")
         return True
 
     do_exit = do_quit

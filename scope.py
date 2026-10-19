@@ -57,6 +57,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--config", default=str(HERE / "config.ini"), help="설정 파일 (기본: config.ini)")
     ap.add_argument("--sim", action="store_true", help="스코프 없이 시뮬레이터로 실행")
     ap.add_argument("--shell", action="store_true", help="기존 명령어 셸로 실행")
+    ap.add_argument("--fetch", action="store_true", help="스코프에 저장해 둔 캡처 PNG 만 가져오고 종료")
     ap.add_argument("--debug", action="store_true", help="SCPI 송수신을 화면에 출력")
     ap.add_argument("--temp", help="온도 (예: 85)")
     ap.add_argument("--name", help="시험 이름 (예: INV_3V3)")
@@ -99,7 +100,11 @@ def main(argv: list[str] | None = None) -> int:
             bench.out_type = args.type.upper()
     
         bench.explicit_options = {key for key, value in (("temp", args.temp), ("name", args.name), ("out_type", args.type)) if value}
-        if args.command:
+        if args.fetch:
+            got, left = bench.fetch_pending()
+            print(f"캡처 파일 가져옴 {got}개, 남음 {left}개")
+            status = 0 if not left else 1
+        elif args.command:
             ScopeShell(bench).onecmd(" ".join(args.command))
             status = 0
         elif args.shell:

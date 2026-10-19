@@ -23,6 +23,7 @@ class ManualTest(unittest.TestCase):
             b = Bench(s, Config(), Path(d), echo=lambda _: None)
             b.dut_pin = '12'
             rec = b.save_manual('R_pu', [1, 2], '1 Mohm')
+            b.fetch_pending()
             self.assertTrue((rec.folder/'waveform.csv').exists())
             self.assertTrue((rec.folder/'screen.png').read_bytes().startswith(b'\x89PNG'))
             data = json.loads((rec.folder/'result.json').read_text())

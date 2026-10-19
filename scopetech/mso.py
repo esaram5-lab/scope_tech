@@ -341,6 +341,72 @@ class MSO5B:
         self.check("캡처 파일 삭제", raise_=False)
         return data
 
+    def capture_deferred(self, ink_saver: bool = False, timeout: float = 30, arm_wait: float = 2.0,
+                         save_wait: float = 5.0, post_wait: float = 3.0) -> tuple[str, str]:
+        """화면을 스코프에 저장만 하고 (폴더, 파일이름 접두사)를 돌려준다. 파일 조회/읽기/삭제는 하지 않는다.
+        실장비(250Hz 트리거)에서 캡처 직후 파일을 읽으면 TekScope 가 멈춘 사례가 있어, 가져오기는
+        fetch_images() 로 측정이 모두 끝난 뒤 한 번에 한다."""
+        self.stop()
+        dest = self.query("FILESystem:CWD?").strip().strip('"').rstrip("/")
+        prefix = f"scopetech{time.time_ns() // 1_000_000 % 10**9}"
+        self.aoe_active = True
+        try:
+            self.write(f"SAVe:IMAGe:COMPosition {'INVErted' if ink_saver else 'NORMal'}")
+            self.write(f'SAVEONEVent:FILEDest "{dest}"')
+            self.write(f'SAVEONEVent:FILEName "{prefix}"')
+            self.write("SAVEONEVent:IMAGe:FILEFormat PNG")
+            self.write("ACTONEVent:LIMit UNLIMITED")
+            self.write("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON")
+            self.write("ACTONEVent:ENable 1")
+            self.pace()
+            time.sleep(arm_wait)
+            self.single(timeout)
+            time.sleep(save_wait)  # 스코프가 PNG 를 쓰는 동안 아무 명령도 보내지 않음
+            self.wait_idle()
+            time.sleep(post_wait)
+        except BaseException:
+            self.abort_capture()
+            raise
+        self.write("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF")
+        self.write("ACTONEVent:ENable 0")
+        with self.t.temp_timeout(30):
+            self.pace()
+        self.aoe_active = False
+        time.sleep(post_wait)
+        return dest, prefix
+
+    def fetch_images(self, items: list[dict], delete: bool = True, gap: float = 1.0) -> dict[str, bytes]:
+        """capture_deferred 로 저장해 둔 PNG 들을 한 번에 가져온다. {prefix: PNG bytes}.
+        파일 사이에 gap 초씩 쉬고, 못 찾거나 불완전한 파일은 결과에서 빠진다(나중에 다시 시도 가능)."""
+        found: dict[str, bytes] = {}
+        listings: dict[str, list[str]] = {}
+        for it in items:
+            dest = it["dest"]
+            if dest not in listings:
+                cwd = self.query("FILESystem:CWD?").strip().strip('"').rstrip("/")
+                if cwd != dest:
+                    raise ScopeError(f"스코프 현재 폴더({cwd})가 캡처 폴더({dest})와 다릅니다.")
+                listings[dest] = [n.strip().strip('"') for n in self.query("FILESystem:DIR?").split(",")]
+                time.sleep(gap)
+            names = sorted(n for n in listings[dest] if n.startswith(it["prefix"]))
+            if not names:
+                continue
+            path = f"{dest}/{names[-1]}"
+            self.write(f'FILESystem:READFile "{path}"')
+            with self.t.temp_timeout(30):
+                data = self.t.read_file(None)
+                self.t.sync()
+            if data.endswith(b"\n"):
+                data = data[:-1]
+            if data.startswith(b"\x89PNG") and data[-8:-4] == b"IEND":
+                found[it["prefix"]] = data
+                if delete:
+                    time.sleep(gap)
+                    self.write(f'FILESystem:DELEte "{path}"')
+                    self.check("캡처 파일 삭제", raise_=False)
+            time.sleep(gap)
+        return found
+
     def _read_png_when_complete(self, path: str, timeout: float = 30) -> bytes:
         deadline = time.monotonic() + timeout
         while True:

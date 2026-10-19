@@ -102,6 +102,13 @@ def main(argv=None) -> int:
 
     bench = Bench(scope, cfg, HERE / ("captures_sim" if args.sim else "captures") / "_seqtest", echo=lambda s: out("    " + s))
     bench.name = "SEQTEST"
+    shots = {"n": 0}
+
+    def shot_path() -> Path:
+        shots["n"] += 1
+        return bench.out_dir / "shots" / f"shot_{shots['n']:03d}.png"
+
+    bench.shot_path = shot_path
 
     def snapshot() -> None:
         out("  --- 스코프 상태 (각 질의 5초 제한) ---")
@@ -139,17 +146,17 @@ def main(argv=None) -> int:
             out(f"\n===== {n}/{args.repeat} 회 =====")
             steps = [("0 상태정리", scope.reset_state)]
             if args.only == "capture":
-                steps += [("2 화면캡처", lambda: bench._shot(False))]
+                steps += [("2 화면캡처", lambda: bench._take(False, shot_path()))]
             else:
                 def clean():
                     bench._hide_overlay(bench.record)
                     try:
-                        bench._shot(False)
+                        bench._take(False, shot_path())
                     finally:
                         bench._restore_overlay(bench.record)
                 steps += [
                     ("1 VIL/VIH 측정", lambda: bench.vih(args.ch_in, args.ch_out)),
-                    ("2 meas 캡처", lambda: bench._shot(False)),
+                    ("2 meas 캡처", lambda: bench._take(False, shot_path())),
                     ("3 clean 캡처", clean),
                     ("4 파형·설정 저장", lambda: bench.save([args.ch_in, args.ch_out])),
                 ]
@@ -157,6 +164,10 @@ def main(argv=None) -> int:
                 out(f"\n=> {n}회차에서 실패. 위 '직전 SCPI 기록'의 마지막 줄이 멈춘 명령입니다.")
                 break
             ok_runs += 1
+        if ok_runs == args.repeat and bench.pending_count():
+            out("\n===== 캡처 파일 한 번에 가져오기 =====")
+            if not step(f"5 가져오기({bench.pending_count()}개)", lambda: _fetch_all(bench, out)):
+                ok_runs -= 1
     except KeyboardInterrupt:
         out("\n사용자 중단")
     finally:
@@ -169,6 +180,13 @@ def main(argv=None) -> int:
     out(f"이 파일을 올려주세요: {path}")
     report.close()
     return 0 if ok_runs == args.repeat else 2
+
+
+def _fetch_all(bench, out) -> None:
+    got, left = bench.fetch_pending()
+    out(f"    가져옴 {got}개, 남음 {left}개")
+    if left:
+        raise RuntimeError(f"캡처 {left}개를 가져오지 못했습니다")
 
 
 WAIT_KEYS = {"arm": "aoe_arm_wait_s", "save": "aoe_save_wait_s", "post": "aoe_post_wait_s"}
@@ -194,7 +212,7 @@ def sweep(args, cfg, scope, bench, t, step, out, path, report) -> int:
             for n in range(1, args.repeat + 1):
                 t0 = time.monotonic()
                 ok = step(f"{n}/{args.repeat} 상태정리", scope.reset_state) and step(
-                    f"{n}/{args.repeat} 화면캡처", lambda: bench._shot(False))
+                    f"{n}/{args.repeat} 화면캡처", lambda: bench._take(False, bench.shot_path()))
                 if not ok:
                     failed_at = lv
                     break
@@ -204,6 +222,10 @@ def sweep(args, cfg, scope, bench, t, step, out, path, report) -> int:
                 break
             rows.append((lv, vals, f"성공 {args.repeat}/{args.repeat}, 캡처 1회 평균 {sum(times) / len(times):.1f}s"))
             passed.append((lv, vals))
+        if failed_at is None and bench.pending_count():
+            out("\n===== 캡처 파일 한 번에 가져오기 =====")
+            if not step(f"가져오기({bench.pending_count()}개)", lambda: _fetch_all(bench, out)):
+                rows.append(("가져오기", {}, "실패"))
     except KeyboardInterrupt:
         out("\n사용자 중단")
     finally:
@@ -214,7 +236,8 @@ def sweep(args, cfg, scope, bench, t, step, out, path, report) -> int:
         t.close()
     out("\n===== 스윕 결과 =====")
     for lv, vals, res in rows:
-        out(f"  비율 {lv:<5g} " + " ".join(f"{k}={v:5.2f}" for k, v in vals.items()) + f"  -> {res}")
+        head = f"비율 {lv:<5g}" if isinstance(lv, float) else f"{lv:<9}"
+        out(f"  {head} " + " ".join(f"{k}={v:5.2f}" for k, v in vals.items()) + f"  -> {res}")
     if passed:
         lv, vals = passed[-1]
         out(f"\n가장 짧게 통과한 비율: {lv:g}" + ("" if failed_at is None else f"  (비율 {failed_at:g} 에서 실패)"))

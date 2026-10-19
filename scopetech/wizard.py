@@ -41,6 +41,21 @@ class Wizard:
             self.echo(f'[경고] 이전 설정을 저장하지 못했습니다: {e}')
 
     def run(self):
+        status = self._run()
+        b = self.bench
+        n = b.pending_count() if hasattr(b, 'pending_count') else 0
+        if n and status == 0:
+            try:
+                got, left = b.fetch_pending()
+                self.echo(f'캡처 파일 {got}개 가져옴' + (f', {left}개 남음 (py scope.py --fetch 로 다시 시도)' if left else ''))
+            except (ScopeError, OSError) as e:
+                self.echo(f'[캡처 파일 가져오기 실패] {e}\nTekScope 상태 확인/재시작 후 py scope.py --fetch 로 다시 가져오세요.')
+                return 1
+        elif n:
+            self.echo(f'스코프에 저장된 캡처 {n}개를 아직 가져오지 않았습니다. TekScope 상태 확인 후 py scope.py --fetch 로 가져오세요.')
+        return status
+
+    def _run(self):
         b = self.bench
         self.echo('\n측정 도우미 — Enter: 기본값 유지 / q: 종료')
         # CLI에서 전달한 값이 저장된 기본값보다 우선한다.

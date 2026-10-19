@@ -43,6 +43,11 @@ class SimFlowTest(unittest.TestCase):
 
         shots = self.bench.capture()
         self.assertEqual([p.name for p in shots], ["meas.png", "clean.png"])
+        # 기본(image_fetch=end): 캡처 중에는 스코프에 저장만, 나중에 한 번에 가져옴
+        self.assertFalse(shots[0].exists())
+        self.assertEqual(self.bench.pending_count(), 2)
+        self.assertEqual(self.bench.fetch_pending(), (2, 0))
+        self.assertEqual(self.bench.pending_count(), 0)
         self.assertNotEqual(shots[0].read_bytes(), shots[1].read_bytes())
         self.assertEqual(self.sim.cursor["STATE"], "1")  # 캡처 후 커서 복원
 
@@ -51,7 +56,7 @@ class SimFlowTest(unittest.TestCase):
         self.assertIn("waveform.csv", names)
         self.assertIn("setup.set", names)
         self.assertEqual({f"CH{c}.wfm" for c in range(1, 8)} & names, {f"CH{c}.wfm" for c in range(1, 8)})
-        self.assertEqual(self.sim.files, {})  # 스코프 임시 파일 정리
+        self.assertFalse([k for k in self.sim.files if "SCOPETECH" in k])  # 가져온 캡처는 스코프에서 삭제
         wfs = wavefile.read_csv(rec.folder / "waveform.csv")
         self.assertEqual([w.source for w in wfs], [f"CH{c}" for c in range(1, 8)])
         self.assertEqual(len(wfs[0]), self.sim.reclen)
@@ -100,6 +105,13 @@ class SimFlowTest(unittest.TestCase):
         with self.assertRaises(Exception):
             self.scope.check("명령")
         self.sim.error_log.clear()
+
+    def test_missing_capture_stays_pending(self):
+        self.bench.capture()
+        for k in [k for k in self.sim.files if "SCOPETECH" in k]:
+            del self.sim.files[k]  # 스코프에서 파일이 사라진 경우
+        self.assertEqual(self.bench.fetch_pending(), (0, 1))
+        self.assertEqual(self.bench.pending_count(), 1)
 
     def test_capture_without_measure(self):
         shots = self.bench.capture()

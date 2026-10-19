@@ -1,6 +1,7 @@
 """측정 작업 흐름: 1) 측정/커서  2) 화면 캡처(측정 有/無)  3) 파형 저장."""
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -279,6 +280,69 @@ class Bench:
             post_wait=c.getfloat("capture", "aoe_post_wait_s"),
         )
 
+    # ---- 캡처 파일 나중에 한 번에 가져오기 (config [capture] image_fetch = end | now)
+    @property
+    def _pending_path(self) -> Path:
+        return self.out_dir / "_pending_images.json"
+
+    def _load_pending(self) -> list[dict]:
+        try:
+            return json.loads(self._pending_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return []
+
+    def _save_pending(self, items: list[dict]) -> None:
+        self.out_dir.mkdir(parents=True, exist_ok=True)
+        if items:
+            self._pending_path.write_text(json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")
+        elif self._pending_path.exists():
+            self._pending_path.unlink()
+
+    def _deferred(self) -> bool:
+        return self.cfg.get("capture", "image_fetch").lower() != "now"
+
+    def _take(self, ink: bool, local: Path) -> Path:
+        """화면 캡처 1장. 기본(end)은 스코프에 저장만 하고 가져올 목록에 기록, now 는 바로 가져온다."""
+        if not self._deferred():
+            local.write_bytes(self._shot(ink))
+            return local
+        c = self.cfg
+        dest, prefix = self.scope.capture_deferred(
+            ink, timeout=c.getfloat("measure", "single_timeout_s"),
+            arm_wait=c.getfloat("capture", "aoe_arm_wait_s"),
+            save_wait=c.getfloat("capture", "aoe_save_wait_s"),
+            post_wait=c.getfloat("capture", "aoe_post_wait_s"),
+        )
+        items = self._load_pending()
+        items.append({"dest": dest, "prefix": prefix, "local": str(local), "time": datetime.now().isoformat(timespec="seconds")})
+        self._save_pending(items)
+        return local
+
+    def pending_count(self) -> int:
+        return len(self._load_pending())
+
+    def fetch_pending(self) -> tuple[int, int]:
+        """스코프에 저장해 둔 캡처 PNG 를 한 번에 가져온다. (가져온 수, 남은 수)"""
+        items = self._load_pending()
+        if not items:
+            return 0, 0
+        self.echo(f"[캡처 파일 가져오기] {len(items)}개 (파일 사이 {self.cfg.get('capture', 'fetch_gap_s')}초 간격)")
+        self.scope.stop()
+        got = self.scope.fetch_images(items, delete=self.cfg.getbool("capture", "delete_after_fetch"),
+                                      gap=self.cfg.getfloat("capture", "fetch_gap_s"))
+        left = []
+        for it in items:
+            data = got.get(it["prefix"])
+            if data is None:
+                left.append(it)
+                self.echo(f"  [못 가져옴] {it['local']} (스코프 파일 {it['prefix']}*.png)")
+                continue
+            Path(it["local"]).parent.mkdir(parents=True, exist_ok=True)
+            Path(it["local"]).write_bytes(data)
+            self.echo(f"  {it['local']}")
+        self._save_pending(left)
+        return len(items) - len(left), len(left)
+
     def capture(self) -> list[Path]:
         rec = self._ensure_record()
         s = self.scope
@@ -287,22 +351,17 @@ class Bench:
         self.echo("  화면 캡처: Single 획득으로 스코프가 직접 저장(Act On Event)")
         out = []
         if rec.meas or rec.cursor:
-            p = rec.folder / "meas.png"
-            p.write_bytes(self._shot(ink))
-            out.append(p)
+            out.append(self._take(ink, rec.folder / "meas.png"))
             self._hide_overlay(rec)
             try:
-                p = rec.folder / "clean.png"
-                p.write_bytes(self._shot(ink))
-                out.append(p)
+                out.append(self._take(ink, rec.folder / "clean.png"))
             finally:
                 self._restore_overlay(rec)
         else:
-            p = rec.folder / "clean.png"
-            p.write_bytes(self._shot(ink))
-            out.append(p)
+            out.append(self._take(ink, rec.folder / "clean.png"))
             self.echo("  측정/커서가 없어 clean.png 만 저장했습니다.")
-        self.echo("[캡처] " + ", ".join(x.name for x in out) + f"  -> {rec.folder}")
+        later = " (스코프에 저장, 종료 시 한 번에 가져옴)" if self._deferred() else ""
+        self.echo("[캡처] " + ", ".join(x.name for x in out) + later + f"  -> {rec.folder}")
         return out
 
     # ------------------------------------------------------------------ 3) 파형 저장
@@ -371,7 +430,7 @@ class Bench:
         wfs = [s.fetch_waveform(c) for c in chans]
         wavefile.write_csv(rec.folder, wfs, {f"CH{c}": self.cfg.channel_name(c) for c in chans})
         self.echo("[2/2] 기존 측정·커서를 표시한 화면 저장 (추가 Single 획득)")
-        (rec.folder / "screen.png").write_bytes(self._shot(self.cfg.getbool("capture", "ink_saver")))
+        self._take(self.cfg.getbool("capture", "ink_saver"), rec.folder / "screen.png")
         rec.result.update({"status": "complete", "saved_channels": [f"CH{c}" for c in chans]})
         results.write_json(rec.folder / "result.json", rec.result)
         return rec

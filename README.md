@@ -53,6 +53,12 @@ save 1 2        <- CSV + wfm + setup
 ```
 오류가 나면 `logs/scpi_날짜.log` 파일을 보내주세요. 어떤 명령에서 막혔는지 바로 알 수 있습니다.
 
+### 캡처 파일은 종료할 때 한 번에 가져옵니다
+실장비(트리거 250Hz)에서 캡처 직후 PNG 를 PC 로 읽으면 TekScope 가 멈춘 사례가 있어, 기본값(`[capture] image_fetch = end`)은
+**측정 중에는 스코프에 저장만** 하고 안내형 메뉴를 **종료할 때 한 번에** 가져옵니다. 셸에서는 `fetch` 명령.
+- 가져오지 못한 파일은 `captures/_pending_images.json` 에 남습니다. TekScope 재시작 후 `py -3.13 scope.py --fetch` 로 다시 가져오세요.
+- 캡처 직후 바로 가져오던 이전 방식은 `image_fetch = now`.
+
 ### 동작 순서 시험 (문제 재현·디버깅용)
 `run_seq_test.bat` (또는 `py -3.13 seq_test.py`) — 측정 프로그램과 같은 코드로 **상태정리 → VIL/VIH 측정 → meas 캡처 → clean 캡처 → 저장** 을 3회 반복합니다.
 - 옵션: `--repeat 5`, `--in 1 --out 2`, `--only capture`(캡처만 반복), `--save-wait 10`(캡처 대기 임시 변경)

@@ -27,6 +27,7 @@ def run_flow(test: unittest.TestCase, t, sim: SimScope) -> None:
         rec = bench.vih(1, 2)
         test.assertAlmostEqual(rec.result["analysis"]["vt_plus"]["stats"]["mean"], 1.90, delta=0.01)
         shots = bench.capture()
+        bench.fetch_pending()
         test.assertTrue(all(p.read_bytes().startswith(b"\x89PNG") for p in shots))
         saved = bench.save([1, 2])
         test.assertEqual((rec.folder / "CH1.wfm").read_bytes()[:4], b"WFM#")
