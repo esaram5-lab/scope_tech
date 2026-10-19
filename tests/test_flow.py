@@ -70,8 +70,14 @@ class SimFlowTest(unittest.TestCase):
         self.assertEqual(len(self.sim.meas), 8)
         self.assertEqual({m["TYPE"] for m in self.sim.meas.values()}, {"TOP", "BASE", "MAXIMUM", "MINIMUM"})
         # 다음 측정 시작 시 이전 측정 정리
-        self.bench.vih(1, 2, hold=True)
-        self.assertEqual(self.sim.meas, {})
+        rec = self.bench.vih(1, 2, hold=True)
+        # 이전 VOH 측정 8개는 지워지고, VIL/VIH 용 출력 TOP/BASE 2개만 남는다
+        self.assertEqual(sorted((m["TYPE"], m["SOURCE1"]) for m in self.sim.meas.values()),
+                         [("BASE", "CH2"), ("TOP", "CH2")])
+        voh = {m["metric"]: m for m in rec.result["metrics"]}
+        self.assertAlmostEqual(voh["VOH (출력 High)"]["worst"], 3.28, delta=0.02)
+        self.assertAlmostEqual(voh["VOL (출력 Low)"]["worst"], 0.04, delta=0.02)
+        self.assertGreaterEqual(voh["VOH (출력 High)"]["n"], 2)
 
     def test_results_csv_locked_does_not_abort(self):
         from unittest import mock

@@ -123,6 +123,8 @@ class ThresholdResult:
     chatter: int = 0
     out_levels: Levels | None = None
     in_levels: Levels | None = None
+    out_highs: list[float] = field(default_factory=list)  # 출력 High 구간별 레벨 [V] (VOH)
+    out_lows: list[float] = field(default_factory=list)  # 출력 Low 구간별 레벨 [V] (VOL)
     warnings: list[str] = field(default_factory=list)
 
     @property
@@ -150,6 +152,8 @@ class ThresholdResult:
             "hysteresis_V": self.hysteresis,
             "polarity": self.polarity,
             "chatter_groups": self.chatter,
+            "out_high_levels_V": list(self.out_highs),
+            "out_low_levels_V": list(self.out_lows),
             "out_top_V": self.out_levels.top if self.out_levels else None,
             "out_base_V": self.out_levels.base if self.out_levels else None,
             "in_min_V": self.in_levels.vmin if self.in_levels else None,
@@ -165,6 +169,20 @@ def _crossing(raw: Sequence[float], i: int, stop: int, level: float, rising: boo
         if (rising and a < level <= b) or (not rising and a > level >= b):
             return j + (level - a) / (b - a)
     return float(i)
+
+
+def _plateaus(raw: Sequence[float], edges: list[int], mid: float, wf: Waveform) -> tuple[list[float], list[float]]:
+    """출력 전환 사이 구간마다 가운데 50% 샘플 평균으로 High/Low 레벨을 구한다(에지·오버슈트 제외)."""
+    highs, lows = [], []
+    bounds = [0] + edges + [len(raw)]
+    for a, b in zip(bounds, bounds[1:]):
+        q = (b - a) // 4
+        if b - a < 20:
+            continue
+        seg = raw[a + q: b - q]
+        v = sum(seg) / len(seg)
+        (highs if v > mid else lows).append(wf.to_volts(v))
+    return highs, lows
 
 
 def _window_mean(raw: Sequence[float], center: int, half: int) -> float:
@@ -221,6 +239,8 @@ def find_thresholds(
         elif v >= hi:
             events.append((_crossing(raw, i, last, rise_level, rising=True), "rise"))
             high, last = True, i
+
+    res.out_highs, res.out_lows = _plateaus(raw, [round(i) for i, _ in events], mid, wout)
 
     n_in = len(win)
     span = max(5, n_in // 200)  # 입력 기울기 판별 구간

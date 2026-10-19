@@ -51,10 +51,14 @@ class Wizard:
                     setattr(b, attr, value)
         try:
             while True:
-                pin = self.prompt('측정할 DUT 핀 번호', self.state.get('pin', ''),
+                pin = self.prompt('측정할 DUT 핀 번호 (VIL/VIH 는 입력 핀)', self.state.get('pin', ''),
                                   lambda s: s.isascii() and s.isdigit() and int(s) > 0)
-                item = self.prompt('측정 항목: 1 VIL/VIH  2 VOH/VOL  3 데이터·화면 저장만', self.state.get('item', '1'),
-                                   lambda s: s in ('1', '2', '3'))
+                item = self.prompt('측정 항목: 1 VIL/VIH(+출력 VOH/VOL)  2 VOH/VOL  3 데이터·화면 저장만',
+                                   self.state.get('item', '1'), lambda s: s in ('1', '2', '3'))
+                out_pin = ''
+                if item == '1':
+                    out_pin = self.prompt('출력 DUT 핀 번호', self.state.get('out_pin', ''),
+                                          lambda s: s.isascii() and s.isdigit() and int(s) > 0)
                 if item == '1':
                     cin = self.channel('in', '입력 신호 스코프 채널', b.cfg.get('defaults', 'vih_in'))
                     while True:
@@ -62,7 +66,8 @@ class Wizard:
                         if cout != cin:
                             break
                         self.echo('입력과 출력은 서로 다른 채널을 선택해주세요.')
-                    self.state.update({'in': cin, 'out': cout})
+                    b.out_type = self.prompt('출력 타입: PP / OD', b.out_type, lambda s: s.upper() in ('PP', 'OD')).upper()
+                    self.state.update({'in': cin, 'out': cout, 'out_pin': out_pin})
                 elif item == '2':
                     cout = self.channel('voh', '출력 신호 스코프 채널', '2')
                     b.out_type = self.prompt('출력 타입: PP / OD', b.out_type, lambda s: s.upper() in ('PP', 'OD')).upper()
@@ -77,7 +82,8 @@ class Wizard:
                 while True:
                     title = {'1': 'VIL/VIH', '2': 'VOH/VOL', '3': '데이터·화면 저장만'}[item]
                     channels = ', '.join(f'CH{c}' for c in chans) if item == '3' else ((f'입력 CH{cin} / ' if item == '1' else '') + f'출력 CH{cout}')
-                    self.echo(f'\nDUT 핀 {pin} | {title} | {channels}')
+                    pins = f'입력 핀 {pin} -> 출력 핀 {out_pin}' if item == '1' else f'DUT 핀 {pin}'
+                    self.echo(f'\n{pins} | {title} | {channels}')
                     self.echo(f'시험: {b.name} / 온도: {b.temp}°C / 출력: {b.out_type} / 기준: {b.spec_name or "미지정"}')
                     if item == '3':
                         self.echo(f'항목: {label} / 메모: {note or "없음"}')
@@ -95,6 +101,7 @@ class Wizard:
                     self.state.update({'name': b.name, 'temp': b.temp, 'out_type': b.out_type})
                     self.remember()
                     b.dut_pin = pin
+                    b.out_pin = out_pin
                     try:
                         if item == '3':
                             rec = b.save_manual(label, chans, note)

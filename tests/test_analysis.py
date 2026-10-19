@@ -41,6 +41,9 @@ class ThresholdTest(unittest.TestCase):
         for v in res.vt_minus_v:
             self.assertAlmostEqual(v, 1.4, delta=0.005)
         self.assertAlmostEqual(res.hysteresis, 0.5, delta=0.01)
+        self.assertTrue(res.out_highs and res.out_lows)
+        self.assertTrue(all(abs(v - 3.3) < 0.01 for v in res.out_highs))
+        self.assertTrue(all(abs(v - 0.0) < 0.01 for v in res.out_lows))
         self.assertEqual(res.chatter, 0)
         self.assertEqual(res.warnings, [])
 

@@ -90,3 +90,10 @@ Tektronix **MSO58B** (FV 2.24.4, Windows 내장형, TPP1000 프로브, CH1~7 연
 - USB 자동검색: Tek 장비가 여러 대면 `*IDN?` 으로 MSO/DPO/LPD 를 선택, 못 고르면 목록과 함께 `usb_resource` 지정 안내.
 - `waveform.csv` UTF-8 BOM. 안내형 메뉴 조건 메모에서 `q` 는 종료가 아닌 메모로 처리.
 - 테스트 33개 통과. 사용자 업로드 `log` 파일은 사용자 요청으로 유지.
+
+## 2026-10-19 VIL/VIH 측정에 출력 VOH/VOL 추가
+- 사용자 요청: 문턱을 출력 반전 기준으로 → 기존 `find_thresholds` 가 이미 출력 전환(출력 진폭의 out_cross) 시점의 입력 전압을 사용함을 설명.
+- 추가: 같은 파형의 출력 High/Low 구간(가운데 50% 평균)으로 VOH/VOL 계산(`ThresholdResult.out_highs/out_lows`, `results.vih_output_metrics`), 판정 포함(OD 는 VOH 제외).
+- VIH 측정 시 출력 채널에 TOP/BASE 측정 배지 추가(`[measure] vih_output_meas`).
+- 안내형 메뉴 1번: 입력 핀 → 항목 → 출력 핀 → 채널 → PP/OD. `Bench.out_pin`, 결과 `out_pin`, 폴더 `PIN입력_OUT출력_`.
+- 테스트 33개 통과. 실장비 미검증.

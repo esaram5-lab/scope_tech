@@ -46,6 +46,7 @@ class Bench:
         self.spec_name = cfg.get("session", "spec")
         self.out_type = cfg.get("session", "out_type").upper() or "PP"
         self.dut_pin = ""
+        self.out_pin = ""  # VIL/VIH 측정 시 출력 DUT 핀
         self.record: Record | None = None
 
     # ------------------------------------------------------------------ 공통
@@ -54,7 +55,8 @@ class Bench:
         chs = "-".join(f"CH{c}" for c in channels)
         base = f"{_safe(self.name)}_{_safe(self.temp)}C" + (f"_{chs}" if chs else "") + f"_{ts}"
         if self.dut_pin:
-            base = f"PIN{_safe(self.dut_pin)}_{base}"
+            out = f"_OUT{_safe(self.out_pin)}" if self.out_pin and item == "VIH" else ""
+            base = f"PIN{_safe(self.dut_pin)}{out}_{base}"
         folder = self.out_dir / item / base
         n = 2
         while folder.exists():
@@ -66,6 +68,7 @@ class Bench:
     def _base_result(self, item: str) -> dict:
         return {
             "dut_pin": self.dut_pin,
+            "out_pin": self.out_pin if item == "VIH" else "",
             "item": item,
             "name": self.name,
             "temp": self.temp,
@@ -115,6 +118,15 @@ class Bench:
     def vih(self, ch_in: int, ch_out: int, hold: bool = False) -> Record:
         s, cfg = self.scope, self.cfg
         self._prepare_overlay()
+        # 화면에도 출력 VOH/VOL 이 보이도록 출력 채널에 TOP/BASE 측정 추가 (값 판정은 같은 파형에서 계산)
+        badges = []
+        if cfg.getbool("measure", "vih_output_meas"):
+            for name, mtype in zip(s.free_measurement_names(2), ("TOP", "BASE")):
+                s.add_measurement(name, mtype, ch_out)
+                badges.append((name, mtype, ch_out))
+            err = s.check("출력 측정 추가", raise_=False)
+            if err:
+                self.echo(f"  [경고] {err}")
         if hold:
             s.stop()
             self.echo("  현재 화면 파형으로 분석합니다(새 획득 없음).")
@@ -133,6 +145,7 @@ class Bench:
         )
 
         rec = self._new_record("VIH", [ch_in, ch_out])
+        rec.meas = badges
         r = rec.result = self._base_result("VIH")
         r["channels"] = {"in": f"CH{ch_in}", "out": f"CH{ch_out}"}
         r["channel_names"] = {f"CH{c}": cfg.channel_name(c) for c in (ch_in, ch_out)}
@@ -156,7 +169,8 @@ class Bench:
         p, m = summarize(th.vt_plus_v), summarize(th.vt_minus_v)
         pair = f"CH{ch_in}->CH{ch_out}"
         sig = f"{cfg.channel_name(ch_in)}->{cfg.channel_name(ch_out)}"
-        r["metrics"] = results.vih_metrics(th, pair, sig)
+        r["metrics"] = results.vih_metrics(th, pair, sig) + results.vih_output_metrics(
+            th, f"CH{ch_out}", cfg.channel_name(ch_out))
         self.record = rec
 
         pol = {"inverting": "반전(인버터)", "non-inverting": "비반전(버퍼/AND/레벨시프터)"}.get(th.polarity, "판별 불가")
@@ -167,8 +181,10 @@ class Bench:
             else:
                 self.echo(f"  {label}: 없음")
         self.echo(f"  히스테리시스: {_v(th.hysteresis)}")
-        if th.out_levels:
-            self.echo(f"  출력 레벨(참고): High {th.out_levels.top:.4f} V / Low {th.out_levels.base:.4f} V")
+        hs, ls = summarize(th.out_highs), summarize(th.out_lows)
+        self.echo(f"  출력 VOH: {_v(hs and hs['mean'])} (worst {_v(hs and hs['min'])}, n={hs['n'] if hs else 0})"
+                  f" | VOL: {_v(ls and ls['mean'])} (worst {_v(ls and ls['max'])}, n={ls['n'] if ls else 0})"
+                  f"  [출력 {self.out_type}{', 핀 ' + self.out_pin if self.out_pin else ''}]")
         if rec.cursor:
             self.echo(f"  커서 A={ta * 1e3:+.4f} ms (VT+), B={tb * 1e3:+.4f} ms (VT-)  [소스 CH{ch_in}]")
         for w in th.warnings:

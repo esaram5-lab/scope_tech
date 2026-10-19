@@ -28,12 +28,14 @@ class WizardTest(unittest.TestCase):
         return Wizard(self.b, self.root/'session.json', ask=lambda _: next(it), echo=self.messages.append).run()
 
     def test_invalid_channels_repeat_and_pin_metadata(self):
-        self.assertEqual(self.run_menu(['abc', '12', '1', '9', '1', '1', '2', '', '1', '', '3']), 0)
+        # 핀 abc(오류)->12, 항목 1, 출력 핀 5, 입력 채널 9(오류)->1, 출력 채널 1(입력과 같음)->2, 타입 PP
+        self.assertEqual(self.run_menu(['abc', '12', '1', '5', '9', '1', '1', '2', '', '', '1', '', '3']), 0)
         self.assertEqual(self.b.vih.call_count, 2)
         self.b.vih.assert_called_with(1, 2)
         self.assertEqual(self.b.save.call_count, 2)
         self.assertEqual(self.b._base_result('VIH')['dut_pin'], '12')
-        self.assertTrue(self.b._new_record('VIH', [1, 2]).folder.name.startswith('PIN12_'))
+        self.assertTrue(self.b._new_record('VIH', [1, 2]).folder.name.startswith('PIN12_OUT5_'))
+        self.assertEqual(self.b._base_result('VIH')['out_pin'], '5')
         self.assertEqual(json.loads((self.root/'session.json').read_text())['out'], 2)
 
     def test_voh_and_settings(self):
@@ -47,7 +49,7 @@ class WizardTest(unittest.TestCase):
 
     def test_capture_failure_does_not_save_or_report_success(self):
         self.b.capture.side_effect = ScopeError('capture failed')
-        self.assertEqual(self.run_menu(['12', '1', '', '', '']), 1)
+        self.assertEqual(self.run_menu(['12', '1', '3', '', '', '', '']), 1)
         self.b.save.assert_not_called()
         self.assertFalse(any('측정 완료' in s for s in self.messages))
 

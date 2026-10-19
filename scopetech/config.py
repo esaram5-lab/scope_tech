@@ -24,6 +24,7 @@ DEFAULTS = {
         "vin_avg_points": "10",
         "out_cross": "0.5",
         "voh_cursor": "yes",
+        "vih_output_meas": "yes",
     },
     "capture": {"ink_saver": "no", "settle_s": "1.0"},
     "save": {"channels": "displayed", "csv": "yes", "wfm": "yes", "setup": "yes"},
