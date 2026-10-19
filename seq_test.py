@@ -10,6 +10,9 @@
     python seq_test.py --repeat 5 --in 1 --out 2
     python seq_test.py --only capture     화면 캡처만 반복(가장 문제였던 부분)
     python seq_test.py --save-wait 10     캡처 대기(aoe_save_wait_s) 임시 변경
+    python seq_test.py --sweep            캡처 대기 시간을 단계적으로 줄이며 최소 안전값 찾기
+    python seq_test.py --sweep --sweep-param save --levels 1,0.5,0.2,0   aoe_save_wait_s 만
+    python seq_test.py --sweep --start-level 0.3   (멈춘 뒤 TekScope 재시작 후 이어서)
     python seq_test.py --sim              시뮬레이터
 결과: logs/seqtest_날짜_시각.txt  (+ logs/scpi_날짜.log)
 """
@@ -62,6 +65,11 @@ def main(argv=None) -> int:
     ap.add_argument("--only", choices=["capture"], help="capture: 화면 캡처만 반복")
     ap.add_argument("--save-wait", type=float, help="aoe_save_wait_s 임시 변경(초)")
     ap.add_argument("--post-wait", type=float, help="aoe_post_wait_s 임시 변경(초)")
+    ap.add_argument("--sweep", action="store_true", help="캡처 대기 시간을 단계적으로 줄이며 반복 시험")
+    ap.add_argument("--sweep-param", choices=["all", "arm", "save", "post"], default="all",
+                    help="줄일 대기 항목 (기본: 세 항목 모두 같은 비율)")
+    ap.add_argument("--levels", default="1,0.7,0.5,0.35,0.2,0.1,0", help="config 값 대비 비율 목록")
+    ap.add_argument("--start-level", type=float, help="이 비율부터 시작(이전 실행에서 멈춘 뒤 이어하기)")
     args = ap.parse_args(argv)
 
     cfg = Config(args.config)
@@ -122,6 +130,9 @@ def main(argv=None) -> int:
         out(f"  [{label}] 통과 ({time.monotonic() - t0:.1f}s)")
         return True
 
+    if args.sweep:
+        return sweep(args, cfg, scope, bench, t, step, out, path, report)
+
     ok_runs = 0
     try:
         for n in range(1, args.repeat + 1):
@@ -158,6 +169,63 @@ def main(argv=None) -> int:
     out(f"이 파일을 올려주세요: {path}")
     report.close()
     return 0 if ok_runs == args.repeat else 2
+
+
+WAIT_KEYS = {"arm": "aoe_arm_wait_s", "save": "aoe_save_wait_s", "post": "aoe_post_wait_s"}
+
+
+def sweep(args, cfg, scope, bench, t, step, out, path, report) -> int:
+    """대기 시간을 비율로 줄여가며 캡처를 반복. 처음 실패한 단계에서 멈추고 직전 단계를 권장값으로 제시."""
+    keys = list(WAIT_KEYS.values()) if args.sweep_param == "all" else [WAIT_KEYS[args.sweep_param]]
+    base = {k: cfg.getfloat("capture", k) for k in WAIT_KEYS.values()}
+    levels = sorted({float(x) for x in args.levels.split(",")}, reverse=True)
+    if args.start_level is not None:
+        levels = [lv for lv in levels if lv <= args.start_level]
+    out(f"\n스윕: {', '.join(keys)} 를 config 값 {', '.join(f'{k}={base[k]:g}' for k in keys)} 대비 {levels} 배로, 단계마다 {args.repeat}회")
+    out("주의: 실패하면 TekScope 가 멈출 수 있습니다. 재시작 후 --start-level 로 이어서 하세요.")
+    passed, failed_at, rows = [], None, []
+    try:
+        for lv in levels:
+            vals = {k: (base[k] * lv if k in keys else base[k]) for k in WAIT_KEYS.values()}
+            for k, v in vals.items():
+                cfg.cp.set("capture", k, f"{v:.3f}")
+            out(f"\n===== 비율 {lv:g}: " + ", ".join(f"{k}={v:.2f}s" for k, v in vals.items()) + " =====")
+            times = []
+            for n in range(1, args.repeat + 1):
+                t0 = time.monotonic()
+                ok = step(f"{n}/{args.repeat} 상태정리", scope.reset_state) and step(
+                    f"{n}/{args.repeat} 화면캡처", lambda: bench._shot(False))
+                if not ok:
+                    failed_at = lv
+                    break
+                times.append(time.monotonic() - t0)
+            if failed_at is not None:
+                rows.append((lv, vals, f"실패({len(times)}/{args.repeat} 성공)"))
+                break
+            rows.append((lv, vals, f"성공 {args.repeat}/{args.repeat}, 캡처 1회 평균 {sum(times) / len(times):.1f}s"))
+            passed.append((lv, vals))
+    except KeyboardInterrupt:
+        out("\n사용자 중단")
+    finally:
+        try:
+            scope.abort_capture()
+        except Exception:  # noqa: BLE001
+            pass
+        t.close()
+    out("\n===== 스윕 결과 =====")
+    for lv, vals, res in rows:
+        out(f"  비율 {lv:<5g} " + " ".join(f"{k}={v:5.2f}" for k, v in vals.items()) + f"  -> {res}")
+    if passed:
+        lv, vals = passed[-1]
+        out(f"\n가장 짧게 통과한 비율: {lv:g}" + ("" if failed_at is None else f"  (비율 {failed_at:g} 에서 실패)"))
+        out("권장 config.ini [capture] (통과값에 1.5배 여유):")
+        for k in WAIT_KEYS.values():
+            out(f"  {k} = {round(vals[k] * 1.5, 1) if k in keys else vals[k]:g}")
+    else:
+        out("\n통과한 단계가 없습니다. 현재 config 값에서도 실패합니다.")
+    out(f"이 파일을 올려주세요: {path}")
+    report.close()
+    return 0 if failed_at is None else 2
 
 
 if __name__ == "__main__":

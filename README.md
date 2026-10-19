@@ -56,6 +56,7 @@ save 1 2        <- CSV + wfm + setup
 ### 동작 순서 시험 (문제 재현·디버깅용)
 `run_seq_test.bat` (또는 `py -3.13 seq_test.py`) — 측정 프로그램과 같은 코드로 **상태정리 → VIL/VIH 측정 → meas 캡처 → clean 캡처 → 저장** 을 3회 반복합니다.
 - 옵션: `--repeat 5`, `--in 1 --out 2`, `--only capture`(캡처만 반복), `--save-wait 10`(캡처 대기 임시 변경)
+- **대기 시간 줄이기 시험:** `--sweep` — 캡처 대기 시간을 config 값의 1 → 0.7 → 0.5 → 0.35 → 0.2 → 0.1 → 0 배로 줄이며 단계마다 `--repeat` 회 캡처. 처음 실패한 단계에서 멈추고, 마지막 통과값에 1.5배 여유를 둔 권장 `config.ini` 값을 출력합니다. 멈추면 TekScope 재시작 후 `--start-level 0.35` 처럼 이어서. 한 항목만: `--sweep-param save` (arm/save/post).
 - 단계별 소요 시간과 모든 SCPI 명령의 시각·간격을 `logs/seqtest_날짜_시각.txt` 에 기록합니다. 실패하면 **직전 SCPI 기록과 스코프 상태**를 출력하고 멈춥니다. 마지막 줄이 멈춘 명령입니다.
 
 ### 데이터·화면 저장만 (R_pd / R_pu / IOH 등)
