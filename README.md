@@ -227,12 +227,23 @@ scopetech/
     base.py              인터페이스: take(local) / pending_count() / fetch_pending()
     aoe.py               기본: Act On Event + 끝날 때 한 번에 가져오기
     off.py               캡처 안 함 (run_nocap)
+    screen_api.py        스코프 Windows 화면 캡처 서버(scope-capture-api, LAN)로 받기
     template.py          직접 만들 때 복사할 틀
   wizard.py / shell.py   안내 메뉴 / 명령 셸 (Bench 메서드만 호출)
   analysis.py results.py wavefile.py config.py sim.py
 ```
 - `steps/capture.py` 는 **어떤 화면을 몇 장**(측정 표시 meas.png, 숨긴 clean.png) 찍을지만 정하고, **어떻게 찍을지**는 `capture/` 의 방법이 정합니다. 메뉴 3·4(`manual.py`, `snap.py`)도 같은 방법을 씁니다.
 - 새 동작: `steps/새동작.py` 에 `run(bench, ...)` 을 만들고 `Bench` 에 한 줄 메서드를 추가하면 메뉴·셸에서 부를 수 있습니다.
+
+### 화면 캡처 서버로 받기 (`method = screen_api`)
+스코프 Windows 에서 돌아가는 화면 캡처 서버([esaram5-lab/scope-capture-api](https://github.com/esaram5-lab/scope-capture-api))로 지금 화면을 받습니다. **TekScope 에 화면 저장·파일 명령을 보내지 않습니다.** 측정 명령은 USB, 화면은 LAN 입니다.
+
+1. 스코프: scope-capture-api README 대로 `scope_capture_server.py` 실행(처음 실행 때 `capture_token.txt` 생성).
+2. PC: `scope_capture_client.py`(자동 검색을 쓰면 `scope_discovery.py` 도)를 `scope.py` 옆에 복사, 스코프의 `capture_token.txt` 도 `scope.py` 옆에 복사.
+3. `config.ini`: `[capture] method = screen_api`, `[screen_api] host = 스코프 IP` (비우면 자동 검색, psutil 필요).
+4. 캡처 순서: `acquire`(기본 stop: 실행 중이면 Single 1회 받고 정지 → meas/clean 이 같은 획득) → `*OPC?` → `settle_s`(0.5초) 화면 갱신 대기 → 서버에 캡처 요청. 스코프에 PNG 가 남지 않고 종료 시 가져오기도 없습니다.
+- `acquire = single`: 캡처마다 새 Single, `keep`: 획득 상태 그대로.
+- 캡처는 Windows 화면 그대로입니다. TekScope 창을 맨 앞에 두세요.
 
 ### 화면 캡처 직접 구현하기
 1. `scopetech/capture/template.py` 를 `scope.py` 옆에 `my_capture.py` 로 복사합니다.

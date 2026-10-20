@@ -30,6 +30,8 @@ DEFAULTS = {
     },
     "capture": {"enabled": "yes", "method": "aoe", "ink_saver": "no", "settle_s": "1.0", "aoe_arm_wait_s": "1", "aoe_save_wait_s": "2", "aoe_post_wait_s": "2",
                 "image_fetch": "end", "fetch_gap_s": "1", "delete_after_fetch": "yes"},
+    "screen_api": {"host": "", "port": "8765", "token_file": "capture_token.txt", "client_dir": "", "name": "",
+                   "timeout_s": "10", "discovery_timeout_s": "2", "acquire": "stop", "settle_s": "0.5"},
     "save": {"channels": "displayed", "csv": "yes", "wfm": "yes", "setup": "yes"},
     "scope": {"temp_dir": "C:/scope_tech_tmp", "num_channels": "8"},
     "output": {"base_dir": "captures", "sim_dir": "captures_sim", "log_dir": "logs"},
