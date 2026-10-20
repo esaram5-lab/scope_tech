@@ -344,8 +344,16 @@ class Bench:
         self._save_pending(left)
         return len(items) - len(left), len(left)
 
+    def capture_enabled(self) -> bool:
+        return self.cfg.getbool("capture", "enabled")
+
     def capture(self) -> list[Path]:
         rec = self._ensure_record()
+        if not self.capture_enabled():
+            rec.result["capture"] = "off"
+            results.write_json(rec.folder / "result.json", rec.result)
+            self.echo("  화면 캡처 생략 (캡처 끔)")
+            return []
         s = self.scope
         s.freeze(self.cfg.getfloat("measure", "single_timeout_s"))  # 두 캡처와 저장 파형이 같은 획득이 되도록
         ink = self.cfg.getbool("capture", "ink_saver")
@@ -416,15 +424,20 @@ class Bench:
         rec.result.update({"manual_item": label, "note": note,
                            "channels": [f"CH{c}" for c in chans],
                            "metrics": [], "status": "incomplete",
-                           "capture_note": "CSV 저장 후 화면 캡처를 위해 추가 Single 획득. 동일 획득 아님."})
+                           "capture_note": "CSV 저장 후 화면 캡처를 위해 추가 Single 획득. 동일 획득 아님."
+                           if self.capture_enabled() else "화면 캡처 끔"})
         self._label_folder(rec, label)
         self.record = rec
         results.write_json(rec.folder / "result.json", rec.result)
-        self.echo("[1/2] 선택한 채널의 파형 CSV 저장")
+        cap = self.capture_enabled()
+        self.echo(f"[1/{2 if cap else 1}] 선택한 채널의 파형 CSV 저장")
         wfs = [s.fetch_waveform(c) for c in chans]
         wavefile.write_csv(rec.folder, wfs, {f"CH{c}": self.cfg.channel_name(c) for c in chans})
-        self.echo("[2/2] 기존 측정·커서를 표시한 화면 저장 (추가 Single 획득)")
-        self._take(self.cfg.getbool("capture", "ink_saver"), rec.folder / "screen.png")
+        if cap:
+            self.echo("[2/2] 기존 측정·커서를 표시한 화면 저장 (추가 Single 획득)")
+            self._take(self.cfg.getbool("capture", "ink_saver"), rec.folder / "screen.png")
+        else:
+            rec.result["capture"] = "off"
         rec.result.update({"status": "complete", "saved_channels": [f"CH{c}" for c in chans]})
         results.write_json(rec.folder / "result.json", rec.result)
         return rec
@@ -444,6 +457,8 @@ class Bench:
         화면 캡처는 Act On Event 라 Single 1회 획득이 일어난다(원격 SAVe:IMAGe 는 TekScope 를 멈춤)."""
         if not label.strip():
             raise ValueError("캡처 이름을 입력해주세요.")
+        if not self.capture_enabled():
+            raise ValueError("화면 캡처를 끈 상태입니다(run_nocap / [capture] enabled = no).")
         rec = self._new_record("SNAP", [])
         rec.result = self._base_result("SNAP")
         rec.result.update({"snap_item": label, "note": note, "cursor": cursor, "metrics": [],

@@ -234,6 +234,8 @@ def detail(w, pin: str, i: int, e: dict, root: Path) -> None:
             w(f"![{img.name}]({link(img, root)})\n" if primary else f"- 캡처: [{img.name}]({link(img, root)})")
         if not primary:
             w("")
+    elif r.get("capture") == "off":
+        w("_화면 캡처 안 함 (캡처 끈 측정)_\n")
     elif r.get("item") in ("VIH", "VOH", "MANUAL", "SNAP"):
         w("_화면 캡처 없음 (스코프에서 아직 가져오지 않았다면 `py scope.py --fetch`)_\n")
     if e["csv"]:

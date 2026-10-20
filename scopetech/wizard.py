@@ -68,8 +68,12 @@ class Wizard:
             while True:
                 pin = self.prompt('측정할 DUT 핀 번호 (VIL/VIH 는 입력 핀)', self.state.get('pin', ''),
                                   lambda s: s.isascii() and s.isdigit() and int(s) > 0)
-                item = self.prompt('측정 항목: 1 VIL/VIH + 출력 VOH/VOL  2 VOH/VOL만(50회 통계)  3 데이터·화면 저장만  4 화면만 캡처(커서)',
-                                   self.state.get('item', '1'), lambda s: s in ('1', '2', '3', '4'))
+                cap = b.capture_enabled()
+                items = ('1', '2', '3', '4') if cap else ('1', '2', '3')
+                item = self.prompt('측정 항목: 1 VIL/VIH + 출력 VOH/VOL  2 VOH/VOL만(50회 통계)  '
+                                   + ('3 데이터·화면 저장만  4 화면만 캡처(커서)' if cap else '3 데이터 저장만'),
+                                   self.state.get('item', '1') if self.state.get('item', '1') in items else '1',
+                                   lambda s: s in items)
                 out_pin = ''
                 if item == '1':
                     out_pin = self.prompt('출력 DUT 핀 번호', self.state.get('out_pin', ''),
@@ -99,7 +103,7 @@ class Wizard:
                     self.state.update({'manual_label': label, 'manual_channels': raw})
                 self.state.update({'pin': pin, 'item': item})
                 while True:
-                    title = {'1': 'VIL/VIH', '2': 'VOH/VOL', '3': '데이터·화면 저장만', '4': '화면만 캡처'}[item]
+                    title = {'1': 'VIL/VIH', '2': 'VOH/VOL', '3': '데이터·화면 저장만' if cap else '데이터 저장만', '4': '화면만 캡처'}[item]
                     if item == '4':
                         channels = '현재 화면'
                     elif item == '3':
@@ -116,12 +120,15 @@ class Wizard:
                     elif item == '3':
                         self.echo(f'항목: {label} / 메모: {note or "없음"}')
                         self.echo('스코프에서 원하는 측정·커서를 준비해주세요. 저항/전류 자동 계산은 하지 않습니다.')
-                        self.echo('선택 채널의 현재 파형을 CSV로 저장한 뒤 화면을 추가 획득합니다. DC 신호는 Auto 트리거를 준비해주세요.')
+                        self.echo('선택 채널의 현재 파형을 CSV로 저장한 뒤 화면을 추가 획득합니다. DC 신호는 Auto 트리거를 준비해주세요.'
+                                  if cap else '선택 채널의 현재 파형을 CSV로 저장합니다(화면 캡처 없음).')
                     else:
                         self.echo('삼각파 0~VCCIO와 트리거를 준비해주세요.' if item == '1' else
                                   'High/Low가 반복되는 출력 신호, 부하 조건과 트리거를 준비해주세요.')
-                    if item != '4':
+                    if item != '4' and cap:
                         self.echo('캡처 시 추가 획득이 발생하므로 측정 중 입력 조건을 유지해주세요.')
+                    if not cap:
+                        self.echo('[화면 캡처 끔] 측정·파형 저장만 합니다.')
                     action = self.prompt('준비되면 Enter로 시작 (s: 시험 이름·온도 변경)', '', lambda s: s in ('', 's'))
                     if action == 's':
                         b.name = self.prompt('시험 이름', b.name, lambda s: bool(s))
@@ -145,8 +152,11 @@ class Wizard:
                         else:
                             self.echo('\n[1/3] 측정')
                             rec = b.vih(cin, cout) if item == '1' else b.voh([cout])
-                            self.echo('[2/3] 화면 캡처')
-                            b.capture()
+                            if cap:
+                                self.echo('[2/3] 화면 캡처')
+                                b.capture()
+                            else:
+                                self.echo('[2/3] 화면 캡처 생략')
                             self.echo('[3/3] 파형·설정 저장')
                             b.save()
                     except KeyboardInterrupt:

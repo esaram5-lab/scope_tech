@@ -103,6 +103,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--sim", action="store_true", help="스코프 없이 시뮬레이터로 실행")
     ap.add_argument("--shell", action="store_true", help="기존 명령어 셸로 실행")
     ap.add_argument("--fetch", action="store_true", help="스코프에 저장해 둔 캡처 PNG 만 가져오고 종료")
+    ap.add_argument("--no-capture", action="store_true", help="화면 캡처 없이 측정·파형 저장만 (run_nocap.bat)")
     ap.add_argument("--debug", action="store_true", help="SCPI 송수신을 화면에 출력")
     ap.add_argument("--temp", help="온도 (예: 85)")
     ap.add_argument("--name", help="시험 이름 (예: INV_3V3)")
@@ -112,6 +113,8 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     cfg = Config(args.config)
+    if args.no_capture:
+        cfg.cp.set("capture", "enabled", "no")
     out_dir = HERE / cfg.get("output", "sim_dir" if args.sim else "base_dir")
     logger = make_logger(HERE / cfg.get("output", "log_dir"), args.debug)
 
@@ -131,6 +134,8 @@ def main(argv: list[str] | None = None) -> int:
         )
         idn = scope.connect()
         print(f"연결됨: {idn}  ({transport.description})")
+        if not cfg.getbool("capture", "enabled"):
+            print("화면 캡처 끔: 측정·커서 표시·파형 저장만 합니다.")
         if "MSO5" not in idn.upper() and not args.sim:
             print("  [주의] MSO 5 시리즈가 아닌 것 같습니다. 명령이 맞지 않을 수 있습니다.")
     

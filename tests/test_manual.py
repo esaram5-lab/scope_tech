@@ -83,3 +83,51 @@ class SnapTest(unittest.TestCase):
             b.snap.assert_called_once_with('pulse', 'room')
             b.save_manual.assert_not_called()
             b.vih.assert_not_called()
+
+
+class NoCaptureTest(unittest.TestCase):
+    def test_capture_off_skips_all_screen_saving(self):
+        with tempfile.TemporaryDirectory() as d:
+            t = SimTransport()
+            s = MSO5B(t, settle_s=0)
+            s.connect()
+            cfg = Config()
+            cfg.cp.set('capture', 'enabled', 'no')
+            b = Bench(s, cfg, Path(d), echo=lambda _: None)
+            b.dut_pin = '2'
+            rec = b.vih(1, 2)
+            t.sim.log.clear()
+            self.assertEqual(b.capture(), [])
+            b.save([1, 2])
+            self.assertFalse(any('ACTONEVENT' in cmd.upper() or 'SAVE:IMAGE' in cmd.upper() for cmd in t.sim.log))
+            self.assertEqual(b.pending_count(), 0)
+            self.assertEqual(json.loads((rec.folder/'result.json').read_text())['capture'], 'off')
+            self.assertTrue((rec.folder/'waveform.csv').exists())
+            self.assertFalse(list(rec.folder.glob('*.png')))
+            m = b.save_manual('R_pu', [1], '')
+            self.assertFalse((m.folder/'screen.png').exists())
+            self.assertEqual(b.pending_count(), 0)
+            with self.assertRaises(ValueError):
+                b.snap('x')
+
+    def test_menu_without_capture(self):
+        with tempfile.TemporaryDirectory() as d:
+            cfg = Config()
+            cfg.cp.set('capture', 'enabled', 'no')
+            b = Bench(Mock(num_channels=8), cfg, Path(d), echo=lambda _: None)
+            b.vih = Mock(return_value=Mock(folder=Path(d)))
+            b.capture = Mock()
+            b.save = Mock()
+            b.reset = Mock()
+            prompts = []
+            answers = iter(['2', '4', '1', '12', '1', '2', 'pp', '', '3'])
+
+            def ask(p):
+                prompts.append(p)
+                return next(answers)
+            code = Wizard(b, Path(d)/'session.json', ask=ask, echo=lambda _: None).run()
+            self.assertEqual(code, 0)
+            self.assertNotIn('4 화면만', prompts[1])
+            b.vih.assert_called_once_with(1, 2)
+            b.capture.assert_not_called()
+            b.save.assert_called_once()

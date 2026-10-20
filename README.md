@@ -75,6 +75,15 @@ save 1 2        <- CSV + wfm + setup
 - CSV는 현재 파형을 정지한 뒤 저장하고, 화면은 AOE 방식으로 추가 Single 획득합니다. 같은 획득을 담는 것은 아니므로 입력 조건을 유지해주세요. DC 신호는 Auto 트리거를 준비해주세요.
 - `result.json`의 status가 complete일 때만 전체 저장 완료입니다. 실패 시 일부 파일과 incomplete 상태가 남을 수 있습니다.
 
+### 화면 캡처 없이 실행 (`run_nocap.bat`)
+`run_scope.bat` 과 같은 메뉴지만 **화면 캡처를 전혀 하지 않습니다**(`scope.py --no-capture`). 측정·커서·측정 배지 표시, 판정, 파형 CSV/.wfm/설정 저장은 그대로입니다.
+
+- 메뉴 1·2: `[2/3] 화면 캡처 생략`, 메뉴 3: CSV 만 저장, 메뉴 4(화면만 캡처)는 나오지 않습니다.
+- 스코프 Act On Event·이미지 파일을 쓰지 않으므로 종료 시 가져오기도 없습니다. 결과 폴더에 PNG 가 없고 result.json 에 `"capture": "off"` 가 남습니다.
+- 셸도 같습니다: `run_nocap.bat --shell` (`all` 명령에서 캡처 생략).
+- 항상 끄려면 `config.ini` 의 `[capture] enabled = no`.
+- 스코프 파일 저장(.wfm, setup.set)도 빼려면 `[save] wfm = no`, `setup = no` (CSV 에 전체 파형이 있음).
+
 ### 화면만 캡처 (커서)
 기본 실행 메뉴에서 **4**를 선택합니다. DUT 핀 → 캡처 이름 → 메모 → 준비 후 Enter. 셸에서는 `snap [이름]`.
 

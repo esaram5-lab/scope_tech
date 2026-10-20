@@ -125,7 +125,8 @@ class ScopeShell(cmd.Cmd):
             self.do_vih(rest)
         else:
             self.do_voh(rest)
-        self.bench.capture()
+        if self.bench.capture_enabled():
+            self.bench.capture()
         self.bench.save()
 
     do_vil = do_vih
