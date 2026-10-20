@@ -69,7 +69,7 @@ class Wizard:
 
     def _run(self):
         b = self.bench
-        self.echo('\n측정 도우미 — 현재 설정 확인 후 Enter: 측정 / s: 설정 변경 / q: 종료')
+        self.echo('\n측정 도우미 — 현재 설정 확인 후 Enter: 측정 / p: 핀만 변경 / s: 설정 변경 / q: 종료')
         # CLI에서 전달한 값이 저장된 기본값보다 우선한다.
         for key, attr in (('name', 'name'), ('temp', 'temp'), ('out_type', 'out_type')):
             if key in self.state and attr not in getattr(b, 'explicit_options', set()):
@@ -85,9 +85,13 @@ class Wizard:
                     self._edit(cap)
                     editing = False
                 self._show(cap)
-                action = self.prompt('Enter: 측정 시작 / s: 설정 변경 / q: 종료', '', lambda s: s.lower() in ('', 's'))
-                if action.lower() == 's':
+                action = self.prompt('Enter: 측정 시작 / p: 핀만 변경 / s: 설정 변경 / q: 종료', '',
+                                     lambda s: s.lower() in ('', 'p', 's')).lower()
+                if action == 's':
                     editing = True
+                    continue
+                if action == 'p':
+                    self._edit_pin()
                     continue
                 status = self._measure(cap)
                 if status is not None:
@@ -118,7 +122,7 @@ class Wizard:
         """설정 변경: 지금 값이 기본값이라 바꿀 것만 입력하고 나머지는 Enter."""
         b, st = self.bench, self.state
         self.echo('\n[설정 변경] Enter: 지금 값 유지')
-        digit = lambda s: s.isascii() and s.isdigit() and int(s) > 0  # noqa: E731
+        digit = self.valid_pin
         st['pin'] = self.prompt('측정할 DUT 핀 번호 (VIL/VIH 는 입력 핀)', st.get('pin', ''), digit)
         items = self._items(cap)
         st['item'] = item = self.prompt('측정 항목: ' + '  '.join(f'{k} {self._item_text(k, cap)}' for k in items),
@@ -148,6 +152,18 @@ class Wizard:
         b.temp = self.prompt('온도(°C)', b.temp, self.valid_temp)
         st.update({'name': b.name, 'temp': b.temp, 'out_type': b.out_type})
         self.remember()
+
+    def _edit_pin(self):
+        """핀 번호만 변경(VIL/VIH 는 입력·출력 핀). 나머지 설정은 그대로."""
+        st = self.state
+        st['pin'] = self.prompt('DUT 핀 번호' + (' (입력 핀)' if st['item'] == '1' else ''), st['pin'], self.valid_pin)
+        if st['item'] == '1':
+            st['out_pin'] = self.prompt('출력 DUT 핀 번호', st.get('out_pin', ''), self.valid_pin)
+        self.remember()
+
+    @staticmethod
+    def valid_pin(value):
+        return value.isascii() and value.isdigit() and int(value) > 0
 
     def _chans(self):
         return list(dict.fromkeys(int(x) for x in str(self.state['manual_channels']).replace(',', ' ').split()))

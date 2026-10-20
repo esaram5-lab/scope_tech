@@ -75,3 +75,20 @@ class WizardTest(unittest.TestCase):
         self.assertEqual((self.b.dut_pin, self.b.out_pin), ('3', '13'))
         state = json.loads((self.root/'session.json').read_text())
         self.assertEqual((state['pin'], state['out_pin'], state['in'], state['out']), ('3', '13', 1, 2))
+
+    def test_pin_shortcut_changes_only_pins(self):
+        (self.root/'session.json').write_text(json.dumps(
+            {'pin': '2', 'item': '1', 'out_pin': '12', 'in': 1, 'out': 2, 'name': 'INV', 'temp': '25', 'out_type': 'PP'}))
+        # p -> 입력 핀 3, 출력 핀 13 -> 설정 화면에서 Enter 측정 -> p -> 입력 핀 x(오류)->4, 출력 핀 Enter 유지 -> Enter -> q
+        self.assertEqual(self.run_menu(['p', '3', '13', '', 'p', 'x', '4', '', '', 'q']), 0)
+        self.assertEqual(self.b.vih.call_count, 2)
+        self.b.vih.assert_called_with(1, 2)
+        self.assertEqual((self.b.dut_pin, self.b.out_pin), ('4', '13'))
+        state = json.loads((self.root/'session.json').read_text())
+        self.assertEqual((state['pin'], state['out_pin'], state['name']), ('4', '13', 'INV'))
+
+    def test_pin_shortcut_single_pin_item(self):
+        (self.root/'session.json').write_text(json.dumps({'pin': '12', 'item': '2', 'voh': 4, 'out_type': 'OD'}))
+        self.assertEqual(self.run_menu(['p', '20', '', 'q']), 0)
+        self.b.voh.assert_called_once_with([4])
+        self.assertEqual(self.b.dut_pin, '20')

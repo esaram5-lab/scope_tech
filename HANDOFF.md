@@ -132,3 +132,4 @@ Tektronix **MSO58B** (FV 2.24.4, Windows 내장형, TPP1000 프로브, CH1~7 연
 - 2026-10-20 사용자: "모든 문제는 화면 캡처에서 생기니 캡처 뺀 서브" 요청 → `run_nocap.bat` (`scope.py --no-capture`) + `[capture] enabled`(기본 yes). 끄면 Bench.capture 는 생략(result.json `capture: off`), save_manual 은 CSV 만, snap 은 ValueError, 메뉴 4 숨김, 셸 all 캡처 생략, 보고서는 "화면 캡처 안 함" 표시. .wfm/setup.set(스코프 파일 저장+READFile)은 그대로이며 `[save] wfm/setup = no` 로 끌 수 있음. 테스트 40개 통과.
 - 참고: 메인 실행 파일 이름은 `run_scope.bat` (이전 대화에서 run.bat 이라 잘못 안내함).
 - 2026-10-20 사용자: 매 측정마다 설정 확인 Enter 가 번거로움 → 안내형 메뉴를 "현재 설정 한 화면 표시 → Enter 바로 측정 / s 설정 변경(지금 값이 기본값) / q 종료"로 변경. 저장된 설정이 완전하면 질문 없이 설정 화면부터, 측정 후 다시 설정 화면으로. 이전의 "1 재측정/2 다른 핀/3 종료" 질문 제거. 메뉴 3·4 메모는 실행 중에만 유지. 테스트 41개 통과.
+- 2026-10-20 설정 화면에 `p`(핀만 변경) 추가: 핀 번호만 묻고(VIL/VIH 는 입력→출력 핀) 설정 화면으로 복귀. 테스트 43개 통과.
