@@ -34,9 +34,9 @@ class WizardTest(unittest.TestCase):
         self.assertEqual(self.b.vih.call_count, 2)
         self.b.vih.assert_called_with(1, 2)
         self.assertEqual(self.b.save.call_count, 2)
-        self.assertEqual(self.b._base_result('VIH')['dut_pin'], '12')
-        self.assertTrue(self.b._new_record('VIH', [1, 2]).folder.name.startswith('PIN12_OUT5_'))
-        self.assertEqual(self.b._base_result('VIH')['out_pin'], '5')
+        self.assertEqual(self.b.base_result('VIH')['dut_pin'], '12')
+        self.assertTrue(self.b.new_record('VIH', [1, 2]).folder.name.startswith('PIN12_OUT5_'))
+        self.assertEqual(self.b.base_result('VIH')['out_pin'], '5')
         self.assertEqual(json.loads((self.root/'session.json').read_text())['out'], 2)
 
     def test_voh_and_settings(self):

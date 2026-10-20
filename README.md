@@ -214,6 +214,34 @@ Tektronix 공식 Python 라이브러리 `tm_devices` 로 같은 스코프를 시
 | `… 중 스코프 오류: …` | 스코프가 거부한 명령입니다. `logs/` 파일을 보내주세요. |
 
 ## 개발자용
+### 구조 (모듈)
+```
+scope.py                 실행 (안내 메뉴 / 셸 / --fetch / --no-capture)
+scopetech/
+  transport.py           통신 (USB: visa64.dll 직접 호출, LAN: 소켓)
+  mso.py                 MSO58B 드라이버 (SCPI 명령 단위: single, fetch_waveform, add_measurement, cursor_*, capture_deferred ...)
+  workflow.py            Bench: 시험 조건·현재 기록 폴더 등 공통 상태와 도구, 각 동작을 steps/ 에 맡김
+  steps/                 동작 하나 = 모듈 하나, run(bench, ...)
+    reset.py  vih.py  voh.py  capture.py  save.py  manual.py  snap.py
+  capture/               화면 캡처 '방법' (교체 가능, config [capture] method)
+    base.py              인터페이스: take(local) / pending_count() / fetch_pending()
+    aoe.py               기본: Act On Event + 끝날 때 한 번에 가져오기
+    off.py               캡처 안 함 (run_nocap)
+    template.py          직접 만들 때 복사할 틀
+  wizard.py / shell.py   안내 메뉴 / 명령 셸 (Bench 메서드만 호출)
+  analysis.py results.py wavefile.py config.py sim.py
+```
+- `steps/capture.py` 는 **어떤 화면을 몇 장**(측정 표시 meas.png, 숨긴 clean.png) 찍을지만 정하고, **어떻게 찍을지**는 `capture/` 의 방법이 정합니다. 메뉴 3·4(`manual.py`, `snap.py`)도 같은 방법을 씁니다.
+- 새 동작: `steps/새동작.py` 에 `run(bench, ...)` 을 만들고 `Bench` 에 한 줄 메서드를 추가하면 메뉴·셸에서 부를 수 있습니다.
+
+### 화면 캡처 직접 구현하기
+1. `scopetech/capture/template.py` 를 `scope.py` 옆에 `my_capture.py` 로 복사합니다.
+2. `take(self, local)` 를 구현합니다: 스코프 화면 1장을 `local`(PNG 경로)에 저장하고 `local` 을 돌려줍니다.
+   `self.scope`(드라이버), `self.cfg`, `self.echo`, `self.ink` 를 쓸 수 있습니다. 나중에 한 번에 가져오는 방식이면 `pending_count()`/`fetch_pending()` 도 구현합니다(`aoe.py` 참고).
+3. `config.ini` 의 `[capture] method = my_capture` (클래스 이름이 `Capture` 가 아니면 `my_capture:클래스이름`).
+4. `py scope.py --sim` 으로 흐름 확인 → `run_seq_test.bat --only capture --repeat 10` 으로 실장비 반복 시험(모든 SCPI 명령이 시각과 함께 로그에 남음).
+- 이전 방식으로 돌아가려면 `method = aoe`. 잘못된 이름이면 시작할 때 어느 파일을 찾았는지 알려줍니다.
+
 ```
 python -m unittest discover -s tests -t .
 ```

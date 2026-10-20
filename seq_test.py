@@ -156,17 +156,17 @@ def main(argv=None) -> int:
             out(f"\n===== {n}/{args.repeat} 회 =====")
             steps = [("0 상태정리", scope.reset_state)]
             if args.only == "capture":
-                steps += [("2 화면캡처", lambda: bench._take(False, shot_path()))]
+                steps += [("2 화면캡처", lambda: bench.capturer.take(shot_path()))]
             else:
                 def clean():
-                    bench._hide_overlay(bench.record)
+                    bench.hide_overlay(bench.record)
                     try:
-                        bench._take(False, shot_path())
+                        bench.capturer.take(shot_path())
                     finally:
-                        bench._restore_overlay(bench.record)
+                        bench.restore_overlay(bench.record)
                 steps += [
                     ("1 VIL/VIH 측정", lambda: bench.vih(args.ch_in, args.ch_out)),
-                    ("2 meas 캡처", lambda: bench._take(False, shot_path())),
+                    ("2 meas 캡처", lambda: bench.capturer.take(shot_path())),
                     ("3 clean 캡처", clean),
                     ("4 파형·설정 저장", lambda: bench.save([args.ch_in, args.ch_out])),
                 ]
@@ -193,7 +193,7 @@ def main(argv=None) -> int:
 
 
 def _fetch_all(bench, out, scope=None, offset=None) -> None:
-    items = bench._load_pending()
+    items = bench.capturer.load_pending() if hasattr(bench.capturer, "load_pending") else []
     got, left = bench.fetch_pending()
     out(f"    가져옴 {got}개, 남음 {left}개")
     if offset is not None:
@@ -242,7 +242,7 @@ def sweep(args, cfg, scope, bench, t, step, out, path, report, fetch) -> int:
             for n in range(1, args.repeat + 1):
                 t0 = time.monotonic()
                 ok = step(f"{n}/{args.repeat} 상태정리", scope.reset_state) and step(
-                    f"{n}/{args.repeat} 화면캡처", lambda: bench._take(False, bench.shot_path()))
+                    f"{n}/{args.repeat} 화면캡처", lambda: bench.capturer.take(bench.shot_path()))
                 if not ok:
                     failed_at = lv
                     break
