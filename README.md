@@ -162,6 +162,16 @@ logs/scpi_20261017.log                <- 스코프 송수신 기록(문제 확�
 - `py analyze.py --recompute`: `vin_avg_points`나 `out_cross`를 바꾼 뒤, 저장된 CSV로 VT+/VT−를 다시 계산합니다.
 - `py analyze.py --spec 1V8`: 결과에 기록된 기준 대신 지정한 기준으로 판정합니다.
 
+## 보고서 초안 만들기 (Markdown)
+`run_report.bat` (또는 `py report.py`) → `captures/report_날짜_시각.md`. 스코프 연결 없이 저장된 결과만 읽습니다.
+
+- **핀별 요약:** 핀마다 VIL(VT-) / VIH(VT+) / 히스테리시스 / VOL / VOH 의 전 조건 최악값과 판정.
+- **핀별 상세:** 조건(시험·온도·출력 타입)별 표, 측정마다 typ·최악값·n·기준·판정 표와 화면 캡처(meas/clean/screen, `xy.svg` 가 있으면 함께).
+- VIL/VIH 측정의 출력 VOH/VOL 은 **출력 핀** 아래에 들어갑니다(캡처는 링크). 메뉴 3·4 저장은 해당 핀 아래 캡처로 들어갑니다.
+- DUT·목적·메모 칸은 `(작성)` 으로 비워 둡니다. 그대로 편집해서 쓰세요.
+- 골라 만들기: `run_report.bat --temp 85`, `--name INV_3V3`, `--spec 3V3`(판정 기준 바꿔 재판정), `--out 경로.md`.
+- 이미지는 보고서 파일 위치 기준 상대 경로로 링크합니다. 보고서와 captures 폴더를 함께 옮기면 그대로 열립니다(VS Code, Typora 등).
+
 ## tm_devices 비교 시험 (선택)
 Tektronix 공식 Python 라이브러리 `tm_devices` 로 같은 스코프를 시험합니다. 본 프로그램은 표준 라이브러리만 쓰며 이 시험에만 필요합니다.
 1. 인터넷 PC: `get_tm_devices.bat` → `tm_devices_wheels` 폴더 생성(약 13MB, Python 아무 버전이나 있으면 됨)
