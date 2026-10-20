@@ -75,6 +75,13 @@ save 1 2        <- CSV + wfm + setup
 - CSV는 현재 파형을 정지한 뒤 저장하고, 화면은 AOE 방식으로 추가 Single 획득합니다. 같은 획득을 담는 것은 아니므로 입력 조건을 유지해주세요. DC 신호는 Auto 트리거를 준비해주세요.
 - `result.json`의 status가 complete일 때만 전체 저장 완료입니다. 실패 시 일부 파일과 incomplete 상태가 남을 수 있습니다.
 
+### 화면만 캡처 (커서)
+기본 실행 메뉴에서 **4**를 선택합니다. DUT 핀 → 캡처 이름 → 메모 → 준비 후 Enter. 셸에서는 `snap [이름]`.
+
+- 파형 데이터(CURVe?)·측정·설정 파일 없이, 커서를 켜고 지금 화면만 `screen.png` 로 저장합니다. 커서 위치는 스코프에 맞춰 둔 그대로입니다.
+- 저장 위치: `captures/SNAP/PIN번호_시험이름_온도_시각_이름/` (`screen.png`, `result.json`). 이미지는 종료할 때 한 번에 가져옵니다.
+- 화면 저장은 Act On Event 방식이라 Single 1회 획득이 일어납니다. 신호와 트리거가 들어오는 상태여야 합니다.
+
 ## 3. 사용 예
 ```
 [25C TEST PP spec=-] scope> temp 25

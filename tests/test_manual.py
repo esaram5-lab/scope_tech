@@ -48,3 +48,38 @@ class ManualTest(unittest.TestCase):
             b.save_manual.assert_called_once_with('IOH', [1, 2], '11 mA')
             b.vih.assert_not_called()
             b.voh.assert_not_called()
+
+
+class SnapTest(unittest.TestCase):
+    def test_snap_turns_cursor_on_and_saves_screen_only(self):
+        with tempfile.TemporaryDirectory() as d:
+            t = SimTransport()
+            s = MSO5B(t, settle_s=0)
+            s.connect()
+            t.sim.log.clear()
+            b = Bench(s, Config(), Path(d), echo=lambda _: None)
+            b.dut_pin = '5'
+            rec = b.snap('edge', 'note')
+            self.assertEqual(t.sim.cursor['STATE'], '1')
+            self.assertFalse(any(cmd.upper().startswith(('CURVE', 'DATA:SOU', 'SAVE:WAVE', 'SAVE:SETUP', 'MEASUREMENT:ADDNEW'))
+                                 for cmd in t.sim.log))
+            self.assertEqual(b.fetch_pending(), (1, 0))
+            self.assertTrue((rec.folder/'screen.png').read_bytes().startswith(b'\x89PNG'))
+            self.assertEqual(sorted(p.name for p in rec.folder.iterdir()), ['result.json', 'screen.png'])
+            data = json.loads((rec.folder/'result.json').read_text())
+            self.assertEqual((data['dut_pin'], data['snap_item'], data['status']), ('5', 'edge', 'complete'))
+            self.assertIn('SNAP', rec.folder.parts)
+            self.assertTrue(rec.folder.name.endswith('_edge'))
+
+    def test_menu_snap(self):
+        with tempfile.TemporaryDirectory() as d:
+            b = Bench(Mock(num_channels=8), Config(), Path(d), echo=lambda _: None)
+            b.snap = Mock(return_value=Mock(folder=Path(d)))
+            b.save_manual = Mock()
+            b.vih = Mock()
+            answers = iter(['3', '4', 'pulse', 'room', '', '3'])
+            code = Wizard(b, Path(d)/'session.json', ask=lambda _: next(answers), echo=lambda _: None).run()
+            self.assertEqual(code, 0)
+            b.snap.assert_called_once_with('pulse', 'room')
+            b.save_manual.assert_not_called()
+            b.vih.assert_not_called()

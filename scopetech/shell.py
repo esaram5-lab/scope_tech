@@ -12,6 +12,7 @@ INTRO = """
   vih [입력 출력] [hold]   VIL/VIH 측정 + 커서   (기본 1 2)
   voh [채널...] [hold]     VOH/VOL 측정 + 통계   (기본 2)
   capture                  화면 캡처 (meas.png / clean.png)
+  snap [이름]              커서 켜고 지금 화면만 캡처 (파형 데이터 없음)
   save [채널...]           파형 저장 (CSV + .wfm + setup)
   all vih 1 2 / all voh 2  측정 -> 캡처 -> 저장 한 번에
   temp 85 | name INV_3V3 | spec 3V3 | type od     시험 조건 설정
@@ -98,6 +99,13 @@ class ScopeShell(cmd.Cmd):
         """capture
         화면을 캡처합니다. 측정/커서가 있으면 meas.png(표시)와 clean.png(숨김) 두 장을 저장합니다."""
         self.bench.capture()
+
+    def do_snap(self, arg: str) -> None:
+        """snap [이름]
+        파형 데이터·측정 없이 커서를 켜고 지금 화면만 screen.png 로 저장합니다(Single 1회 획득).
+        예) snap   /   snap INV_edge"""
+        rec = self.bench.snap(arg.strip() or "screen")
+        print(f"저장 위치: {rec.folder}" + (" (화면 이미지는 fetch 또는 quit 때 가져옵니다)" if self.bench.pending_count() else ""))
 
     def do_save(self, arg: str) -> None:
         """save [채널...]

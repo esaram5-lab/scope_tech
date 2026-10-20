@@ -417,14 +417,7 @@ class Bench:
                            "channels": [f"CH{c}" for c in chans],
                            "metrics": [], "status": "incomplete",
                            "capture_note": "CSV 저장 후 화면 캡처를 위해 추가 Single 획득. 동일 획득 아님."})
-        # 폴더에 시험 항목도 표시하며 기존 폴더를 덮어쓰지 않는다.
-        target = rec.folder.with_name(rec.folder.name + "_" + _safe(label))
-        n = 2
-        while target.exists():
-            target = rec.folder.with_name(rec.folder.name + "_" + _safe(label) + f"_{n}")
-            n += 1
-        rec.folder.rename(target)
-        rec.folder = target
+        self._label_folder(rec, label)
         self.record = rec
         results.write_json(rec.folder / "result.json", rec.result)
         self.echo("[1/2] 선택한 채널의 파형 CSV 저장")
@@ -433,6 +426,38 @@ class Bench:
         self.echo("[2/2] 기존 측정·커서를 표시한 화면 저장 (추가 Single 획득)")
         self._take(self.cfg.getbool("capture", "ink_saver"), rec.folder / "screen.png")
         rec.result.update({"status": "complete", "saved_channels": [f"CH{c}" for c in chans]})
+        results.write_json(rec.folder / "result.json", rec.result)
+        return rec
+
+    def _label_folder(self, rec: Record, label: str) -> None:
+        """폴더에 시험 항목도 표시하며 기존 폴더를 덮어쓰지 않는다."""
+        target = rec.folder.with_name(rec.folder.name + "_" + _safe(label))
+        n = 2
+        while target.exists():
+            target = rec.folder.with_name(rec.folder.name + "_" + _safe(label) + f"_{n}")
+            n += 1
+        rec.folder.rename(target)
+        rec.folder = target
+
+    def snap(self, label: str, note: str = "", cursor: bool = True) -> Record:
+        """화면만 저장: 파형 데이터·측정·설정 파일 없이 커서를 켜고 지금 화면을 캡처한다.
+        화면 캡처는 Act On Event 라 Single 1회 획득이 일어난다(원격 SAVe:IMAGe 는 TekScope 를 멈춤)."""
+        if not label.strip():
+            raise ValueError("캡처 이름을 입력해주세요.")
+        rec = self._new_record("SNAP", [])
+        rec.result = self._base_result("SNAP")
+        rec.result.update({"snap_item": label, "note": note, "cursor": cursor, "metrics": [],
+                           "status": "incomplete", "capture_note": "Act On Event Single 1회 획득 화면. 파형 데이터 없음."})
+        self._label_folder(rec, label)
+        self.record = rec
+        results.write_json(rec.folder / "result.json", rec.result)
+        if cursor:
+            self.echo("[1/2] 커서 표시 (스코프에 설정된 커서 위치 그대로)")
+            self.scope.cursor_on(True)
+            self.scope.pace()
+        self.echo(f"[{2 if cursor else 1}/{2 if cursor else 1}] 화면 캡처 (Single 1회, 스코프에 저장)")
+        self._take(self.cfg.getbool("capture", "ink_saver"), rec.folder / "screen.png")
+        rec.result["status"] = "complete"
         results.write_json(rec.folder / "result.json", rec.result)
         return rec
 

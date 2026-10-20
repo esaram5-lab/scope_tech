@@ -68,8 +68,8 @@ class Wizard:
             while True:
                 pin = self.prompt('측정할 DUT 핀 번호 (VIL/VIH 는 입력 핀)', self.state.get('pin', ''),
                                   lambda s: s.isascii() and s.isdigit() and int(s) > 0)
-                item = self.prompt('측정 항목: 1 VIL/VIH + 출력 VOH/VOL  2 VOH/VOL만(50회 통계)  3 데이터·화면 저장만',
-                                   self.state.get('item', '1'), lambda s: s in ('1', '2', '3'))
+                item = self.prompt('측정 항목: 1 VIL/VIH + 출력 VOH/VOL  2 VOH/VOL만(50회 통계)  3 데이터·화면 저장만  4 화면만 캡처(커서)',
+                                   self.state.get('item', '1'), lambda s: s in ('1', '2', '3', '4'))
                 out_pin = ''
                 if item == '1':
                     out_pin = self.prompt('출력 DUT 핀 번호', self.state.get('out_pin', ''),
@@ -87,6 +87,10 @@ class Wizard:
                     cout = self.channel('voh', '출력 신호 스코프 채널', '2')
                     b.out_type = self.prompt('출력 타입: PP / OD', b.out_type, lambda s: s.upper() in ('PP', 'OD')).upper()
                     self.state['voh'] = cout
+                elif item == '4':
+                    label = self.prompt('캡처 이름 (폴더 이름에 들어갑니다)', self.state.get('snap_label', 'screen'), lambda s: bool(s))
+                    note = self.prompt('조건 메모 (생략 가능)', '', allow_quit=False)
+                    self.state['snap_label'] = label
                 else:
                     label = self.prompt('시험 항목 이름 (R_pd / R_pu / IOH 등)', self.state.get('manual_label', 'R_pd'), lambda s: bool(s))
                     raw = self.prompt('저장할 채널 번호 (예: 1,2)', self.state.get('manual_channels', '1'), self.valid_channels)
@@ -95,19 +99,29 @@ class Wizard:
                     self.state.update({'manual_label': label, 'manual_channels': raw})
                 self.state.update({'pin': pin, 'item': item})
                 while True:
-                    title = {'1': 'VIL/VIH', '2': 'VOH/VOL', '3': '데이터·화면 저장만'}[item]
-                    channels = ', '.join(f'CH{c}' for c in chans) if item == '3' else ((f'입력 CH{cin} / ' if item == '1' else '') + f'출력 CH{cout}')
+                    title = {'1': 'VIL/VIH', '2': 'VOH/VOL', '3': '데이터·화면 저장만', '4': '화면만 캡처'}[item]
+                    if item == '4':
+                        channels = '현재 화면'
+                    elif item == '3':
+                        channels = ', '.join(f'CH{c}' for c in chans)
+                    else:
+                        channels = (f'입력 CH{cin} / ' if item == '1' else '') + f'출력 CH{cout}'
                     pins = f'입력 핀 {pin} -> 출력 핀 {out_pin}' if item == '1' else f'DUT 핀 {pin}'
                     self.echo(f'\n{pins} | {title} | {channels}')
                     self.echo(f'시험: {b.name} / 온도: {b.temp}°C / 출력: {b.out_type} / 기준: {b.spec_name or "미지정"}')
-                    if item == '3':
+                    if item == '4':
+                        self.echo(f'캡처: {label} / 메모: {note or "없음"}')
+                        self.echo('스코프 화면과 커서 위치를 준비해주세요. 파형 데이터는 받지 않고 커서를 켠 뒤 화면만 저장합니다.')
+                        self.echo('캡처는 Single 1회 획득으로 저장되므로 신호와 트리거가 들어오는 상태여야 합니다.')
+                    elif item == '3':
                         self.echo(f'항목: {label} / 메모: {note or "없음"}')
                         self.echo('스코프에서 원하는 측정·커서를 준비해주세요. 저항/전류 자동 계산은 하지 않습니다.')
                         self.echo('선택 채널의 현재 파형을 CSV로 저장한 뒤 화면을 추가 획득합니다. DC 신호는 Auto 트리거를 준비해주세요.')
                     else:
                         self.echo('삼각파 0~VCCIO와 트리거를 준비해주세요.' if item == '1' else
                                   'High/Low가 반복되는 출력 신호, 부하 조건과 트리거를 준비해주세요.')
-                    self.echo('캡처 시 추가 획득이 발생하므로 측정 중 입력 조건을 유지해주세요.')
+                    if item != '4':
+                        self.echo('캡처 시 추가 획득이 발생하므로 측정 중 입력 조건을 유지해주세요.')
                     action = self.prompt('준비되면 Enter로 시작 (s: 시험 이름·온도 변경)', '', lambda s: s in ('', 's'))
                     if action == 's':
                         b.name = self.prompt('시험 이름', b.name, lambda s: bool(s))
@@ -124,7 +138,9 @@ class Wizard:
                         return 1
                     b.out_pin = out_pin
                     try:
-                        if item == '3':
+                        if item == '4':
+                            rec = b.snap(label, note)
+                        elif item == '3':
                             rec = b.save_manual(label, chans, note)
                         else:
                             self.echo('\n[1/3] 측정')
@@ -139,7 +155,8 @@ class Wizard:
                     except (ScopeError, OSError, ValueError, KeyError) as e:
                         self.echo(f'[중단] {e}\n완료되지 않았습니다. TekScope 화면 상태와 logs 폴더를 확인해주세요.')
                         return 1
-                    self.echo(f'\n측정 완료 — DUT 핀 {pin}\n저장 위치: {rec.folder}')
+                    self.echo(f'\n{"캡처" if item == "4" else "측정"} 완료 — DUT 핀 {pin}\n저장 위치: {rec.folder}'
+                              + ('\n(화면 이미지는 종료할 때 스코프에서 가져옵니다)' if b.pending_count() else ''))
                     next_action = self.prompt('1 같은 조건 재측정 / 2 다른 핀·항목 / 3 종료', '2', lambda s: s in ('1', '2', '3'))
                     if next_action == '3':
                         return 0
