@@ -23,7 +23,7 @@ def run(bench, label: str, note: str = "", cursor: bool = True):
         bench.scope.cursor_on(True)
         bench.scope.pace()
     bench.echo(f"[{2 if cursor else 1}/{2 if cursor else 1}] 화면 캡처 ({bench.capturer.label})")
-    bench.capturer.take(rec.folder / "screen.png")
+    bench.take(rec.folder / "screen.png")
     rec.result["status"] = "complete"
     results.write_json(rec.folder / "result.json", rec.result)
     return rec
