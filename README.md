@@ -196,6 +196,17 @@ logs/scpi_20261017.log                <- 스코프 송수신 기록(문제 확�
 - 골라 만들기: `run_report.bat --temp 85`, `--name INV_3V3`, `--spec 3V3`(판정 기준 바꿔 재판정), `--out 경로.md`.
 - 이미지는 보고서 파일 위치 기준 상대 경로로 링크합니다. 보고서와 captures 폴더를 함께 옮기면 그대로 열립니다(VS Code, Typora 등).
 
+## 온도별 표 만들기 (CSV)
+`run_temp_table.bat` (또는 `py temp_table.py`) → `captures/temp_table_날짜_시각.csv` (엑셀에서 바로 열림).
+```
+핀,항목,시험,출력,채널,-40°C,25°C,85°C
+2,VIL (VT-),INV_3V3,PP,CH1->CH2,1.3991,1.3987,1.3992
+2,VIH (VT+),INV_3V3,PP,CH1->CH2,1.9023,1.8996,1.9006
+12,VOH,INV_3V3,PP,CH2,3.2800,3.2800,3.2800
+```
+- 행 = 핀·항목(VIL/VIH/Hys/VOL/VOH), 열 = 온도. 값은 판정에 쓰는 최악값(V): VIL = VT- 최솟값, VIH = VT+ 최댓값, VOL 최댓값, VOH 최솟값. VIL/VIH 측정의 출력 VOH/VOL 은 출력 핀 행.
+- 같은 핀·온도를 여러 번 쟀으면 마지막 측정(`--pick worst` 면 최악값). 평균값 표: `--value typ`. 골라 만들기: `--name INV_3V3`.
+
 ## tm_devices 비교 시험 (선택)
 Tektronix 공식 Python 라이브러리 `tm_devices` 로 같은 스코프를 시험합니다. 본 프로그램은 표준 라이브러리만 쓰며 이 시험에만 필요합니다.
 1. 인터넷 PC: `get_tm_devices.bat` → `tm_devices_wheels` 폴더 생성(약 13MB, Python 아무 버전이나 있으면 됨)
