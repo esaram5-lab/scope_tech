@@ -42,7 +42,7 @@ class ManualTest(unittest.TestCase):
             b.save_manual = Mock(return_value=Mock(folder=Path(d)))
             b.vih = Mock()
             b.voh = Mock()
-            answers = iter(['12', '3', 'IOH', '9', '1,2,1', '11 mA', '', '', '', 'q'])
+            answers = iter(['12', '3', 'IOH', '9', '1,2,1', '11 mA', '', '', 'r', 'q'])
             code = Wizard(b, Path(d)/'session.json', ask=lambda _: next(answers), echo=lambda _: None).run()
             self.assertEqual(code, 0)
             b.save_manual.assert_called_once_with('IOH', [1, 2], '11 mA')
@@ -77,7 +77,7 @@ class SnapTest(unittest.TestCase):
             b.snap = Mock(return_value=Mock(folder=Path(d)))
             b.save_manual = Mock()
             b.vih = Mock()
-            answers = iter(['3', '4', 'pulse', 'room', '', '', '', 'q'])
+            answers = iter(['3', '4', 'pulse', 'room', '', '', 'r', 'q'])
             code = Wizard(b, Path(d)/'session.json', ask=lambda _: next(answers), echo=lambda _: None).run()
             self.assertEqual(code, 0)
             b.snap.assert_called_once_with('pulse', 'room')
@@ -120,7 +120,7 @@ class NoCaptureTest(unittest.TestCase):
             b.save = Mock()
             b.reset = Mock()
             prompts = []
-            answers = iter(['2', '4', '1', '12', '1', '2', 'pp', '', '', '', 'q'])
+            answers = iter(['2', '4', '1', '12', '1', '2', 'pp', '', '', 'r', 'q'])
 
             def ask(p):
                 prompts.append(p)

@@ -69,7 +69,7 @@ class Wizard:
 
     def _run(self):
         b = self.bench
-        self.echo('\n측정 도우미 — 현재 설정 확인 후 Enter: 측정 / p: 핀만 변경 / s: 설정 변경 / q: 종료')
+        self.echo('\n측정 도우미 — Enter: 핀 바꿔 측정 / r: 같은 설정으로 다시 측정 / s: 설정 변경 / q: 종료')
         # CLI에서 전달한 값이 저장된 기본값보다 우선한다.
         for key, attr in (('name', 'name'), ('temp', 'temp'), ('out_type', 'out_type')):
             if key in self.state and attr not in getattr(b, 'explicit_options', set()):
@@ -85,14 +85,13 @@ class Wizard:
                     self._edit(cap)
                     editing = False
                 self._show(cap)
-                action = self.prompt('Enter: 측정 시작 / p: 핀만 변경 / s: 설정 변경 / q: 종료', '',
-                                     lambda s: s.lower() in ('', 'p', 's')).lower()
+                action = self.prompt('Enter: 핀 바꿔 측정 / r: 같은 설정으로 다시 측정 / s: 설정 변경 / q: 종료', '',
+                                     lambda s: s.lower() in ('', 'r', 's')).lower()
                 if action == 's':
                     editing = True
                     continue
-                if action == 'p':
+                if action == '':  # 기본: 핀 번호만 바꾸고(Enter 로 유지 가능) 바로 측정
                     self._edit_pin()
-                    continue
                 status = self._measure(cap)
                 if status is not None:
                     return status
