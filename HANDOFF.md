@@ -143,3 +143,4 @@ Tektronix **MSO58B** (FV 2.24.4, Windows 내장형, TPP1000 프로브, CH1~7 연
 - 2026-10-21 `temp_table.py` / `run_temp_table.bat` 추가: result.json 들을 report.load 로 읽어 행 = (핀, 항목, 시험, 출력, 채널), 열 = 온도인 CSV(utf-8-sig). 값 기본 worst(--value typ), 반복 측정 기본 latest(--pick worst). tests/test_temp_table.py.
 - 2026-10-21 `scopetech/gallery.py`: 캡처 PNG 를 `captures/result/시험_온도C_PIN핀[_OUT출력핀]_항목[_clean].png` 로 복사(중복 _2…). `Bench.take()` 가 capturer.take 후 collect, aoe 는 fetch_pending 에서 collect. steps 는 bench.take 사용. `[output] result_dir`(기본 result, 비우면 끔). 테스트 59개.
 - 2026-10-21 사용자: VI 측정은 출력 핀 VO 도 측정됨 → VIL/VIH 캡처는 입력 핀 `..._PIN2_VIL-VIH.png` 와 출력 핀 `..._PIN12_VOH-VOL.png` 두 복사본(이름에서 _OUT 제거). gallery.image_names.
+- 2026-10-21 `collect_photos.py` / `run_collect_photos.bat`: 기존 측정 폴더의 meas/clean/screen.png 를 gallery 규칙으로 captures/result 에 모음(gallery.collect_all). collect_all 은 내용이 같은 사진이 이미 있으면 복사하지 않음(재실행해도 중복 없음, 측정 중 복사는 재측정을 모두 남김).

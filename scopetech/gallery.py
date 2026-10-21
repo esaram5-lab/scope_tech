@@ -42,8 +42,9 @@ def image_name(result: dict, image: str) -> str:
     return image_names(result, image)[0]
 
 
-def collect(png: Path, result_dir: Path) -> list[Path]:
-    """png 옆 result.json 을 읽어 result_dir 에 이름 붙인 복사본(들)을 만든다. 정보가 없으면 건너뛴다."""
+def collect(png: Path, result_dir: Path, skip_same: bool = False) -> list[Path]:
+    """png 옆 result.json 을 읽어 result_dir 에 이름 붙인 복사본(들)을 만든다. 정보가 없으면 건너뛴다.
+    skip_same: 내용이 같은 사진이 이미 있으면 복사하지 않음(기존 사진 모으기용. 측정 중에는 재측정을 모두 남김)."""
     png = Path(png)
     meta = png.parent / "result.json"
     if not png.exists() or not meta.exists():
@@ -53,13 +54,29 @@ def collect(png: Path, result_dir: Path) -> list[Path]:
     except (OSError, ValueError):
         return []
     result_dir.mkdir(parents=True, exist_ok=True)
+    data = png.read_bytes()
     out = []
     for stem in image_names(result, png.name):
         target = result_dir / f"{stem}{png.suffix}"
         n = 2
         while target.exists():
+            if skip_same and target.stat().st_size == len(data) and target.read_bytes() == data:
+                break  # 같은 사진이 이미 있음(다시 모으기를 여러 번 실행해도 중복 없음)
             target = result_dir / f"{stem}_{n}{png.suffix}"
             n += 1
-        shutil.copy2(png, target)
-        out.append(target)
+        else:
+            shutil.copy2(png, target)
+            out.append(target)
     return out
+
+
+def collect_all(base: Path, result_dir: Path) -> tuple[int, int]:
+    """base 아래 모든 측정 폴더의 캡처 사진을 result_dir 에 모은다. (새로 복사한 수, 살펴본 사진 수)"""
+    copied = seen = 0
+    for meta in sorted(Path(base).glob("*/*/result.json"), key=lambda p: p.parent.name):
+        for name in ("meas.png", "clean.png", "screen.png"):
+            png = meta.parent / name
+            if png.exists():
+                seen += 1
+                copied += len(collect(png, result_dir, skip_same=True))
+    return copied, seen

@@ -57,3 +57,22 @@ class GalleryTest(unittest.TestCase):
             b.snap("edge")
             b.fetch_pending()
             self.assertFalse((Path(d) / "result").exists())
+
+    def test_collect_existing_photos_once(self):
+        import collect_photos
+        with tempfile.TemporaryDirectory() as d:
+            b = self.bench(d, result_dir="")  # 사진 모음 기능이 없던 때 찍은 사진
+            b.dut_pin, b.out_pin = "2", "12"
+            b.vih(1, 2)
+            b.capture()
+            b.dut_pin, b.out_pin = "7", ""
+            b.snap("edge")
+            b.fetch_pending()
+            self.assertFalse((Path(d) / "result").exists())
+            self.assertEqual(collect_photos.main(["--dir", d]), 0)
+            names = sorted(p.name for p in (Path(d) / "result").iterdir())
+            self.assertEqual(len(names), 5)
+            self.assertIn("INV_3V3_-40C_PIN12_VOH-VOL_clean.png", names)
+            collect_photos.main(["--dir", d])  # 다시 실행해도 중복 없음
+            self.assertEqual(sorted(p.name for p in (Path(d) / "result").iterdir()), names)
+

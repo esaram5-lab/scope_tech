@@ -209,6 +209,7 @@ INV_3V3_25C_PIN7_edge.png                  메뉴 4 (캡처 이름)
 - 이름: `시험_온도C_PIN핀_항목[_clean].png`. VIL/VIH 측정 사진은 입력 핀(`VIL-VIH`)과 출력 핀(`VOH-VOL`) 두 이름으로 복사합니다. 같은 이름이 있으면 `_2`, `_3` 을 붙입니다(재측정).
 - aoe 방식(스코프에 저장 후 나중에 가져오기)이면 가져올 때 복사합니다.
 - 폴더 이름은 `config.ini [output] result_dir`, 비우면 복사하지 않습니다.
+- **이미 찍어 둔 사진 모으기:** `run_collect_photos.bat` (또는 `py collect_photos.py`). 모든 측정 폴더의 사진을 같은 규칙으로 복사합니다. 여러 번 실행해도 같은 사진은 다시 복사하지 않습니다.
 
 ## 온도별 표 만들기 (CSV)
 `run_temp_table.bat` (또는 `py temp_table.py`) → `captures/temp_table_날짜_시각.csv` (엑셀에서 바로 열림).
