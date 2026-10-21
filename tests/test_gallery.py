@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from scopetech.config import Config
-from scopetech.gallery import image_name
+from scopetech.gallery import image_name, image_names
 from scopetech.mso import MSO5B
 from scopetech.sim import SimTransport
 from scopetech.workflow import Bench
@@ -21,8 +21,9 @@ class GalleryTest(unittest.TestCase):
 
     def test_names(self):
         r = {"item": "VIH", "name": "INV", "temp": "85", "dut_pin": "2", "out_pin": "12"}
-        self.assertEqual(image_name(r, "meas.png"), "INV_85C_PIN2_OUT12_VIL-VIH")
-        self.assertEqual(image_name(r, "clean.png"), "INV_85C_PIN2_OUT12_VIL-VIH_clean")
+        self.assertEqual(image_names(r, "meas.png"), ["INV_85C_PIN2_VIL-VIH", "INV_85C_PIN12_VOH-VOL"])
+        self.assertEqual(image_names(r, "clean.png"), ["INV_85C_PIN2_VIL-VIH_clean", "INV_85C_PIN12_VOH-VOL_clean"])
+        self.assertEqual(image_names({**r, "out_pin": ""}, "meas.png"), ["INV_85C_PIN2_VIL-VIH"])
         self.assertEqual(image_name({"item": "VOH", "name": "INV", "temp": "25", "dut_pin": "20"}, "clean.png"),
                          "INV_25C_PIN20_VOH-VOL_clean")
         self.assertEqual(image_name({"item": "MANUAL", "name": "T", "temp": "25", "dut_pin": "5", "manual_item": "R pu"},
@@ -41,11 +42,13 @@ class GalleryTest(unittest.TestCase):
             b.snap("edge")
             b.fetch_pending()
             names = sorted(p.name for p in (Path(d) / "result").iterdir())
-            self.assertEqual(names, ["INV_3V3_-40C_PIN2_OUT12_VIL-VIH.png", "INV_3V3_-40C_PIN2_OUT12_VIL-VIH_2.png",
-                                     "INV_3V3_-40C_PIN2_OUT12_VIL-VIH_clean.png",
-                                     "INV_3V3_-40C_PIN2_OUT12_VIL-VIH_clean_2.png", "INV_3V3_-40C_PIN7_edge.png"])
+            self.assertEqual(names, ["INV_3V3_-40C_PIN12_VOH-VOL.png", "INV_3V3_-40C_PIN12_VOH-VOL_2.png",
+                                     "INV_3V3_-40C_PIN12_VOH-VOL_clean.png", "INV_3V3_-40C_PIN12_VOH-VOL_clean_2.png",
+                                     "INV_3V3_-40C_PIN2_VIL-VIH.png", "INV_3V3_-40C_PIN2_VIL-VIH_2.png",
+                                     "INV_3V3_-40C_PIN2_VIL-VIH_clean.png", "INV_3V3_-40C_PIN2_VIL-VIH_clean_2.png",
+                                     "INV_3V3_-40C_PIN7_edge.png"])
             original = next((Path(d) / "VIH").glob("*/meas.png"))
-            self.assertEqual((Path(d) / "result" / names[0]).read_bytes(), original.read_bytes())
+            self.assertEqual((Path(d) / "result" / names[4]).read_bytes(), original.read_bytes())
 
     def test_disabled(self):
         with tempfile.TemporaryDirectory() as d:

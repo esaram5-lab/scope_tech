@@ -199,13 +199,14 @@ logs/scpi_20261017.log                <- 스코프 송수신 기록(문제 확�
 ## 캡처 사진 모아 보기 (`captures/result/`)
 캡처할 때마다 측정 폴더의 PNG 복사본을 `captures/result/` 에 알아보기 쉬운 이름으로 넣습니다(원본은 그대로).
 ```
-INV_3V3_25C_PIN2_OUT12_VIL-VIH.png         측정 표시 화면 (meas.png)
-INV_3V3_25C_PIN2_OUT12_VIL-VIH_clean.png   측정 숨긴 화면 (clean.png)
+INV_3V3_25C_PIN2_VIL-VIH.png         VIL/VIH 측정 표시 화면 (meas.png) - 입력 핀
+INV_3V3_25C_PIN12_VOH-VOL.png        같은 화면 - 출력 핀 (같은 파형에서 VOH/VOL 도 측정)
+INV_3V3_25C_PIN2_VIL-VIH_clean.png   측정 숨긴 화면 (clean.png), 출력 핀 쪽도 _clean
 INV_3V3_85C_PIN20_VOH-VOL.png
 INV_3V3_25C_PIN5_R_pu.png                  메뉴 3 (항목 이름)
 INV_3V3_25C_PIN7_edge.png                  메뉴 4 (캡처 이름)
 ```
-- 이름: `시험_온도C_PIN핀[_OUT출력핀]_항목[_clean].png`. 같은 이름이 있으면 `_2`, `_3` 을 붙입니다(재측정).
+- 이름: `시험_온도C_PIN핀_항목[_clean].png`. VIL/VIH 측정 사진은 입력 핀(`VIL-VIH`)과 출력 핀(`VOH-VOL`) 두 이름으로 복사합니다. 같은 이름이 있으면 `_2`, `_3` 을 붙입니다(재측정).
 - aoe 방식(스코프에 저장 후 나중에 가져오기)이면 가져올 때 복사합니다.
 - 폴더 이름은 `config.ini [output] result_dir`, 비우면 복사하지 않습니다.
 

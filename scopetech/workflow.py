@@ -90,16 +90,16 @@ class Bench:
         self.collect(path)
         return path
 
-    def collect(self, png: Path) -> Path | None:
+    def collect(self, png: Path) -> list[Path]:
         """캡처 PNG 를 [output] result_dir 에 '시험_온도_핀_항목.png' 로 복사 (미뤄 둔 캡처는 가져올 때)."""
         sub = self.cfg.get("output", "result_dir").strip()
         if not sub:
-            return None
+            return []
         try:
             return gallery.collect(png, self.out_dir / sub)
         except OSError as e:  # 복사 실패로 측정을 멈추지 않는다
             self.echo(f"  [경고] 캡처 복사본을 만들지 못했습니다: {e}")
-            return None
+            return []
 
     def capture_enabled(self) -> bool:
         return self.capturer.enabled

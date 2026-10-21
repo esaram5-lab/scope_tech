@@ -142,3 +142,4 @@ Tektronix **MSO58B** (FV 2.24.4, Windows 내장형, TPP1000 프로브, CH1~7 연
 - 2026-10-21 (main 병합 후 새 작업) 설정 화면 키 변경: Enter = 핀 번호만 묻고 바로 측정(기본), r = 같은 설정으로 다시 측정, s = 설정 변경, q = 종료. 이전 p 키는 Enter 로 통합.
 - 2026-10-21 `temp_table.py` / `run_temp_table.bat` 추가: result.json 들을 report.load 로 읽어 행 = (핀, 항목, 시험, 출력, 채널), 열 = 온도인 CSV(utf-8-sig). 값 기본 worst(--value typ), 반복 측정 기본 latest(--pick worst). tests/test_temp_table.py.
 - 2026-10-21 `scopetech/gallery.py`: 캡처 PNG 를 `captures/result/시험_온도C_PIN핀[_OUT출력핀]_항목[_clean].png` 로 복사(중복 _2…). `Bench.take()` 가 capturer.take 후 collect, aoe 는 fetch_pending 에서 collect. steps 는 bench.take 사용. `[output] result_dir`(기본 result, 비우면 끔). 테스트 59개.
+- 2026-10-21 사용자: VI 측정은 출력 핀 VO 도 측정됨 → VIL/VIH 캡처는 입력 핀 `..._PIN2_VIL-VIH.png` 와 출력 핀 `..._PIN12_VOH-VOL.png` 두 복사본(이름에서 _OUT 제거). gallery.image_names.
