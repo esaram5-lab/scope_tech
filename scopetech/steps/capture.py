@@ -22,14 +22,14 @@ def run(bench) -> list[Path]:
     bench.echo(f"  화면 캡처: {cap.label}")
     out = []
     if rec.meas or rec.cursor:
-        out.append(cap.take(rec.folder / "meas.png"))
+        out.append(bench.take(rec.folder / "meas.png"))
         bench.hide_overlay(rec)
         try:
-            out.append(cap.take(rec.folder / "clean.png"))
+            out.append(bench.take(rec.folder / "clean.png"))
         finally:
             bench.restore_overlay(rec)
     else:
-        out.append(cap.take(rec.folder / "clean.png"))
+        out.append(bench.take(rec.folder / "clean.png"))
         bench.echo("  측정/커서가 없어 clean.png 만 저장했습니다.")
     later = " (스코프에 저장, 종료 시 한 번에 가져옴)" if cap.pending_count() else ""
     bench.echo("[캡처] " + ", ".join(x.name for x in out) + later + f"  -> {rec.folder}")

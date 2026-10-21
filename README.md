@@ -196,6 +196,19 @@ logs/scpi_20261017.log                <- 스코프 송수신 기록(문제 확�
 - 골라 만들기: `run_report.bat --temp 85`, `--name INV_3V3`, `--spec 3V3`(판정 기준 바꿔 재판정), `--out 경로.md`.
 - 이미지는 보고서 파일 위치 기준 상대 경로로 링크합니다. 보고서와 captures 폴더를 함께 옮기면 그대로 열립니다(VS Code, Typora 등).
 
+## 캡처 사진 모아 보기 (`captures/result/`)
+캡처할 때마다 측정 폴더의 PNG 복사본을 `captures/result/` 에 알아보기 쉬운 이름으로 넣습니다(원본은 그대로).
+```
+INV_3V3_25C_PIN2_OUT12_VIL-VIH.png         측정 표시 화면 (meas.png)
+INV_3V3_25C_PIN2_OUT12_VIL-VIH_clean.png   측정 숨긴 화면 (clean.png)
+INV_3V3_85C_PIN20_VOH-VOL.png
+INV_3V3_25C_PIN5_R_pu.png                  메뉴 3 (항목 이름)
+INV_3V3_25C_PIN7_edge.png                  메뉴 4 (캡처 이름)
+```
+- 이름: `시험_온도C_PIN핀[_OUT출력핀]_항목[_clean].png`. 같은 이름이 있으면 `_2`, `_3` 을 붙입니다(재측정).
+- aoe 방식(스코프에 저장 후 나중에 가져오기)이면 가져올 때 복사합니다.
+- 폴더 이름은 `config.ini [output] result_dir`, 비우면 복사하지 않습니다.
+
 ## 온도별 표 만들기 (CSV)
 `run_temp_table.bat` (또는 `py temp_table.py`) → `captures/temp_table_날짜_시각.csv` (엑셀에서 바로 열림).
 ```

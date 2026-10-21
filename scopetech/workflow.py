@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Callable
 
 from . import capture as capture_methods
-from . import results
+from . import gallery, results
 from .config import Config
 from .mso import MSO5B
 from .steps import capture as capture_step
@@ -83,6 +83,23 @@ class Bench:
         if self._capturer is None:
             self._capturer = capture_methods.load(self)
         return self._capturer
+
+    def take(self, local: Path) -> Path:
+        """화면 1장 (캡처 방법에 맡김). 바로 저장되면 결과 폴더에 이름 붙인 복사본도 만든다."""
+        path = self.capturer.take(local)
+        self.collect(path)
+        return path
+
+    def collect(self, png: Path) -> Path | None:
+        """캡처 PNG 를 [output] result_dir 에 '시험_온도_핀_항목.png' 로 복사 (미뤄 둔 캡처는 가져올 때)."""
+        sub = self.cfg.get("output", "result_dir").strip()
+        if not sub:
+            return None
+        try:
+            return gallery.collect(png, self.out_dir / sub)
+        except OSError as e:  # 복사 실패로 측정을 멈추지 않는다
+            self.echo(f"  [경고] 캡처 복사본을 만들지 못했습니다: {e}")
+            return None
 
     def capture_enabled(self) -> bool:
         return self.capturer.enabled

@@ -26,7 +26,7 @@ def run(bench, label: str, chans: list[int], note: str = ""):
     wavefile.write_csv(rec.folder, wfs, {f"CH{c}": bench.cfg.channel_name(c) for c in chans})
     if cap:
         bench.echo(f"[2/2] 기존 측정·커서를 표시한 화면 저장 ({bench.capturer.label})")
-        bench.capturer.take(rec.folder / "screen.png")
+        bench.take(rec.folder / "screen.png")
     else:
         rec.result["capture"] = "off"
     rec.result.update({"status": "complete", "saved_channels": [f"CH{c}" for c in chans]})

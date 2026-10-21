@@ -75,6 +75,7 @@ class Capture(Base):
                 continue
             Path(it["local"]).parent.mkdir(parents=True, exist_ok=True)
             Path(it["local"]).write_bytes(data)
+            self.bench.collect(Path(it["local"]))
             self.echo(f"  {it['local']}")
         self.save_pending(left)
         return len(items) - len(left), len(left)

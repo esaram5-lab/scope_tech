@@ -35,7 +35,7 @@ DEFAULTS = {
                    "stable_ms": "2000", "stable_interval_ms": "100", "stable_frames": "3"},
     "save": {"channels": "displayed", "csv": "yes", "wfm": "yes", "setup": "yes"},
     "scope": {"temp_dir": "C:/scope_tech_tmp", "num_channels": "8"},
-    "output": {"base_dir": "captures", "sim_dir": "captures_sim", "log_dir": "logs"},
+    "output": {"base_dir": "captures", "result_dir": "result", "sim_dir": "captures_sim", "log_dir": "logs"},
     "channels": {},
 }
 
