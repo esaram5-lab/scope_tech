@@ -229,6 +229,7 @@ scopetech/
     off.py               캡처 안 함 (run_nocap)
     screen_api.py        기본: 스코프 Windows 화면 캡처 서버(scope-capture-api, LAN)로 받기
     template.py          직접 만들 때 복사할 틀
+scope_capture/            동봉: 스코프 화면 캡처 서버·클라이언트 (scope-capture-api v1.2), run_capture_server.bat
   wizard.py / shell.py   안내 메뉴 / 명령 셸 (Bench 메서드만 호출)
   analysis.py results.py wavefile.py config.py sim.py
 ```
@@ -239,8 +240,11 @@ scopetech/
 **기본 캡처 방식입니다(2026-10-21 실장비 확인).** 이전 방식으로 돌아가려면 `[capture] method = aoe`. 예전 aoe 로 스코프에 남겨 둔 캡처는 방식을 바꿔도 `py scope.py --fetch` 로 가져올 수 있습니다.
 스코프 Windows 에서 돌아가는 화면 캡처 서버([esaram5-lab/scope-capture-api](https://github.com/esaram5-lab/scope-capture-api))로 지금 화면을 받습니다. **TekScope 에 화면 저장·파일 명령을 보내지 않습니다.** 측정 명령은 USB, 화면은 LAN 입니다.
 
-1. 스코프: scope-capture-api README 대로 `scope_capture_server.py` 실행(처음 실행 때 `capture_token.txt` 생성).
-2. PC: `scope_capture_client.py`(자동 검색을 쓰면 `scope_discovery.py` 도)를 `scope.py` 옆에 복사, 스코프의 `capture_token.txt` 도 `scope.py` 옆에 복사.
+서버·클라이언트는 **`scope_capture/` 폴더에 동봉**되어 있습니다(scope-capture-api v1.2, `scope_capture/VERSION.txt`).
+
+1. 스코프: `scope_capture/` 폴더를 스코프에 복사 → 처음 한 번 `py -m pip install Pillow` → `run_capture_server.bat` 실행
+   (`--discovery --window TekScope`, 처음 실행 때 `capture_token.txt` 생성). 자세한 설정·방화벽: `scope_capture/README_KO.md`.
+2. PC: 스코프의 `capture_token.txt` 를 `scope.py` 옆(또는 `scope_capture/`)에 복사. 클라이언트는 동봉본을 자동으로 씁니다.
 3. `config.ini`: `[capture] method = screen_api`, `[screen_api] host = 스코프 IP` (비우면 자동 검색, psutil 필요).
 4. 캡처 순서: `acquire`(기본 stop: 실행 중이면 Single 1회 받고 정지 → meas/clean 이 같은 획득) → `*OPC?` → `settle_s`(0.3초) → 서버에 캡처 요청. 서버가 **화면이 멈출 때까지**(100 ms 간격으로 찍어 3장 연속 같을 때, 최대 `stable_ms` 2초) 기다렸다 찍습니다(서버 v1.2). 스코프에 PNG 가 남지 않고 종료 시 가져오기도 없습니다.
 5. TekScope 창만 찍으려면 스코프에서 서버를 `--window TekScope` 로 실행합니다(창 제목 확인: `--list-windows`). 연결할 때 창을 찾았는지 표시합니다.

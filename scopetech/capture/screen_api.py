@@ -5,8 +5,8 @@ TekScope 에는 화면 저장·파일 명령을 하나도 보내지 않는다(Ac
 (측정 명령은 지금처럼 USB, 화면은 LAN).
 
 준비 (config.ini [capture] method = screen_api, 설정은 [screen_api])
-- scope_capture_client.py (자동 검색을 쓰면 scope_discovery.py 도) 를 scope.py 옆에 복사하거나 client_dir 지정
-- 스코프 서버가 처음 만든 capture_token.txt 를 PC 로 복사해 token_file 에 지정
+- 클라이언트는 scope_tech 에 동봉된 scope_capture/ 의 것을 쓴다(client_dir 로 다른 폴더 지정 가능)
+- 스코프 서버가 처음 만든 capture_token.txt 를 PC 의 scope.py 옆(또는 scope_capture/)에 복사
 - host 에 스코프 IP. 비우면 자동 검색(서버 --discovery, PC 에 psutil 필요)
 
 캡처 순서 (take 1회)
@@ -30,9 +30,9 @@ ROOT = Path(__file__).resolve().parents[2]  # scope.py 가 있는 폴더
 
 
 def _import_client(client_dir: str):
-    """scope_capture_client 모듈을 찾는다: client_dir -> scope.py 옆 -> scope-capture-api 폴더."""
+    """scope_capture_client 모듈을 찾는다: client_dir -> 동봉된 scope_capture/ -> scope.py 옆 -> scope-capture-api 폴더."""
     candidates = [Path(client_dir)] if client_dir else []
-    candidates += [ROOT, ROOT / "scope-capture-api", ROOT.parent / "scope-capture-api"]
+    candidates += [ROOT / "scope_capture", ROOT, ROOT / "scope-capture-api", ROOT.parent / "scope-capture-api"]
     for d in candidates:
         d = (d if d.is_absolute() else ROOT / d).resolve()
         path = d / "scope_capture_client.py"
@@ -82,7 +82,8 @@ class Capture(Base):
             return self._client
         self._mod = _import_client(self.opt("client_dir"))
         token = Path(self.opt("token_file") or "capture_token.txt")
-        token = token if token.is_absolute() else ROOT / token
+        if not token.is_absolute():
+            token = next((p for p in (ROOT / token, ROOT / "scope_capture" / token) if p.exists()), ROOT / token)
         if not token.exists():
             raise ValueError(f"캡처 서버 토큰 파일이 없습니다: {token} (스코프 서버의 capture_token.txt 를 복사)")
         timeout = float(self.opt("timeout_s") or 10)

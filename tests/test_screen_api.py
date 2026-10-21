@@ -15,8 +15,8 @@ from scopetech.sim import SimTransport
 from scopetech.transport import ScopeError
 from scopetech.workflow import Bench
 
-# scope_tech 옆에 scope-capture-api 를 받아 두면 실제 서버·클라이언트 코드로도 시험한다
-REAL = Path(os.environ.get("SCOPE_CAPTURE_API", Path(__file__).resolve().parents[2] / "scope-capture-api"))
+# 동봉된 실제 서버·클라이언트 코드(scope_capture/)로도 시험한다
+REAL = Path(os.environ.get("SCOPE_CAPTURE_API", Path(__file__).resolve().parents[1] / "scope_capture"))
 
 FAKE_CLIENT = '''
 from pathlib import Path
