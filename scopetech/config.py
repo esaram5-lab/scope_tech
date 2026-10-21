@@ -28,7 +28,7 @@ DEFAULTS = {
         "vih_output_meas": "yes",
         "reset_each_run": "yes",
     },
-    "capture": {"enabled": "yes", "method": "aoe", "ink_saver": "no", "settle_s": "1.0", "aoe_arm_wait_s": "1", "aoe_save_wait_s": "2", "aoe_post_wait_s": "2",
+    "capture": {"enabled": "yes", "method": "screen_api", "ink_saver": "no", "settle_s": "1.0", "aoe_arm_wait_s": "1", "aoe_save_wait_s": "2", "aoe_post_wait_s": "2",
                 "image_fetch": "end", "fetch_gap_s": "1", "delete_after_fetch": "yes"},
     "screen_api": {"host": "", "port": "8765", "token_file": "capture_token.txt", "client_dir": "", "name": "",
                    "timeout_s": "10", "discovery_timeout_s": "2", "acquire": "stop", "settle_s": "0.3",

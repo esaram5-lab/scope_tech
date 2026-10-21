@@ -225,9 +225,9 @@ scopetech/
     reset.py  vih.py  voh.py  capture.py  save.py  manual.py  snap.py
   capture/               화면 캡처 '방법' (교체 가능, config [capture] method)
     base.py              인터페이스: take(local) / pending_count() / fetch_pending()
-    aoe.py               기본: Act On Event + 끝날 때 한 번에 가져오기
+    aoe.py               Act On Event + 끝날 때 한 번에 가져오기 (이전 기본)
     off.py               캡처 안 함 (run_nocap)
-    screen_api.py        스코프 Windows 화면 캡처 서버(scope-capture-api, LAN)로 받기
+    screen_api.py        기본: 스코프 Windows 화면 캡처 서버(scope-capture-api, LAN)로 받기
     template.py          직접 만들 때 복사할 틀
   wizard.py / shell.py   안내 메뉴 / 명령 셸 (Bench 메서드만 호출)
   analysis.py results.py wavefile.py config.py sim.py
@@ -236,6 +236,7 @@ scopetech/
 - 새 동작: `steps/새동작.py` 에 `run(bench, ...)` 을 만들고 `Bench` 에 한 줄 메서드를 추가하면 메뉴·셸에서 부를 수 있습니다.
 
 ### 화면 캡처 서버로 받기 (`method = screen_api`)
+**기본 캡처 방식입니다(2026-10-21 실장비 확인).** 이전 방식으로 돌아가려면 `[capture] method = aoe`. 예전 aoe 로 스코프에 남겨 둔 캡처는 방식을 바꿔도 `py scope.py --fetch` 로 가져올 수 있습니다.
 스코프 Windows 에서 돌아가는 화면 캡처 서버([esaram5-lab/scope-capture-api](https://github.com/esaram5-lab/scope-capture-api))로 지금 화면을 받습니다. **TekScope 에 화면 저장·파일 명령을 보내지 않습니다.** 측정 명령은 USB, 화면은 LAN 입니다.
 
 1. 스코프: scope-capture-api README 대로 `scope_capture_server.py` 실행(처음 실행 때 `capture_token.txt` 생성).

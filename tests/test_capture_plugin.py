@@ -77,3 +77,19 @@ class CapturePluginTest(unittest.TestCase):
             with self.assertRaises(NotImplementedError):
                 b.capturer.take(Path(d) / "x.png")
             self.assertTrue(issubclass(type(b.capturer), capture.Capture))
+
+    def test_shipped_default_is_screen_api_and_old_aoe_images_still_fetch(self):
+        import configparser
+        cp = configparser.ConfigParser()
+        cp.read(Path(__file__).resolve().parents[1] / "config.ini", encoding="utf-8")
+        self.assertEqual(cp.get("capture", "method"), "screen_api")
+        with tempfile.TemporaryDirectory() as d:
+            b, scope = self.bench(d)
+            b.dut_pin = "2"
+            b.snap("old")  # aoe 로 스코프에 저장해 둔 캡처
+            cfg = Config()
+            cfg.cp.set("capture", "method", "off")
+            b2 = Bench(scope, cfg, Path(d), echo=lambda _: None)  # 방법을 바꾼 뒤 같은 스코프
+            self.assertEqual(b2.pending_count(), 1)
+            self.assertEqual(b2.fetch_pending(), (1, 0))
+

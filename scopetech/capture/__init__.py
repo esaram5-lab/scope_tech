@@ -1,7 +1,8 @@
 """화면 캡처 방식 (교체 가능).
 
 config.ini [capture] method 로 고른다.
-    aoe        기본. Act On Event 로 스코프가 직접 저장, 측정 끝난 뒤 한 번에 가져오기 (aoe.py)
+    screen_api 기본. 스코프 Windows 화면 캡처 서버(scope-capture-api)로 LAN 캡처 (screen_api.py)
+    aoe        Act On Event 로 스코프가 직접 저장, 측정 끝난 뒤 한 번에 가져오기 (aoe.py)
     off        캡처 안 함 (off.py). [capture] enabled = no / scope.py --no-capture 도 이것
     이름        직접 만든 방식: scopetech/capture/이름.py 또는 scope.py 옆 이름.py 의 Capture 클래스
     이름:클래스  클래스 이름이 Capture 가 아닐 때
@@ -17,7 +18,7 @@ from .base import Capture
 def method_name(cfg) -> str:
     if not cfg.getbool("capture", "enabled"):
         return "off"
-    return cfg.get("capture", "method").strip() or "aoe"
+    return cfg.get("capture", "method").strip() or "screen_api"
 
 
 def load(bench) -> Capture:

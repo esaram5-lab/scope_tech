@@ -87,12 +87,19 @@ class Bench:
     def capture_enabled(self) -> bool:
         return self.capturer.enabled
 
+    def _pending_owner(self) -> capture_methods.Capture:
+        """미뤄 둔 캡처를 가진 방법. 다른 방법으로 바꾼 뒤에도 예전 aoe 캡처가 남아 있으면 그것을 가져온다."""
+        if self.capturer.pending_count() or not (self.out_dir / "_pending_images.json").exists():
+            return self.capturer
+        from .capture import aoe
+        return aoe.Capture(self)
+
     def pending_count(self) -> int:
-        return self.capturer.pending_count()
+        return self._pending_owner().pending_count()
 
     def fetch_pending(self) -> tuple[int, int]:
         """미뤄 둔 캡처 PNG 를 한 번에 가져온다. (가져온 수, 남은 수)"""
-        return self.capturer.fetch_pending()
+        return self._pending_owner().fetch_pending()
 
     # ------------------------------------------------------------------ 공통 도구 (steps 가 사용)
     def new_record(self, item: str, channels: list[int]) -> Record:
