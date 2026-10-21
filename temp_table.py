@@ -20,6 +20,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 from report import COLS, COL_TITLE, WORST, load, pin_key, temp_key  # noqa: E402
+from scopetech import manual_calc  # noqa: E402
 from scopetech.config import Config  # noqa: E402
 
 
@@ -37,16 +38,25 @@ def table(entries: list[dict], pick: str = "latest", value: str = "worst") -> tu
             key = (e["pin"], col, str(r.get("name", "")), str(r.get("out_type", "")), e["channel"])
             cells.setdefault(key, {}).setdefault(temp, []).append((r.get("timestamp", ""), x))
             temps.add(temp)
+        calc = r.get("calc")
+        if calc and calc.get("value") is not None:  # 메뉴 3: Rpd/Rpu(kΩ), IOH/IOL(mA)
+            value, unit = manual_calc.display(calc)
+            key = (e["pin"], f"{calc['name']} ({unit})", str(r.get("name", "")), str(r.get("out_type", "")),
+                   calc["inputs"]["channel"])
+            cells.setdefault(key, {}).setdefault(temp, []).append((r.get("timestamp", ""), float(value)))
+            temps.add(temp)
     order = sorted(temps, key=temp_key)
     rows = []
-    for key in sorted(cells, key=lambda k: (pin_key(k[0]), k[2], COLS.index(k[1]), k[4])):
+    def order_of(col):
+        return (0, COLS.index(col)) if col in COLS else (1, col)
+    for key in sorted(cells, key=lambda k: (pin_key(k[0]), k[2], order_of(k[1]), k[4])):
         pin, col, name, out_type, channel = key
-        row = [pin, COL_TITLE[col], name, out_type, channel]
+        row = [pin, COL_TITLE.get(col, col), name, out_type, channel]
         for t in order:
             got = cells[key].get(t)
             if not got:
                 row.append("")
-            elif pick == "latest":
+            elif pick == "latest" or col not in WORST:  # 저항·전류는 최악 방향이 없어 마지막 측정
                 row.append(f"{max(got)[1]:.4f}")
             else:
                 row.append(f"{WORST[col](x for _, x in got):.4f}")
@@ -72,7 +82,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"결과 폴더가 없습니다: {base}")
         return 1
     entries, _ = load(base, cfg, args)
-    temps, rows = table([e for e in entries if e["values"]], args.pick, args.value)
+    temps, rows = table([e for e in entries if e["values"] or e["result"].get("calc")], args.pick, args.value)
     if not rows:
         print(f"표에 넣을 측정값이 없습니다: {base}")
         return 1

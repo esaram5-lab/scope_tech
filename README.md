@@ -106,6 +106,19 @@ save 1 2        <- CSV + wfm + setup
 - 저장 위치: `captures/SNAP/PIN번호_시험이름_온도_시각_이름/` (`screen.png`, `result.json`). 이미지는 종료할 때 한 번에 가져옵니다.
 - 화면 저장은 Act On Event 방식이라 Single 1회 획득이 일어납니다. 신호와 트리거가 들어오는 상태여야 합니다.
 
+### R_pd / R_pu / IOH / IOL 값 계산 (메뉴 3)
+시험 항목 이름을 `R_pd`, `R_pu`, `IOH`, `IOL` 로 하면 저장한 파형(레코드 평균)으로 값을 계산해 `result.json` 의 `calc`, 보고서의 **핀별 저항·전류** 표, 온도별 표(`Rpd (kΩ)`, `IOH (mA)` 행)에 넣습니다.
+
+| 항목 | 회로 | 저장 채널 | 계산 |
+|---|---|---|---|
+| R_pd | 외부 1 MΩ 핀→VDD | 핀 전압 | Rpd = 1/(1/(R_ext·V/(VDD−V)) − 1/R_probe) |
+| R_pu | 외부 1 MΩ 핀→GND | 핀 전압 | Rpu = (R_ext‖R_probe)·(VDD−V)/V |
+| IOH/IOL | 부하 | 전류 프로브(먼저), 핀 전압(선택) | 전류 평균, 그때 핀 전압 |
+
+- TPP1000 입력 저항(10 MΩ)을 병렬로 보정합니다. 보정하지 않으면 예를 들어 Rpu 100 kΩ 을 약 10% 크게 읽습니다.
+- 설정: `config.ini [manual]` 의 `vdd_v = 3.3`, `r_ext_ohm = 1e6`, `probe_r_ohm = 10e6`.
+- 핀 전압이 VDD 이상/0 이하이거나 결과가 프로브 저항보다 크면 값을 비우고 이유를 적습니다(연결 확인).
+
 ## 3. 사용 예
 ```
 [25C TEST PP spec=-] scope> temp 25

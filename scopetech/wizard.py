@@ -139,7 +139,7 @@ class Wizard:
             st['voh'] = self.channel('voh', '출력 신호 스코프 채널', '2')
         elif item == '3':
             st['manual_label'] = self.prompt('시험 항목 이름 (R_pd / R_pu / IOH 등)', st.get('manual_label', 'R_pd'), lambda s: bool(s))
-            st['manual_channels'] = self.prompt('저장할 채널 번호 (예: 1,2)', st.get('manual_channels', '1'), self.valid_channels)
+            st['manual_channels'] = self.prompt('저장할 채널 번호 (예: 1,2 / R_pd·R_pu: 핀 전압 채널 먼저, IOH·IOL: 전류 프로브 채널 먼저)', st.get('manual_channels', '1'), self.valid_channels)
         else:
             st['snap_label'] = self.prompt('캡처 이름 (폴더 이름에 들어갑니다)', st.get('snap_label', 'screen'), lambda s: bool(s))
         if item in ('1', '2'):

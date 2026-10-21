@@ -1,7 +1,7 @@
 """데이터·화면 저장 (메뉴 3): 기존 측정/커서는 그대로 두고 선택 채널 CSV + 화면 1장."""
 from __future__ import annotations
 
-from .. import results, wavefile
+from .. import manual_calc, results, wavefile
 
 
 def run(bench, label: str, chans: list[int], note: str = ""):
@@ -24,6 +24,12 @@ def run(bench, label: str, chans: list[int], note: str = ""):
     bench.echo(f"[1/{2 if cap else 1}] 선택한 채널의 파형 CSV 저장")
     wfs = [s.fetch_waveform(c) for c in chans]
     wavefile.write_csv(rec.folder, wfs, {f"CH{c}": bench.cfg.channel_name(c) for c in chans})
+    calc = manual_calc.compute(label, wfs, bench.cfg)  # R_pd/R_pu/IOH/IOL 이면 값 계산
+    if calc:
+        rec.result["calc"] = calc
+        value, unit = manual_calc.display(calc)
+        bench.echo(f"  {calc['name']} = {value} {unit}  ({calc['note']})")
+        results.write_json(rec.folder / "result.json", rec.result)
     if cap:
         bench.echo(f"[2/2] 기존 측정·커서를 표시한 화면 저장 ({bench.capturer.label})")
         bench.take(rec.folder / "screen.png")
