@@ -241,9 +241,11 @@ scopetech/
 1. 스코프: scope-capture-api README 대로 `scope_capture_server.py` 실행(처음 실행 때 `capture_token.txt` 생성).
 2. PC: `scope_capture_client.py`(자동 검색을 쓰면 `scope_discovery.py` 도)를 `scope.py` 옆에 복사, 스코프의 `capture_token.txt` 도 `scope.py` 옆에 복사.
 3. `config.ini`: `[capture] method = screen_api`, `[screen_api] host = 스코프 IP` (비우면 자동 검색, psutil 필요).
-4. 캡처 순서: `acquire`(기본 stop: 실행 중이면 Single 1회 받고 정지 → meas/clean 이 같은 획득) → `*OPC?` → `settle_s`(0.5초) 화면 갱신 대기 → 서버에 캡처 요청. 스코프에 PNG 가 남지 않고 종료 시 가져오기도 없습니다.
+4. 캡처 순서: `acquire`(기본 stop: 실행 중이면 Single 1회 받고 정지 → meas/clean 이 같은 획득) → `*OPC?` → `settle_s`(0.3초) → 서버에 캡처 요청. 서버가 **화면이 멈출 때까지**(100 ms 간격으로 찍어 3장 연속 같을 때, 최대 `stable_ms` 2초) 기다렸다 찍습니다(서버 v1.2). 스코프에 PNG 가 남지 않고 종료 시 가져오기도 없습니다.
+5. TekScope 창만 찍으려면 스코프에서 서버를 `--window TekScope` 로 실행합니다(창 제목 확인: `--list-windows`). 연결할 때 창을 찾았는지 표시합니다.
 - `acquire = single`: 캡처마다 새 Single, `keep`: 획득 상태 그대로.
-- 캡처는 Windows 화면 그대로입니다. TekScope 창을 맨 앞에 두세요.
+- 2초 안에 화면이 멈추지 않으면(획득이 실행 중 등) 저장하지 않고 오류로 알립니다. 옛 서버(v1.1)는 `stable_ms = 0`.
+- `--window` 없이 실행한 서버는 Windows 화면 전체를 찍습니다. TekScope 창을 맨 앞에 두세요.
 
 ### 화면 캡처 직접 구현하기
 1. `scopetech/capture/template.py` 를 `scope.py` 옆에 `my_capture.py` 로 복사합니다.

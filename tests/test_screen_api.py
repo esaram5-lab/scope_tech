@@ -1,3 +1,4 @@
+import os
 import shutil
 import struct
 import sys
@@ -14,7 +15,8 @@ from scopetech.sim import SimTransport
 from scopetech.transport import ScopeError
 from scopetech.workflow import Bench
 
-REAL = Path(__file__).resolve().parents[2] / "esaram5-lab" / "scope-capture-api"
+# scope_tech 옆에 scope-capture-api 를 받아 두면 실제 서버·클라이언트 코드로도 시험한다
+REAL = Path(os.environ.get("SCOPE_CAPTURE_API", Path(__file__).resolve().parents[2] / "scope-capture-api"))
 
 FAKE_CLIENT = '''
 from pathlib import Path
@@ -34,10 +36,11 @@ class ScopeCaptureClient:
     def health(self):
         if self.token != "good":
             raise CaptureError("HTTP 401")
-        return {"status": "ok"}
+        return {"status": "ok", "features": ["stable", "window"], "window": {"title": "TekScope", "found": True,
+                                                                          "matched": "TekScope", "foreground": True}}
 
-    def capture_png(self):
-        ScopeCaptureClient.calls.append("capture")
+    def capture_png(self, stable_ms=0, interval_ms=None, frames=None):
+        ScopeCaptureClient.calls.append((stable_ms, interval_ms, frames))
         return b"\\x89PNG fake"
 '''
 
@@ -61,7 +64,7 @@ class ScreenApiTest(unittest.TestCase):
         cfg.cp.set("capture", "method", "screen_api")
         cfg.cp.set("capture", "settle_s", "0")
         for k, v in {"host": "127.0.0.1", "token_file": str(self.tmp / "tok.txt"), "client_dir": str(client_dir),
-                     "settle_s": "0", **opts}.items():
+                     "settle_s": "0", "stable_interval_ms": "20", **opts}.items():
             cfg.cp.set("screen_api", k, v)
         t = SimTransport()
         s = MSO5B(t, settle_s=0)
@@ -69,7 +72,7 @@ class ScreenApiTest(unittest.TestCase):
         return Bench(s, cfg, self.tmp / "out", echo=lambda _: None), t
 
     def fake_dir(self):
-        d = self.tmp / "client"
+        d = (self.tmp / "client").resolve()
         d.mkdir()
         (d / "scope_capture_client.py").write_text(textwrap.dedent(FAKE_CLIENT), encoding="utf-8")
         self.addCleanup(lambda: str(d) in sys.path and sys.path.remove(str(d)))
@@ -85,6 +88,22 @@ class ScreenApiTest(unittest.TestCase):
         self.assertEqual((rec.folder / "meas.png").read_bytes(), b"\x89PNG fake")
         self.assertFalse(any(x in c.upper() for c in t.sim.log for x in ("ACTONEVENT", "SAVE:IMAGE", "READFILE")))
         self.assertEqual(b.pending_count(), 0)
+        calls = sys.modules["scope_capture_client"].ScopeCaptureClient.calls
+        self.assertEqual(calls[-2:], [(2000, 20, 3), (2000, 20, 3)])
+
+    def test_stable_off_and_old_server(self):
+        b, _ = self.bench(self.fake_dir(), stable_ms="0")
+        b.capturer.take(self.tmp / "a.png")
+        self.assertEqual(sys.modules["scope_capture_client"].ScopeCaptureClient.calls[-1], (0, None, None))
+        mod = sys.modules["scope_capture_client"]
+        old_health = mod.ScopeCaptureClient.health
+        mod.ScopeCaptureClient.health = lambda self: {"status": "ok"}  # v1.1 서버: features 없음
+        try:
+            b2, _ = self.bench(self.tmp / "client")
+            with self.assertRaisesRegex(ValueError, "stable"):
+                b2.capturer.take(self.tmp / "b.png")
+        finally:
+            mod.ScopeCaptureClient.health = old_health
 
     def test_acquire_single_takes_new_acquisition_each_time(self):
         b, t = self.bench(self.fake_dir(), acquire="single")
@@ -96,20 +115,30 @@ class ScreenApiTest(unittest.TestCase):
         b, _ = self.bench(self.fake_dir(), token="bad")
         with self.assertRaisesRegex(ScopeError, "연결 실패"):
             b.capturer.take(self.tmp / "x.png")
+        from scopetech.capture import screen_api
         b2, _ = self.bench(self.tmp / "nowhere")
-        if not (Path(__file__).resolve().parents[1] / "scope_capture_client.py").exists():
+        root = screen_api.ROOT
+        screen_api.ROOT = self.tmp / "empty" / "root"  # scope.py 옆·옆 폴더에도 없는 상황
+        try:
             with self.assertRaisesRegex(ValueError, "scope_capture_client.py"):
                 b2.capturer.take(self.tmp / "y.png")
+        finally:
+            screen_api.ROOT = root
 
     @unittest.skipUnless((REAL / "scope_capture_server.py").exists(), "scope-capture-api 저장소 없음")
     def test_real_server_and_client(self):
         sys.path.insert(0, str(REAL))
-        self.addCleanup(sys.path.remove, str(REAL))
+        self.addCleanup(lambda: [sys.path.remove(p) for p in list(sys.path) if p == str(REAL.resolve())])
         from scope_capture_server import CaptureServer
         srv = CaptureServer(("127.0.0.1", 0), "good", png)
         threading.Thread(target=srv.serve_forever, daemon=True).start()
         self.addCleanup(srv.server_close)
         self.addCleanup(srv.shutdown)
         b, _ = self.bench(REAL, port=str(srv.server_address[1]))
-        rec = b.snap("real")
+        rec = b.snap("real")  # stable_ms=2000: 같은 화면 3장 연속이면 반환
         self.assertEqual((rec.folder / "screen.png").read_bytes(), png())
+        frames = iter(range(10**6))
+        srv.grab = lambda: (next(frames), png)  # 계속 바뀌는 화면 -> 저장하지 않고 안내
+        b2, _ = self.bench(REAL, port=str(srv.server_address[1]), stable_ms="200")
+        with self.assertRaisesRegex(ScopeError, "acquire"):
+            b2.snap("moving")
