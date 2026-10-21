@@ -1,0 +1,511 @@
+"""Tektronix 4/5/6 Series B MSO(MSO58B) 제어. 명령은 077189805 프로그래머 매뉴얼 기준."""
+from __future__ import annotations
+
+import re
+import sys
+import time
+from array import array
+from datetime import datetime
+
+from .analysis import Waveform
+from .transport import ScopeError, ScopeTimeout, Transport
+
+CURSOR = "DISplay:WAVEView1:CURSor:CURSOR1"
+ESR_ERROR_MASK = 0x3C  # QYE | DDE | EXE | CME
+NO_VALUE = 9.9e37  # 측정값 없음
+
+
+class MSO5B:
+    def __init__(self, transport: Transport, temp_dir: str = "C:/scope_tech_tmp", settle_s: float = 0.5,
+                 num_channels: int = 8):
+        self.t = transport
+        self.temp_dir = temp_dir.rstrip("/")
+        self.settle_s = settle_s
+        self.num_channels = num_channels
+        self.idn = ""
+        self.warnings: list[str] = []  # 치명적이지 않은 스코프 이벤트(측정 경고 등)
+        self.aoe_active = False
+
+    # ------------------------------------------------------------------ 기본
+    def connect(self) -> str:
+        self.write("*CLS")
+        self.write("HEADer OFF")
+        self.write("VERBose ON")
+        self.idn = self.query("*IDN?")
+        if not self._make_temp_dir():
+            home = self.query("FILESystem:HOMEDir?").strip().strip('"').rstrip("/")
+            self.temp_dir = f"{home}/scope_tech_tmp"
+            if not self._make_temp_dir():
+                raise ScopeError(f"스코프에 임시 폴더를 만들 수 없습니다: {self.temp_dir} (config.ini 의 [scope] temp_dir 확인)")
+        return self.idn
+
+    def _make_temp_dir(self) -> bool:
+        """임시 폴더를 만든다. '이미 있음'(257) 은 정상.
+        실장비에서 FILESystem:CWD 변경 + LDIR? 직후 TekScope 가 멈춰서 CWD 는 건드리지 않는다."""
+        self.write(f'FILESystem:MKDir "{self.temp_dir}"')
+        self.t.sync()
+        esr = int(float(self.query("*ESR?")))
+        if not esr & ESR_ERROR_MASK:
+            return True
+        events = self.query("ALLEv?")
+        return "already contains" in events or events.lstrip().startswith("257")
+
+    def write(self, cmd: str) -> None:
+        self.t.write(cmd)
+
+    def query(self, cmd: str) -> str:
+        return self.t.query(cmd)
+
+    def qfloat(self, cmd: str) -> float | None:
+        v = float(self.query(cmd))
+        return None if abs(v) >= NO_VALUE else v
+
+    def check(self, context: str, raise_: bool = True) -> str | None:
+        """*ESR? 로 오류를 확인하고, 있으면 ALLEv? 메시지와 함께 알린다.
+        측정 계산 이벤트(2200번대: 클리핑, 계산 중 등)와 경고(500번대)는 치명적 오류로 보지 않는다."""
+        esr = int(float(self.query("*ESR?")))
+        if not esr & ESR_ERROR_MASK:
+            return None
+        events = self.query("ALLEv?")
+        codes = [abs(int(c)) for c in re.findall(r'(?:^|,)\s*(-?\d+)\s*,\s*"', events)]
+        if codes and all(2200 <= c <= 2299 or 400 <= c <= 599 for c in codes):
+            self.warnings.append(f"{context}: {events}")
+            return None
+        msg = f"{context} 중 스코프 오류: {events}"
+        if raise_:
+            raise ScopeError(msg)
+        return msg
+
+    def recover(self) -> None:
+        self.t.recover()
+        self.write("*CLS")
+
+    # ------------------------------------------------------------------ 획득
+    def is_running(self) -> bool:
+        return self.query("ACQuire:STATE?") != "0"
+
+    def stop(self) -> None:
+        """획득을 멈추고 스코프가 처리를 끝낼 때까지 기다린다."""
+        if self.is_running():
+            self.write("ACQuire:STATE STOP")
+            deadline = time.monotonic() + 10
+            while self.query("ACQuire:STATE?") != "0":
+                if time.monotonic() >= deadline:
+                    raise ScopeTimeout("획득 정지 확인 실패: AOE를 켜지 않습니다.")
+                time.sleep(0.1)
+        self.wait_idle()
+
+    def freeze(self, timeout: float) -> None:
+        """캡처/저장 전 화면 고정. 실행 중이면 강제 STOP 대신 Single 로 한 획득을 끝까지 받고 멈춘다
+        (실장비에서 실행 중 STOP 직후 화면 저장 시 TekScope 가 멈춘 사례가 있음)."""
+        if self.is_running():
+            try:
+                self.single(timeout)
+            except ScopeTimeout:
+                self.stop()
+        self.wait_idle()
+
+    def wait_idle(self, timeout: float = 15) -> None:
+        """BUSY? 가 0 이 될 때까지 기다린 뒤 화면 갱신 시간을 준다."""
+        deadline = time.monotonic() + timeout
+        while self.query("BUSY?") != "0":
+            if time.monotonic() >= deadline:
+                raise ScopeTimeout("스코프 BUSY 상태가 해제되지 않았습니다.")
+            time.sleep(0.1)
+        time.sleep(self.settle_s)
+
+    def run(self) -> None:
+        self.write("ACQuire:STOPAfter RUNSTop")
+        self.write("ACQuire:STATE RUN")
+
+    def acq_mode(self) -> str:
+        return self.query("ACQuire:MODe?").upper()
+
+    def set_acq_mode(self, mode: str) -> None:
+        self.write(f"ACQuire:MODe {mode}")
+
+    def single(self, timeout: float) -> None:
+        """단일 획득(Single) 후 완료될 때까지 기다린다."""
+        self.write("ACQuire:STOPAfter SEQuence")
+        self.write("ACQuire:STATE ON")
+        deadline = time.monotonic() + timeout
+        # 긴 레코드/HiRes 처리 중에는 상태 응답이 늦을 수 있어 질의마다 넉넉한 타임아웃을 준다
+        while True:
+            with self.t.temp_timeout(max(timeout, 30)):
+                state = self.query("ACQuire:STATE?")
+            if state == "0":
+                break
+            if time.monotonic() > deadline:
+                self.write("ACQuire:STATE STOP")
+                raise ScopeTimeout(
+                    f"{timeout:.0f}초 안에 트리거가 걸리지 않았습니다. 트리거 설정/입력 신호를 확인하세요."
+                )
+            time.sleep(0.1)
+        self.check("단일 획득")
+
+    def acquire_stats(self, count: int, timeout: float) -> int:
+        """통계를 지우고 count 회 획득한 뒤 정지한다. 실제 획득 횟수를 반환."""
+        self.write("ACQuire:STOPAfter RUNSTop")
+        self.write("CLEAR")
+        self.write("ACQuire:STATE RUN")
+        deadline = time.monotonic() + timeout
+        n = 0
+        while True:
+            time.sleep(0.2)
+            n = int(float(self.query("ACQuire:NUMACq?")))
+            if n >= count or time.monotonic() > deadline:
+                break
+        self.stop()
+        if n == 0:
+            raise ScopeTimeout("획득이 한 번도 되지 않았습니다. 트리거 설정을 확인하세요.")
+        return n
+
+    # ------------------------------------------------------------------ 채널/파형
+    def displayed_channels(self) -> list[int]:
+        return [
+            ch for ch in range(1, self.num_channels + 1)
+            if self.query(f"DISplay:GLObal:CH{ch}:STATE?") not in ("0", "OFF")
+        ]
+
+    def fetch_waveform(self, ch: int) -> Waveform:
+        src = f"CH{ch}"
+        self.write(f"DATa:SOUrce {src}")
+        self.write("DATa:ENCdg SRIbinary")
+        self.write("WFMOutpre:BYT_Nr 2")
+        self.write("DATa:STARt 1")
+        self.write("DATa:STOP 2000000000")  # 레코드 끝까지 (멈춘 레코드가 현재 설정보다 길어도 잘리지 않게)
+        pre = {k: float(self.query(f"WFMOutpre:{k}?")) for k in ("NR_Pt", "XINcr", "XZEro", "PT_Off", "YMUlt", "YOFf", "YZEro")}
+        self.write("CURVe?")
+        with self.t.temp_timeout(10 + 2 * pre["NR_Pt"] / 1e6):
+            data = self.t.read_block()
+        raw = array("h")
+        raw.frombytes(data[: len(data) // 2 * 2])
+        if sys.byteorder == "big":
+            raw.byteswap()
+        self.check(f"{src} 파형 전송")
+        if len(raw) != int(pre["NR_Pt"]):
+            raise ScopeError(f"{src} 파형 길이 불일치: {len(raw)} != {int(pre['NR_Pt'])}")
+        return Waveform(src, raw, pre["XINcr"], pre["XZEro"], pre["PT_Off"], pre["YMUlt"], pre["YOFf"], pre["YZEro"])
+
+    # ------------------------------------------------------------------ 측정
+    def list_measurements(self) -> list[str]:
+        r = self.query("MEASUrement:LIST?").strip().strip('"')
+        if not r or r.upper() == "NONE":
+            return []
+        return [s.strip().strip('"') for s in r.split(",")]
+
+    def free_measurement_names(self, count: int) -> list[str]:
+        used = {m.upper() for m in self.list_measurements()}
+        names, i = [], 1
+        while len(names) < count:
+            if f"MEAS{i}" not in used:
+                names.append(f"MEAS{i}")
+            i += 1
+        return names
+
+    def delete_all_measurements(self) -> None:
+        self.write("MEASUrement:DELETEALL")
+        self.pace()
+
+    def delete_measurement(self, name: str) -> None:
+        self.write(f'MEASUrement:DELete "{name}"')
+
+    def add_measurement(self, name: str, mtype: str, ch: int, show_stats: bool = True) -> None:
+        self.write(f'MEASUrement:ADDNew "{name}"')
+        self.write(f"MEASUrement:{name}:TYPe {mtype}")
+        self.write(f"MEASUrement:{name}:SOUrce1 CH{ch}")
+        if show_stats:
+            self.write(f"MEASUrement:{name}:DISPlaystat:ENABle ON")
+        self.pace()
+
+    def measurement_results(self, name: str) -> dict:
+        base = f"MEASUrement:{name}:RESUlts"
+        pop = self.qfloat(f"{base}:ALLAcqs:POPUlation?")
+        return {
+            "mean": self.qfloat(f"{base}:ALLAcqs:MEAN?"),
+            "min": self.qfloat(f"{base}:ALLAcqs:MINimum?"),
+            "max": self.qfloat(f"{base}:ALLAcqs:MAXimum?"),
+            "population": int(pop) if pop is not None else 0,
+            "last": self.qfloat(f"{base}:CURRentacq:MEAN?"),
+        }
+
+    # ------------------------------------------------------------------ 커서
+    def results_bar(self, on: bool) -> None:
+        self.write(f"MAINWindow:RRBDisplaystate {'ON' if on else 'OFF'}")
+
+    def pace(self) -> None:
+        """TekScope 가 앞 명령을 처리할 때까지 기다린다(연속 명령 폭주 방지)."""
+        self.t.sync()
+        time.sleep(0.1)
+
+    def cursor_on(self, on: bool) -> None:
+        self.write(f"{CURSOR}:STATE {'ON' if on else 'OFF'}")
+
+    def cursor_is_on(self) -> bool:
+        return self.query(f"{CURSOR}:STATE?") not in ("0", "OFF")
+
+    def cursor_waveform(self, ch: int, ta: float, tb: float) -> None:
+        """파형 커서: 지정 시간의 CHx 전압을 화면에 읽어준다."""
+        self.cursor_on(True)
+        self.write(f"{CURSOR}:FUNCtion WAVEFORM")
+        self.write(f"{CURSOR}:SPLITMODE SAME")
+        self.write(f"{CURSOR}:ASOUrce CH{ch}")
+        self.write(f"{CURSOR}:BSOUrce CH{ch}")
+        self.write(f"{CURSOR}:MODe INDEPENDENT")
+        self.write(f"{CURSOR}:WAVEform:APOSition {ta:.6E}")
+        self.write(f"{CURSOR}:WAVEform:BPOSition {tb:.6E}")
+        self.pace()
+
+    def cursor_hbars(self, ch: int, va: float, vb: float) -> None:
+        """수평 커서: 지정 전압 위치에 가로선."""
+        self.cursor_on(True)
+        self.write(f"{CURSOR}:FUNCtion HBArs")
+        self.write(f"{CURSOR}:ASOUrce CH{ch}")
+        self.write(f"{CURSOR}:BSOUrce CH{ch}")
+        self.write(f"{CURSOR}:MODe INDEPENDENT")
+        self.write(f"{CURSOR}:HBArs:APOSition {va:.6E}")
+        self.write(f"{CURSOR}:HBArs:BPOSition {vb:.6E}")
+        self.pace()
+
+    # ------------------------------------------------------------------ 파일
+    def _fetch_file(self, fname: str, timeout: float) -> bytes:
+        path = f"{self.temp_dir}/{fname}"
+        self.write(f'FILESystem:READFile "{path}"')
+        with self.t.temp_timeout(timeout):
+            data = self.t.read_file(None)
+            self.t.sync()
+        # MSO58B 는 파일 뒤에 줄바꿈 1바이트를 붙여 보낸다(실장비 확인: 항상 파일 크기 +1)
+        if data.endswith(b"\n"):
+            data = data[:-1]
+        self.write(f'FILESystem:DELEte "{path}"')
+        self.check(f"파일 전송({fname})")
+        if not data:
+            raise ScopeError(f"{fname}: 받은 데이터가 없습니다.")
+        return data
+
+    def _save_on_scope(self, cmd: str, context: str, timeout: float) -> None:
+        self.write(cmd)
+        with self.t.temp_timeout(timeout):
+            self.t.sync()
+        self.check(context)
+
+    def screenshot(self, ink_saver: bool = False, timeout: float = 30, arm_wait: float = 2.0,
+                   save_wait: float = 5.0, post_wait: float = 3.0) -> bytes:
+        """화면 캡처. 원격 SAVe:IMAGe 는 실장비(MSO58B FV 2.24.4)에서 TekScope 화면을 멈추게 해서 쓰지 않는다.
+        대신 Act On Event(트리거 시 스코프가 스스로 화면 저장)를 켜고 Single 1회로 저장시킨 뒤 파일을 가져온다.
+        Single 이 새로 한 번 획득하므로 캡처 화면은 직전 화면과 다른 획득이다(반복 트리거 신호면 같은 모양)."""
+        # 연속 획득 중 AOE를 켜면 Single 전환 전에 여러 저장이 시작될 수 있다.
+        # 정지와 BUSY 해제를 확인하지 못하면 AOE를 절대 활성화하지 않는다.
+        self.stop()
+        dest = self.query("FILESystem:CWD?").strip().strip('"').rstrip("/")
+        prefix = f"scopetech{time.time_ns() // 1_000_000 % 10**9}"
+        name = None
+        self.aoe_active = True  # 설정 중 중단되어도 정리 대상
+        try:
+            self.write(f"SAVe:IMAGe:COMPosition {'INVErted' if ink_saver else 'NORMal'}")
+            self.write(f'SAVEONEVent:FILEDest "{dest}"')
+            self.write(f'SAVEONEVent:FILEName "{prefix}"')
+            self.write("SAVEONEVent:IMAGe:FILEFormat PNG")
+            self.write("ACTONEVent:LIMit UNLIMITED")
+            self.write("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON")
+            self.write("ACTONEVent:ENable 1")
+            self.pace()
+            # 실장비(트리거 250Hz)에서 캡처 중 멈춤 -> 단계마다 넉넉히 기다리고, 저장 중에는 질의하지 않는다
+            time.sleep(arm_wait)
+            self.single(timeout)
+            time.sleep(save_wait)  # 이 동안 스코프가 PNG 를 쓴다. 아무 명령도 보내지 않음
+            deadline = time.monotonic() + 30
+            while time.monotonic() < deadline:
+                names = sorted(n.strip().strip('"') for n in self.query("FILESystem:DIR?").split(",") if prefix in n)
+                if names:
+                    name = names[-1]
+                    break
+                time.sleep(1.0)
+            if not name:
+                raise ScopeTimeout("화면 캡처 파일이 만들어지지 않았습니다(트리거/Act On Event 확인).")
+            # 실장비: 파일이 목록에 보인 직후(아직 쓰는 중) AOE 를 끄면 TekScope 가 멈췄다.
+            # 저장이 끝날 때까지(BUSY 해제 + PNG 끝 IEND 확인) AOE 는 켠 채로 기다린다.
+            path = f"{dest}/{name}"
+            time.sleep(post_wait)
+            data = self._read_png_when_complete(path)
+            time.sleep(1.0)
+        except BaseException:
+            self.abort_capture()
+            raise
+        self.write("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF")
+        self.write("ACTONEVent:ENable 0")
+        with self.t.temp_timeout(30):
+            self.pace()
+        self.aoe_active = False
+        time.sleep(post_wait)  # 다음 캡처/명령 전 여유
+        self.write(f'FILESystem:DELEte "{path}"')
+        self.check("캡처 파일 삭제", raise_=False)
+        return data
+
+    def capture_deferred(self, ink_saver: bool = False, timeout: float = 30, arm_wait: float = 2.0,
+                         save_wait: float = 5.0, post_wait: float = 3.0) -> tuple[str, str]:
+        """화면을 스코프에 저장만 하고 (폴더, 파일이름 접두사)를 돌려준다. 파일 조회/읽기/삭제는 하지 않는다.
+        실장비(250Hz 트리거)에서 캡처 직후 파일을 읽으면 TekScope 가 멈춘 사례가 있어, 가져오기는
+        fetch_images() 로 측정이 모두 끝난 뒤 한 번에 한다."""
+        self.stop()
+        dest = self.query("FILESystem:CWD?").strip().strip('"').rstrip("/")
+        prefix = f"scopetech{time.time_ns() // 1_000_000 % 10**9}"
+        self.aoe_active = True
+        try:
+            self.write(f"SAVe:IMAGe:COMPosition {'INVErted' if ink_saver else 'NORMal'}")
+            self.write(f'SAVEONEVent:FILEDest "{dest}"')
+            self.write(f'SAVEONEVent:FILEName "{prefix}"')
+            self.write("SAVEONEVent:IMAGe:FILEFormat PNG")
+            self.write("ACTONEVent:LIMit UNLIMITED")
+            self.write("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE ON")
+            self.write("ACTONEVent:ENable 1")
+            self.pace()
+            time.sleep(arm_wait)
+            self.last_capture = {"single_at": time.time()}
+            self.single(timeout)
+            time.sleep(save_wait)  # 스코프가 PNG 를 쓰는 동안 아무 명령도 보내지 않음
+            self.wait_idle()
+            time.sleep(post_wait)
+        except BaseException:
+            self.abort_capture()
+            raise
+        self.last_capture["disarm_at"] = time.time()
+        self.write("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF")
+        self.write("ACTONEVent:ENable 0")
+        with self.t.temp_timeout(30):
+            self.pace()
+        self.aoe_active = False
+        time.sleep(post_wait)
+        return dest, prefix
+
+    def clock_offset(self, timeout: float = 3.0) -> float:
+        """스코프 시계 - PC 시계(초). TIME? 의 초가 바뀌는 순간을 잡아 수십 ms 정밀도로 잰다.
+        캡처 파일 이름의 시각(AOE 가 붙임)을 PC 시각으로 바꿔 실제 저장 소요 시간을 계산할 때 쓴다."""
+        first = self.query("TIME?").strip().strip('"')
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            cur = self.query("TIME?").strip().strip('"')
+            if cur != first:
+                pc = datetime.now()
+                day = self.query("DATE?").strip().strip('"')
+                return (datetime.strptime(f"{day} {cur}", "%Y-%m-%d %H:%M:%S") - pc).total_seconds()
+            time.sleep(0.02)
+        raise ScopeError("스코프 TIME? 의 초가 바뀌지 않습니다.")
+
+    def fetch_images(self, items: list[dict], delete: bool = True, gap: float = 1.0) -> dict[str, bytes]:
+        """capture_deferred 로 저장해 둔 PNG 들을 한 번에 가져온다. {prefix: PNG bytes}.
+        파일 사이에 gap 초씩 쉬고, 못 찾거나 불완전한 파일은 결과에서 빠진다(나중에 다시 시도 가능)."""
+        found: dict[str, bytes] = {}
+        self.fetched_names: dict[str, str] = {}
+        listings: dict[str, list[str]] = {}
+        for it in items:
+            dest = it["dest"]
+            if dest not in listings:
+                cwd = self.query("FILESystem:CWD?").strip().strip('"').rstrip("/")
+                if cwd != dest:
+                    raise ScopeError(f"스코프 현재 폴더({cwd})가 캡처 폴더({dest})와 다릅니다.")
+                listings[dest] = [n.strip().strip('"') for n in self.query("FILESystem:DIR?").split(",")]
+                time.sleep(gap)
+            names = sorted(n for n in listings[dest] if n.startswith(it["prefix"]))
+            if not names:
+                continue
+            path = f"{dest}/{names[-1]}"
+            self.write(f'FILESystem:READFile "{path}"')
+            with self.t.temp_timeout(30):
+                data = self.t.read_file(None)
+                self.t.sync()
+            if data.endswith(b"\n"):
+                data = data[:-1]
+            if data.startswith(b"\x89PNG") and data[-8:-4] == b"IEND":
+                found[it["prefix"]] = data
+                self.fetched_names[it["prefix"]] = names[-1]
+                if delete:
+                    time.sleep(gap)
+                    self.write(f'FILESystem:DELEte "{path}"')
+                    self.check("캡처 파일 삭제", raise_=False)
+            time.sleep(gap)
+        return found
+
+    def _read_png_when_complete(self, path: str, timeout: float = 30) -> bytes:
+        deadline = time.monotonic() + timeout
+        while True:
+            time.sleep(1.0)
+            self.wait_idle()
+            self.write(f'FILESystem:READFile "{path}"')
+            with self.t.temp_timeout(30):
+                data = self.t.read_file(None)
+                self.t.sync()
+            if data.endswith(b"\n"):
+                data = data[:-1]
+            if data.startswith(b"\x89PNG") and data[-12:-8] == b"\x00\x00\x00\x00" and data[-8:-4] == b"IEND":
+                return data
+            if time.monotonic() > deadline:
+                raise ScopeError(f"화면 캡처 파일을 완전히 받지 못했습니다: {path}")
+
+    def reset_state(self) -> None:
+        """매 측정 전 정리: 응답 확인, 남은 Act On Event 해제, 결과 바 표시, 오류 비우기.
+        스코프 설정(V/div, 트리거 등)은 건드리지 않는다. TekScope 가 이미 멈춰 있으면 여기서 알려준다.
+        실장비에서 캡처 직후 매번 USB Device Clear + AOE 해제 명령을 다시 보내다가 USB 응답이 끊긴 사례가 있어,
+        Device Clear 는 응답이 없을 때만, AOE/결과 바 명령은 상태가 다를 때만 보낸다."""
+        try:
+            with self.t.temp_timeout(5):
+                self.t.sync()
+        except ScopeTimeout:
+            self.t.recover()  # 응답이 없을 때만 통신 정리(Device Clear) 후 다시 확인
+            try:
+                with self.t.temp_timeout(10):
+                    self.t.sync()
+            except ScopeTimeout as e:
+                raise ScopeError("스코프가 응답하지 않습니다. TekScope 를 재시작한 뒤 다시 시도하세요.") from e
+        self.write("*CLS")
+        if self.query("ACTONEVent:ENable?") not in ("0", "OFF"):
+            self.write("ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF")
+            self.write("ACTONEVent:ENable 0")
+            self.pace()
+        self.aoe_active = False
+        if self.query("MAINWindow:RRBDisplaystate?") in ("0", "OFF"):
+            self.write("MAINWindow:RRBDisplaystate ON")
+            self.pace()
+        self.query("*IDN?")
+        self.warnings.clear()
+
+    def abort_capture(self) -> list[str]:
+        """중단 시 최선 노력 정리. 새 획득/완료 대기는 하지 않는다.
+
+        통신 중단 후 잔여 응답을 비우고 정지/이벤트 해제를 요청한다.
+        명령 전송 성공은 TekScope UI 복구를 보장하지 않는다.
+        """
+        errors = []
+        old = self.t.timeout
+        try:
+            self.t.timeout = 2
+            self.t._apply_timeout(2)
+            try:
+                self.t.recover()
+            except Exception as e:
+                errors.append(str(e))
+            commands = ["ACQuire:STATE STOP"]
+            if self.aoe_active:
+                commands += ["ACTONEVent:TRIGger:ACTION:SAVEIMAGe:STATE OFF", "ACTONEVent:ENable 0"]
+            for cmd in commands:
+                try:
+                    self.write(cmd)
+                except Exception as e:
+                    errors.append(f"{cmd}: {e}")
+            if not errors:
+                self.aoe_active = False
+        finally:
+            self.t.timeout = old
+            self.t._apply_timeout(old)
+        return errors
+
+    def save_wfm(self, ch: int, timeout: float = 60) -> bytes:
+        fname = f"scope_tech_CH{ch}.wfm"
+        self._save_on_scope(f'SAVe:WAVEform CH{ch},"{self.temp_dir}/{fname}"', f"CH{ch} .wfm 저장", timeout)
+        return self._fetch_file(fname, timeout)
+
+    def save_setup(self) -> bytes:
+        fname = "scope_tech_setup.set"
+        self._save_on_scope(f'SAVe:SETUp "{self.temp_dir}/{fname}"', "설정 저장", 30)
+        return self._fetch_file(fname, 30)
+

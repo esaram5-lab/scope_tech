@@ -1,0 +1,13 @@
+captures/
+captures_sim/
+logs/
+__pycache__/
+*.pyc
+
+
+.session.json
+.session_sim.json
+tm_devices_wheels/
+capture_token.txt
+capture_device_id.txt
+capture_server.log*

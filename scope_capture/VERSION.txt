@@ -1,0 +1,3 @@
+scope-capture-api 동봉본
+출처: https://github.com/esaram5-lab/scope-capture-api  main d4445af (v1.2: stable 캡처, --window)
+수정은 원본 저장소에서 하고 이 폴더로 다시 복사하세요.

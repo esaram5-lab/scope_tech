@@ -1,0 +1,100 @@
+tmd_test 2026-10-19 20:13:50  python=3.13.16
+tm_devices 3.7.0
+발견: USB0::0x0699::0x0522::C081164::INSTR
+주소: USB0::0x0699::0x0522::C081164::INSTR
+2026-10-19 20:14:01.631589 - Opening DeviceManager
+
+[1 연결(*IDN?)] 시작 20:14:01.631
+2026-10-19 20:14:01.632419 - Creating Connection to SCOPE 1
+2026-10-19 20:14:01.690828 - (SCOPE 1) Query >>  '*IDN?'
+2026-10-19 20:14:01.692909 - Response from '*IDN?' >>  'TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14'
+    연결: TEKTRONIX,MSO58B,C081164,CF:91.1CT FV:2.24.4-release.14
+[1 연결(*IDN?)] 통과 (0.1s)
+
+[2 파형 받기 curve_query(CH1)] 시작 20:14:01.694
+2026-10-19 20:14:01.695429 - (SCOPE 1) Query >>  ':DATA:SOURCE:AVAIL?'
+2026-10-19 20:14:01.708245 - Response from ':DATA:SOURCE:AVAIL?' >>  'CH1,CH2'
+2026-10-19 20:14:01.708683 - (SCOPE 1) Write >>  'DATA:SOURCE CH1'
+2026-10-19 20:14:01.709425 - (SCOPE 1) Query >>  'DATA:SOURCE?'
+2026-10-19 20:14:01.710830 - Response from 'DATA:SOURCE?' >>  'CH1'
+2026-10-19 20:14:01.711203 - (SCOPE 1) Write >>  ':DATA:ENC ASCII'
+2026-10-19 20:14:01.711714 - (SCOPE 1) Query >>  ':DATA:ENC?'
+2026-10-19 20:14:01.716057 - Response from ':DATA:ENC?' >>  'ASCII'
+2026-10-19 20:14:01.716452 - (SCOPE 1) Query >>  ':CURVE?'
+2026-10-19 20:14:01.795959 - Response from ':CURVE?' >>  '3,3,3,3,3,3,3,2,3,3,5,5,4,3,2,2,3,3,3,3,3,3,2,2,3,4,4,3,2,2,4,4,3,3,4,5,4,3,2,3,4,4,4,3,2,3,3,3,2,2,2,3,3,3,4,4,3,2,2,2,3,3,3,3,3,2,2,4,4,3,3,3,3,2,2,2,3,3,3,4,4,4,3,3,3,3,3,3,3,3,4,3,3,3,2,3,3,3,3,4,3,3,3,3,3,3,4,3,2,2,3,3,3,4,4,4,4,3,2,2,2,3,4,4,3,2,2,3,3,3,3,3,2,2,3,4,3,2,2,4,4,3,2,2,3,4,4,3,2,3,4,4,4,4,3,3,3,2,3,4,5,5,4,2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,4,3,2,2,1,1,2,3,3,3,2,3,4,4,4,3,2,2,3,3,3,2,3,3,3,3,3,3,3,3,3,2,2,3,4,4,2,2,3,4,4,3,3,3,4,4,2,2,3,4,3,3,3,3,4,3,2,3,3,4,4,4,3,4,4,3,3,4,3,3,3,4,4,4,3,3,3,3,4,3,3,2,2,2,3,3,3,3,3,3,3,3,5,5,3,4,4,3,3,2,1,2,3,3,3,3,3,3,3,3,3,2,2,3,4,4,3,2,3,3,3,3,4,4,3,4,5,4,3,4,5,5,3,2,2,3,4,4,4,4,4,4,4,3,3,3,3,3,2,3,2,2,2,3,3,3,3,3,3,4,4,3,3,4,4,4,3,3,2,3,4,4,3,2,2,4,5,4,4,3,3,3,4,4,4,4,3,2,3,3,4,4,4,3,3,3,2,2,2,2,3,4,4,4,4,4,4,3,3,3,2,3,3,4,4,3,3,4,4,3,2,2,3,4,3,3,4,4,3,3,3,2,3,4,4,4,3,2,4,3,2,2,4,4,3,3,3,3,3,3,3,4,4,3,3,4,4,4,3,3,3,4,4,5,4,3,3,3,4,3,2,3,4,4,2,1,2,4,4,3,2,3,4,4,3,3,3,2,3,3,3,3,3,3,3,3,3,3,3,3,3,5,5,3,2,2,3,3,2,2,2,3,4,4,3,2,3,5,4,2,2,3,4,3,3,3,5,5,4,2,3,4,4,4,3,2,1,2,2,3,3,4,4,4,3,2,2,4,4,3,3,4,4,3,3,3,3,3,3,3,3,4,5,5,4,4,4,4,3,3,3,4,4,3,3,3,3,3,4,3,2,3,5,6,4,2,2,2,3,3,3,3,3,3,3,3,3,4,4,3,2,3,3,3,3,2,2,3,3,3,3,2,3,4,3,2,3,3,3,4,3,3,4,3,3,4,3,2,2,2,3,4,4,4,3,4,4,3,3,4,3,4,3,4,4,3,2,3,4,4,3,3,3,3,3,3,3,4,4,3,3,3,3,3,3,3,3,3,3,2,3,4,4,3,3,3,3,4,4,3,3,3,3,3,3,3,4,3,3,4,3,3,3,3,3,3,3,2,2,3,3,3,4,5,4,3,3,4,4,4,3,2,4,4,3,4,4,3,2,2,3,4,5,4,4,4,3,3,3,4,3,3,4,3,2,2,3,3,3,3,3,3,3,4,3,2,2,3,3,4,4,5,4,4,3,2,3,4,4,3,2,2,2,3,4,4,3,3,3,4,4,4,4,3,3,2,3,3,3,3,3,2,2,2,3,4,5,4,3,3,4,5,4,3,2,3,3,4,4,4,4,4,3,3,3,3,3,2,3,2,2,3,5,5,4,3,3,4,4,3,3,3,4,3,1,2,4,4,2,3,4,4,3,2,3,4,4,4,3,3,3,3,4,3,2,2,3,3,3,4,4,3,2,2,2,2,2,2,3,3,2,2,3,3,4,5,3,3,4,4,3,3,3,4,5,4,3,2,3,3,4,4,4,4,3,2,2,2,3,3,2,2,3,3,3,3,2,3,3,3,3,4,3,2,2,2,3,3,3,4,4,4,3,3,3,3,3,4,5,5,4,4,3,3,3,3,2,2,3,4,4,4,3,3,4,4,3,3,3,3,3,2,3,3,4,4,3,2,2,3,4,4,3,3,3,3,4,4,4,4,3,2,3,3,3,4,4,3,3,3,3,4,5,4,3,2,3,4,4,3,3,3,3,3,3,3,3,2,2,3,4,3,2,2,2,2,3,4,4,3,3,4,4,3,3,3,3,4,5,4,4,3,3,4,4,3,3,3,3,2,3,3,3,3,4,4,4,3,3,3,3,3,4,3,3,3,2,2,3,4,4,3,4,4,3,2,3,3,4,4,2,2,3,4,3,2,2,3,3,3,4,3,3,3,2,1,3,4,4,3,2,2,2,3,4,3,2,3,3,2,3,4,3,3,3,3,3,2,2,4,5,4,3,3,2,3,4,3,2,3,4,3,2,3,4,4,3,3,4,4,4,3,2,2,2,3,4,3,2,1,2,3,3,3,3,3,3,3,3,3,3,3,3,4,5,4,2,2,3,3,2,3,5,4,3,2,3,3,4,4,4,3,2,3,3,3,3,4,4,4,3,3,4,4,2,2,3,4,4,4,3,2,3,4,4,3,3,3,3,4,4,4,4,4,3,2,2,3,4,3,3,3,3,3,3,4,3,3,3,2,3,4,4,3,3,3,4,4,3,3,3,3,3,2,2,3,4,4,3,3,4,5,4,3,4,4,3,2,3,4,4,3,3,3,2,2,2,3,3,4,2,2,2,3,3,3,2,2,2,2,3,3,3,4,5,4,4,3,3,3,4,5,4,3,3,3,4,4,3,3,1,0,2,4,4,2,2,3,4,4,3,2,2,2,3,4,4,3,4,4,3,3,3,2,1,2,2,3,3,2,3,3,3,2,2,2,3,4,3,2,2,2,2,3,3,4,3,3,3,2,3,4,4,4,4,4,4,3,2,3,2,2,2,2,3,3,3,3,3,2,2,2,3,3,3,3,4,4,4,4,3,2,2,3,3,3,3,3,3,3,3,3,2,1,2,4,4,3,2,3,3,3,3,4,3,2,2,3,4,4,3,3,4,5,3,2,2,3,3,3,4,4,3,4,4,4,3,3,3,4,4,3,3,3,2,2,3,2,2,1,2,3,4,4,4,2,2,2,3,2,2,3,4,4,3,3,2,3,4,4,3,3,4,4,4,3,3,4,4,4,3,3,2,3,3,4,5,5,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,2,2,3,3,4,3,2,2,3,3,3,3,2,3,4,4,3,3,3,4,4,3,3,4,4,4,3,2,3,4,4,4,4,3,2,3,3,3,2,2,4,4,4,3,2,2,3,4,4,3,3,3,4,4,3,4,4,3,2,3,4,4,4,3,2,2,3,4,4,3,3,3,4,3,3,3,3,5,4,3,2,2,3,4,4,3,3,3,3,3,4,3,3,4,4,3,2,2,3,3,3,3,3,4,4,3,3,4,4,3,2,3,3,4,4,4,3,3,3,3,2,3,3,4,4,3,2,3,4,3,3,3,2,2,3,4,4,3,1,2,3,4,4,4,3,3,4,4,3,3,3,4,5,4,3,3,3,3,4,4,3,3,4,4,4,4,3,3,3,4,4,3,2,3,4,4,4,3,3,2,2,3,3,3,3,3,3,4,5,4,3,3,3,3,3,3,4,4,3,3,4,3,1,0,1,3,4,5,4,3,2,2,2,3,4,3,3,2,2,3,3,3,3,4,4,3,3,3,3,3,3,2,3,4,5,4,4,4,4,4,3,3,3,4,4,4,3,3,3,3,3,3,4,6,5,3,1,1,3,3,2,2,3,3,4,4,3,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,4,4,3,4,5,4,4,4,4,3,3,3,4,4,3,3,3,3,5,5,4,3,3,4,3,2,3,5,4,3,3,2,1,2,2,2,2,2,3,4,3,3,2,3,4,4,3,2,2,2,2,1,2,3,4,4,3,3,3,3,4,4,4,5,5,4,5,4,2,2,3,4,3,3,3,3,4,4,3,3,4,3,4,4,4,3,2,2,3,3,2,3,4,3,3,3,4,3,3,4,4,3,4,4,2,2,3,3,3,4,4,3,3,2,3,3,2,2,3,3,3,3,3,3,3,3,3,3,3,3,4,4,3,2,2,3,3,3,3,3,4,4,2,2,3,5,5,3,3,3,3,3,4,4,4,2,2,2,2,3,3,2,3,4,3,3,4,4,3,3,3,3,3,3,3,4,5,4,3,3,2,2,2,2,3,4,4,4,4,3,2,2,4,4,3,2,3,3,3,4,4,3,3,3,3,4,4,4,2,2,3,4,4,3,3,4,5,4,4,4,4,3,3,2,3,4,4,3,3,3,2,3,3,3,3,3,3,4,3,4,4,5,4,3,3,2,3,3,2,3,4,3,2,3,4,4,3,2,3,4,4,3,2,1,2,3,3,3,3,4,5,3,2,2,3,3,2,3,3,1,2,3,3,3,3,3,3,3,3,3,4,4,3,3,3,2,2,3,4,4,2,2,3,4,4,4,4,4,4,4,3,3,3,4,4,3,3,4,4,3,3,3,3,3,2,3,3,4,3,3,4,4,3,2,3,3,3,3,4,4,4,3,4,5,4,3,2,3,2,3,4,4,3,2,2,3,4,3,3,3,2,2,3,4,4,3,3,3,3,3,4,4,3,1,1,3,4,4,4,4,3,3,4,5,4,3,3,4,4,3,4,4,4,3,3,3,3,3,4,4,3,3,3,3,3,3,3,2,2,3,3,4,5,5,4,3,2,3,3,3,3,3,3,3,3,3,4,4,3,3,3,4,4,4,3,2,2,2,3,3,3,3,4,3,3,3,4,4,4,3,2,2,3,4,4,4,4,4,4,4,3,3,2,2,3,5,6,4,2,2,3,2,3,3,3,3,3,3,3,2,3,4,4,3,3,3,3,3,2,2,2,3,3,3,3,4,4,4,4,4,3,3,3,3,3,3,3,3,3,2,2,2,3,3,4,4,3,2,3,3,4,4,4,3,3,3,3,3,3,3,4,4,4,3,3,2,3,4,4,3,3,5,4,3,2,3,4,4,3,3,2,2,2,3,2,2,2,3,3,4,3,2,2,3,3,3,3,3,3,2,2,3,3,3,2,3,4,4,4,4,3,2,3,4,3,3,3,4,4,4,3,4,4,3,3,3,4,4,3,2,3,3,3,3,4,3,3,4,3,2,3,3,3,2,2,3,3,3,3,3,3,2,3,3,3,4,4,4,3,3,3,3,2,3,3,4,4,4,3,3,4,4,4,2,2,2,3,4,4,3,2,2,4,4,3,2,3,3,3,3,3,4,3,3,3,4,3,3,4,4,3,3,3,2,2,2,2,3,3,3,3,3,3,4,4,4,4,3,3,3,5,5,4,4,3,3,2,2,2,2,2,2,2,2,3,2,3,3,2,2,3,3,3,3,3,3,3,3,3,4,3,2,3,3,3,3,3,4,3,2,3,4,3,3,2,4,5,5,4,3,2,2,3,3,4,3,3,3,3,3,3,3,3,4,4,4,3,3,3,3,2,2,3,3,3,2,3,5,5,3,3,4'
+    CH1 2500 포인트, 처음 5개 [3, 3, 3, 3, 3]
+[2 파형 받기 curve_query(CH1)] 통과 (0.1s)
+
+[3 화면 캡처 save_screenshot 1/3] 시작 20:14:01.811
+2026-10-19 20:14:01.821983 - (SCOPE 1) Write >>  'SAVE:IMAGE:COMPOSITION NORMAL'
+2026-10-19 20:14:01.823622 - (SCOPE 1) Query >>  'SAVE:IMAGE:COMPOSITION?'
+2026-10-19 20:14:01.826670 - Response from 'SAVE:IMAGE:COMPOSITION?' >>  'NORMAL'
+2026-10-19 20:14:01.832566 - (SCOPE 1) Write >>  'SAVE:IMAGE "./tmd_001.png"'
+2026-10-19 20:14:01.833621 - (SCOPE 1) Query >>  '*OPC?'
+2026-10-19 20:14:01.986887 - Response from '*OPC?' >>  '1'
+2026-10-19 20:14:01.988267 - (SCOPE 1) Write >>  'FILESYSTEM:READFILE "./tmd_001.png"'
+2026-10-19 20:14:02.008713 - (SCOPE 1) Write >>  'FILESYSTEM:DELETE "./tmd_001.png"'
+2026-10-19 20:14:02.010956 - (SCOPE 1) Query >>  '*OPC?'
+2026-10-19 20:14:47.614715 - The query of SCOPE 1 for '*OPC?' failed with the following message: VisaIOError('VI_ERROR_TMO (-1073807339): Timeout expired before operation completed.')
+[3 화면 캡처 save_screenshot 1/3] 실패 (45.8s): Error: The query of SCOPE 1 for '*OPC?' failed with the following message: VisaIOError('VI_ERROR_TMO (-1073807339): Timeout expired before operation completed.')
+Traceback (most recent call last):
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\tm_devices\driver_mixins\device_control\pi_control.py", line 355, in query
+    response = self._visa_resource.query(query).strip()
+               ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\pyvisa\resources\messagebased.py", line 702, in query
+    return self.read()
+           ~~~~~~~~~^^
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\pyvisa\resources\messagebased.py", line 521, in read
+    message = self._read_raw().decode(enco)
+              ~~~~~~~~~~~~~~^^
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\pyvisa\resources\messagebased.py", line 475, in _read_raw
+    chunk, status = self.visalib.read(self.session, size)
+                    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\pyvisa\ctwrapper\functions.py", line 2339, in read
+    ret = library.viRead(session, buffer, count, byref(return_count))
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\pyvisa\ctwrapper\highlevel.py", line 227, in _return_handler
+    return self.handle_return_value(session, ret_value)  # type: ignore
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\pyvisa\highlevel.py", line 252, in handle_return_value
+    raise errors.VisaIOError(rv)
+pyvisa.errors.VisaIOError: VI_ERROR_TMO (-1073807339): Timeout expired before operation completed.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\tmd_test.py", line 73, in step
+    fn()
+    ~~^^
+  File "C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\tmd_test.py", line 99, in <lambda>
+    lambda name=name: (scope.save_screenshot(name, local_folder=shots_dir),
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\tm_devices\driver_mixins\abstract_device_functionality\screen_capture_mixin.py", line 80, in save_screenshot
+    self._save_screenshot(
+    ~~~~~~~~~~~~~~~~~~~~~^
+        filename=filename_path,
+        ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+        keep_device_file=keep_device_file,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\tm_devices\drivers\scopes\tekscope\tekscope.py", line 743, in _save_screenshot
+    self.write(f"FILESYSTEM:DELETE {device_filepath_string}", opc=True)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\tm_devices\driver_mixins\device_control\pi_control.py", line 918, in write
+    if opc and (result := self.ieee_cmds.opc()) != "1":
+                          ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\tm_devices\driver_mixins\shared_implementations\ieee488_2_commands.py", line 117, in opc
+    return self._pi_control.query("*OPC?")
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\tk_53.kim\AppData\Local\Programs\Python\Python313\Lib\site-packages\tm_devices\driver_mixins\device_control\pi_control.py", line 365, in query
+    raise visa.Error(msg) from error
+pyvisa.errors.Error: The query of SCOPE 1 for '*OPC?' failed with the following message: VisaIOError('VI_ERROR_TMO (-1073807339): Timeout expired before operation completed.')
+
+=> 여기서 멈춤/실패. 위 기록의 마지막 명령을 확인하세요.
+2026-10-19 20:14:47.661567 - Closing Connections to Devices
+2026-10-19 20:14:47.662167 - Closing Connection to SCOPE 1
+2026-10-19 20:14:47.692636 - DeviceManager Closed
+
+결과: 실패 (총 46s)
+이 파일을 올려주세요: C:\Users\tk_53.kim\Desktop\HDH\scope_tech-claude-dreamy-edison-55q1f3\logs\tmd_test_20261019_201350.txt
