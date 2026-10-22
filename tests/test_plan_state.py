@@ -236,6 +236,14 @@ class RunnerLinkTest(unittest.TestCase):
         self.assertNotIn("진행 기록을 쓰지 못했습니다", out)
         self.assertEqual(self.progress()[self.rows[0].key]["status"], DONE)
 
+    def test_scope_left_running_after_each_measurement(self):
+        self.run_plan(["25", "T", "", "g", "16", "", "q"])
+        self.assertEqual(self.t.sim.acq_state, 1)  # VI, RPD 뒤 모두 Run
+        self.assertEqual(self.progress()[self.rows[15].key]["status"], DONE)
+        self.bench.cfg.cp.set("measure", "run_after", "no")
+        self.run_plan(["25", "T", "g", "1", "", "q"])
+        self.assertEqual(self.t.sim.acq_state, 0)  # 끄면 Single 뒤 Stop 그대로
+
 
 if __name__ == "__main__":
     unittest.main()

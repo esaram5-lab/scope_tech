@@ -218,6 +218,7 @@ class Wizard:
                     self.echo('[2/3] 화면 캡처 생략')
                 self.echo('[3/3] 파형·설정 저장')
                 b.save()
+            b.resume()  # 측정이 끝나면 Run 으로 (config [measure] run_after)
         except KeyboardInterrupt:
             self.echo('\n[중단] 측정을 취소했습니다. 일부 파일만 저장됐을 수 있습니다.')
             return 130
