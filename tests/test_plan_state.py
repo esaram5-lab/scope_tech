@@ -197,6 +197,45 @@ class RunnerLinkTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(self.progress()[self.rows[0].key]["status"], DONE)
 
+    def test_change_during_measurement_applies_to_next_one_only(self):
+        write_overrides(self.over, {"manual.vdd_v": "3.0"})
+
+        def echo(text):  # 16번을 재는 도중(상태 정리 직후) GUI 가 VDD 를 바꾼다
+            if "스코프 상태 정리" in text and not changed:
+                changed.append(1)
+                write_overrides(self.over, {"manual.vdd_v": "3.1"})
+        changed = []
+        it = iter(["25", "T", "g", "16", "", "", "q"])
+        PlanRunner(self.bench, self.rows, self.layout, ask=lambda _: next(it), echo=echo).run()
+        rows = self.progress()
+        r16 = json.loads((self.base / rows[self.rows[15].key]["folder"] / "result.json").read_text(encoding="utf-8"))
+        r17 = json.loads((self.base / rows[self.rows[16].key]["folder"] / "result.json").read_text(encoding="utf-8"))
+        self.assertEqual((r16["plan_settings"]["manual.vdd_v"], r16["calc"]["inputs"]["vdd"]), ("3", 3.0))
+        self.assertEqual((r17["plan_settings"]["manual.vdd_v"], r17["calc"]["inputs"]["vdd"]), ("3.1", 3.1))
+
+    def test_ctrl_c_marks_cli_stopped(self):
+        def ask(prompt):
+            if prompt.startswith("Enter: 측정"):
+                self.assertTrue(cli_running(read_state(self.state)))
+                raise KeyboardInterrupt
+            return {"온": "25"}.get(prompt[:1], "T")
+        PlanRunner(self.bench, self.rows, self.layout, ask=ask, echo=lambda _: None).run()
+        self.assertFalse(cli_running(read_state(self.state)))
+
+    def test_progress_saved_while_gui_reads_it(self):
+        real = plan_state.os.replace
+        calls = []
+
+        def busy(a, b):  # Windows: GUI 가 읽는 순간 교체가 두 번 막힘
+            calls.append(str(b))
+            if str(b).endswith("progress_25C.json") and calls.count(str(b)) <= 2:
+                raise PermissionError("busy")
+            real(a, b)
+        with mock.patch.object(plan_state.os, "replace", busy):
+            code, out = self.run_plan(["25", "T", "", "q"])
+        self.assertNotIn("진행 기록을 쓰지 못했습니다", out)
+        self.assertEqual(self.progress()[self.rows[0].key]["status"], DONE)
+
 
 if __name__ == "__main__":
     unittest.main()
