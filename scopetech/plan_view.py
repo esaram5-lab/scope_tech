@@ -17,9 +17,10 @@ from pathlib import Path
 from . import manual_calc, plan_import
 from .config import Config
 from .plan import (DONE, FAIL, SKIP, UNIT_FORMAT, PlanStore, collect_values, describe, load_layout, load_plan,
-                   norm_temp, ordered_temps, rebuild)
+                   migrate_legacy, norm_temp, ordered_temps, rebuild_all)
 from .plan_state import (BY_ID, OVERRIDES_FILE, SETTINGS, STALE_S, STATE_FILE, PlanSettings, cli_running,
                          read_overrides, read_state, validate, write_atomic, write_overrides)
+from .samples import Samples, order_key
 
 GUI_FILE = "gui.json"   # 열려 있는 GUI 의 살아 있다는 표시 (같은 창을 두 번 띄우지 않게)
 IMAGES = ("meas.png", "screen.png", "clean.png")
@@ -46,18 +47,41 @@ class PlanData:
         self.rows = load_plan(Path(plan) if plan else self.here / self.cfg.get("plan", "file"),
                               self.cfg.getint("scope", "num_channels"))
         self.layout = load_layout(self.here / self.cfg.get("plan", "summary"))
-        self.store = PlanStore(self.base, self.cfg.get("plan", "dir") or "plan")
+        self.root = PlanStore(self.base, self.cfg.get("plan", "dir") or "plan")  # 공용 파일(plan/)
         self.configured = [t.strip() for t in self.cfg.get("plan", "temps").replace(",", " ").split() if t.strip()]
         self.by_key = {r.key: r for r in self.rows}
+        if any(self.root.root.glob("progress_*C.json")) and not self.running():
+            try:  # 샘플 구분 전 진행 기록은 시험 이름의 샘플 폴더로
+                migrate_legacy(self.root, Samples(self.root.root))
+            except OSError:
+                pass
+        self.sample = ""
+        found = self.samples()
+        state = self.state()
+        self.sample = state.get("sample") if state.get("sample") in found else (found[0] if found else "")
+
+    # ------------------------------------------------------------ 샘플
+    @property
+    def store(self) -> PlanStore:
+        return self.root.of(self.sample) if self.sample else self.root
+
+    def samples(self, state: dict | None = None) -> list[str]:
+        """진행 기록이 있는 샘플 + CLI 가 지금 진행 중인 샘플."""
+        found = self.root.samples()
+        state = self.state() if state is None else state
+        live = state.get("sample")
+        if live and self.running(state) and live not in found:
+            found = sorted(found + [live], key=order_key)
+        return found
 
     # ------------------------------------------------------------ CLI 상태
     @property
     def state_path(self) -> Path:
-        return self.store.dir / STATE_FILE
+        return self.root.dir / STATE_FILE
 
     @property
     def overrides_path(self) -> Path:
-        return self.store.dir / OVERRIDES_FILE
+        return self.root.dir / OVERRIDES_FILE
 
     def state(self) -> dict:
         return read_state(self.state_path)
@@ -68,9 +92,9 @@ class PlanData:
     def signature(self, temp: str | None, state: dict | None = None) -> tuple:
         """화면을 다시 그려야 하는지 보는 값: 진행 기록·설정 파일 수정 시각과 CLI 상태(살아 있다는 표시 시각은 빼고)."""
         state = self.state() if state is None else state
-        live = (self.running(state),) + tuple(state.get(k) for k in ("temp", "name", "current", "measuring", "last"))
+        live = (self.running(state),) + tuple(state.get(k) for k in ("sample", "temp", "name", "current", "measuring", "last"))
         paths = [self.overrides_path] + [self.store.progress_path(t) for t in self.temps()]
-        return tuple(_mtime(p) for p in paths) + live + (temp,)
+        return tuple(_mtime(p) for p in paths) + live + (self.sample, temp, tuple(self.samples(state)))
 
     def temps(self) -> list[str]:
         return ordered_temps(self.store, self.configured)
@@ -79,7 +103,8 @@ class PlanData:
     def progress_rows(self, temp: str, state: dict | None = None) -> list[dict]:
         state = self.state() if state is None else state
         progress = self.store.load(temp).get("rows", {})
-        live = self.running(state) and str(state.get("temp")) == str(temp)
+        live = (self.running(state) and str(state.get("temp")) == str(temp)
+                and (state.get("sample") or "") == self.sample)
         out = []
         for r in self.rows:
             e = progress.get(r.key, {})
@@ -107,7 +132,8 @@ class PlanData:
         row = self.by_key.get(state.get("current") or "")
         where = f"{row.no}. {row.title()}" if row else "항목 선택 전"
         doing = "측정 중" if state.get("measuring") else "입력 대기"
-        return f"CLI: {state.get('temp', '?')}°C / {state.get('name', '')} — {where} ({doing})"
+        sample = f" [{state['sample']}]" if state.get("sample") else ""
+        return f"CLI: {state.get('temp', '?')}°C / {state.get('name', '')}{sample} — {where} ({doing})"
 
     # ------------------------------------------------------------ 상세
     def folder_of(self, temp: str, key: str) -> Path | None:
@@ -209,7 +235,10 @@ class PlanData:
         return head, rows, blank
 
     def summary_csv(self) -> Path:
-        return self.store.dir / "plan_summary.csv"
+        return self.store.summary_path
+
+    def summary_all_csv(self) -> Path:
+        return self.root.root / "plan_summary_all.csv"
 
     # ------------------------------------------------------------ 설정 탭
     def settings_form(self) -> list[dict]:
@@ -257,17 +286,21 @@ class PlanData:
     def import_preview(self):
         """(picks, unmatched, cfg). 파일은 쓰지 않는다."""
         cfg = self.import_cfg()
-        picks, unmatched = plan_import.plan_import(self.rows, self.store, cfg, plan_import.scan(self.base),
-                                                   order=[_norm(t) for t in self.configured])
+        found = plan_import.scan(self.base, plan_import.load_missing_pins(self.root.root))
+        picks, unmatched = plan_import.plan_import(self.rows, self.root, cfg, found, order=[_norm(t) for t in self.configured],
+                                                   samples=Samples(self.root.root))
         return picks, unmatched, cfg
 
     def import_apply(self, picks, unmatched) -> tuple[list[Path], Path, Path]:
         if self.running():
             raise RuntimeError("CLI 가 계획을 진행 중이라 적용할 수 없습니다. CLI 를 끝낸(q) 뒤 적용하세요.")
-        written = plan_import.apply(picks, self.store)
-        log = plan_import.write_log(picks, unmatched, self.store.dir / f"import_{datetime.now():%Y%m%d_%H%M%S}.csv")
-        summary, _ = rebuild(self.rows, self.layout, self.store, self.configured)
-        return written, log, summary
+        samples = Samples(self.root.root)
+        migrate_legacy(self.root, samples)
+        samples.sync(p.found.name for p in picks if p.found and p.found.name)
+        written = plan_import.apply(picks, self.root)
+        log = plan_import.write_log(picks, unmatched, self.root.dir / f"import_{datetime.now():%Y%m%d_%H%M%S}.csv")
+        every, _ = rebuild_all(self.rows, self.layout, self.root, self.configured)
+        return written, log, every
 
 
 def _norm(t: str) -> str:

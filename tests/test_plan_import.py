@@ -31,16 +31,17 @@ class ImportTest(unittest.TestCase):
         self.store = PlanStore(self.base)
 
     # ------------------------------------------------------------ 예전 형식 기록 만들기
-    def vih(self, pin, ts, out_pin=None, temp="25", vt=(1.9, 1.4), folder=None, pin_key=True, with_output=False):
+    def vih(self, pin, ts, out_pin=None, temp="25", vt=(1.9, 1.4), folder=None, pin_key=True, with_output=False,
+            name="OLD"):
         """예전 메뉴 1 기록: out_pin 없음, 입력 VT+/VT- 만 (출력 VOH/VOL 은 0f30bb7~550a658 사이 버전에 없었음)."""
-        name = folder or f"PIN{pin}" + (f"_OUT{out_pin}" if out_pin else "") + f"_OLD_{temp}C_CH1-CH2_{stamp(ts)}"
-        d = self.base / "VIH" / name
+        folder = folder or f"PIN{pin}" + (f"_OUT{out_pin}" if out_pin else "") + f"_{name}_{temp}C_CH1-CH2_{stamp(ts)}"
+        d = self.base / "VIH" / folder
         d.mkdir(parents=True)
         vin = triangle()
         wi, wo = Waveform("CH1", vin, 1e-6), Waveform("CH2", schmitt(vin, *vt), 1e-6)
         wavefile.write_csv(d, [wi, wo])
         th = find_thresholds(wi, wo)
-        r = {"item": "VIH", "name": "OLD", "temp": temp, "out_type": "PP", "timestamp": ts,
+        r = {"item": "VIH", "name": name, "temp": temp, "out_type": "PP", "timestamp": ts,
              "channels": {"in": "CH1", "out": "CH2"}, "analysis": th.to_dict(),
              "metrics": results.vih_metrics(th, "CH1->CH2", "CH1->CH2")
              + (results.vih_output_metrics(th, "CH2", "CH2") if with_output else [])}
@@ -51,14 +52,14 @@ class ImportTest(unittest.TestCase):
         (d / "result.json").write_text(json.dumps(r), encoding="utf-8")
         return d
 
-    def manual(self, pin, label, ts, waves, temp="25", calc=None):
+    def manual(self, pin, label, ts, waves, temp="25", calc=None, name="OLD"):
         """예전 메뉴 3 기록: waves = {채널: 평균값}, 입력한 채널 순서대로 저장."""
         chans = list(waves)
-        d = self.base / "MANUAL" / f"PIN{pin}_OLD_{temp}C_{'-'.join(chans)}_{stamp(ts)}_{label}"
+        d = self.base / "MANUAL" / f"PIN{pin}_{name}_{temp}C_{'-'.join(chans)}_{stamp(ts)}_{label}"
         d.mkdir(parents=True)
         if waves:
             wavefile.write_csv(d, [Waveform(c, [v] * 50, 1e-6) for c, v in waves.items()])
-        r = {"dut_pin": pin, "item": "MANUAL", "name": "OLD", "temp": temp, "timestamp": ts, "manual_item": label,
+        r = {"dut_pin": pin, "item": "MANUAL", "name": name, "temp": temp, "timestamp": ts, "manual_item": label,
              "channels": chans, "metrics": [], "status": "complete"}
         if calc:
             r["calc"] = calc
@@ -193,14 +194,16 @@ class ImportTest(unittest.TestCase):
         args = ["--dir", str(self.base)]
         out = io.StringIO()
         self.enterContext(contextlib.redirect_stdout(out))
+        st = self.store.of("OLD")  # 시험 이름 OLD -> 샘플 OLD
         self.assertEqual(cli.main(args + ["--dry-run"]), 0)
-        self.assertFalse(self.store.progress_path("85").exists())
+        self.assertFalse(st.progress_path("85").exists())
         self.assertEqual(cli.main(args, ask=lambda _: "n"), 0)
-        self.assertFalse(self.store.progress_path("85").exists())
+        self.assertFalse(st.progress_path("85").exists())
         self.assertEqual(cli.main(args, ask=lambda _: "y"), 0)
-        rows = self.store.load("85")["rows"]
+        rows = st.load("85")["rows"]
         self.assertEqual(sorted(e["source"] for e in rows.values()), [SOURCE, SOURCE])
-        with (self.store.dir / "plan_summary.csv").open(encoding="utf-8-sig", newline="") as f:
+        self.assertTrue((self.store.root / "plan_summary_all.csv").exists())
+        with st.summary_path.open(encoding="utf-8-sig", newline="") as f:
             table = list(csv.reader(f))
         self.assertEqual(table[0][4:], ["25°C", "85°C", "-40°C"])
         cells = {(r[1], r[2]): r[5] for r in table[1:]}

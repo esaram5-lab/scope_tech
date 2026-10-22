@@ -86,6 +86,7 @@ class PlanWindow:
         self.root, self.data = root, data
         self.sig = None
         self.temp = tk.StringVar()
+        self.sample = tk.StringVar(value=data.sample)
         self.follow = tk.BooleanVar(value=True)
         root.title("시험 계획 — 결과·설정")
         root.geometry("1280x800")
@@ -96,11 +97,15 @@ class PlanWindow:
         top.pack(fill="x")
         self.cli = ttk.Label(top, text="", font=("TkDefaultFont", 10, "bold"))
         self.cli.pack(side="left")
-        ttk.Checkbutton(top, text="CLI 온도 따라가기", variable=self.follow).pack(side="right")
+        ttk.Checkbutton(top, text="CLI 따라가기", variable=self.follow).pack(side="right")
         self.temp_box = ttk.Combobox(top, textvariable=self.temp, width=8, state="readonly")
         self.temp_box.pack(side="right", padx=4)
         self.temp_box.bind("<<ComboboxSelected>>", lambda _: self._pick_temp())
         ttk.Label(top, text="온도(°C)").pack(side="right")
+        self.sample_box = ttk.Combobox(top, textvariable=self.sample, width=14, state="readonly")
+        self.sample_box.pack(side="right", padx=4)
+        self.sample_box.bind("<<ComboboxSelected>>", lambda _: self._pick_temp())
+        ttk.Label(top, text="샘플").pack(side="right")
 
         self.tabs = ttk.Notebook(root)
         self.tabs.pack(fill="both", expand=True, padx=6, pady=(0, 6))
@@ -119,11 +124,11 @@ class PlanWindow:
         for t in self._timers.values():
             self.root.after_cancel(t)
         self._timers.clear()
-        mark_gui(self.data.store.dir, closing=True)
+        mark_gui(self.data.root.dir, closing=True)
         self.root.destroy()
 
     def _alive(self) -> None:
-        mark_gui(self.data.store.dir)
+        mark_gui(self.data.root.dir)
         self._timers["alive"] = self.root.after(ALIVE_MS, self._alive)
 
     def _poll(self) -> None:
@@ -138,6 +143,14 @@ class PlanWindow:
 
     def refresh(self, force: bool = False) -> None:
         state = self.data.state()
+        samples = self.data.samples(state)
+        if list(self.sample_box["values"]) != samples:
+            self.sample_box["values"] = samples
+        if self.follow.get() and self.data.running(state) and state.get("sample") in samples:
+            self.sample.set(state["sample"])
+        if self.sample.get() not in samples:
+            self.sample.set(samples[0] if samples else "")
+        self.data.sample = self.sample.get()
         temps = self.data.temps()
         if list(self.temp_box["values"]) != temps:
             self.temp_box["values"] = temps
@@ -235,7 +248,8 @@ class PlanWindow:
         bar.pack(fill="x")
         self.sum_info = ttk.Label(bar, text="")
         self.sum_info.pack(side="left")
-        ttk.Button(bar, text="plan_summary.csv 열기", command=self._open_summary).pack(side="right")
+        ttk.Button(bar, text="전체 샘플 요약표 열기", command=lambda: self._open_summary(True)).pack(side="right", padx=4)
+        ttk.Button(bar, text="이 샘플 요약표 열기", command=self._open_summary).pack(side="right")
         self.sum_frame = ttk.Frame(tab)
         self.sum_frame.pack(fill="both", expand=True, pady=(4, 0))
         self.stree = None
@@ -256,11 +270,11 @@ class PlanWindow:
             self.stree.insert("", "end", values=r, tags=("blank",) if b else ())
         filled = sum(1 for r in rows for c in r[4:] if c)
         total = len(rows) * max(0, len(head) - 4)
-        self.sum_info.configure(text=f"채운 칸 {filled} / {total}  ({temp}°C 칸이 빈 줄은 붉은 배경, "
+        self.sum_info.configure(text=f"{self.data.sample or '-'}: 채운 칸 {filled} / {total}  ({temp}°C 칸이 빈 줄은 붉은 배경, "
                                      "같은 값이 여러 측정에서 나오면 최악값)")
 
-    def _open_summary(self) -> None:
-        p = self.data.summary_csv()
+    def _open_summary(self, every: bool = False) -> None:
+        p = self.data.summary_all_csv() if every else self.data.summary_csv()
         if p.exists():
             open_path(p)
         else:
@@ -385,7 +399,7 @@ class PlanWindow:
         inner.add(top, text="계획 항목")
         pane = ttk.PanedWindow(top, orient="horizontal")
         pane.pack(fill="both", expand=True)
-        self.itree = tree(pane, [("on", "", 30), ("temp", "온도", 50), ("no", "순서", 40), ("kind", "항목", 44),
+        self.itree = tree(pane, [("on", "", 30), ("sample", "샘플", 80), ("temp", "온도", 50), ("no", "순서", 40), ("kind", "항목", 44),
                                  ("pins", "핀", 70), ("state", "처리", 110), ("result", "결과", 300),
                                  ("rec", "기록", 260)], height=18)
         self.itree.bind("<<TreeviewSelect>>", lambda _: self._import_detail())
@@ -408,7 +422,7 @@ class PlanWindow:
         self.inotes.pack(fill="both", expand=True)
         bottom = ttk.Frame(inner)
         inner.add(bottom, text="연결 안 된 기록")
-        self.utree = tree(bottom, [("rec", "기록", 420), ("temp", "온도", 50), ("kind", "종류", 60), ("pin", "핀", 50),
+        self.utree = tree(bottom, [("rec", "기록", 380), ("name", "시험 이름", 100), ("temp", "온도", 50), ("kind", "종류", 60), ("pin", "핀", 50),
                                    ("why", "이유", 420)], height=20)
         self.utree.frame.pack(fill="both", expand=True)
         self.picks, self.unmatched, self.icfg = [], [], None
@@ -461,11 +475,11 @@ class PlanWindow:
             mark = "☑" if p.state == plan_import.SOURCE else ("☐" if p.state in ("유지", "제외") else "")
             tag = {plan_import.SOURCE: "done", "없음": "fail", "같음": "skip"}.get(p.state, "left")
             self.itree.insert("", "end", iid=str(n), tags=(tag,), values=(
-                mark, p.temp, p.row.no, p.row.kind, plan_import._pins(p.row), plan_import.STATE_TEXT[p.state],
+                mark, p.sample, p.temp, p.row.no, p.row.kind, plan_import._pins(p.row), plan_import.STATE_TEXT[p.state],
                 describe(p.row, p.result) if p.result else "", p.found.rel if p.found else ""))
         self.utree.delete(*self.utree.get_children())
         for f in self.unmatched:
-            self.utree.insert("", "end", values=(f.rel, f.temp, f.kind or f.item, f.pin, f.problem))
+            self.utree.insert("", "end", values=(f.rel, f.name, f.temp, f.kind or f.item, f.pin, f.problem))
         if keep and self.itree.exists(keep[0]):
             self.itree.selection_set(keep[0])
 
@@ -498,7 +512,7 @@ class PlanWindow:
             self.ctree.insert("", "end", iid=str(n), values=(f.time, f.rel, describe(p.row, f.result)),
                               tags=("current",) if f is p.found else ())
         e = p.entry
-        lines = [f"{p.temp}°C  {p.row.no}. {p.row.title()}",
+        lines = [f"{p.sample} {p.temp}°C  {p.row.no}. {p.row.title()}",
                  f"처리: {plan_import.STATE_TEXT[p.state]}",
                  "지금 진행 기록: " + (f"{e.get('status')} {e.get('folder', '')}" + (" (가져옴)" if e.get("source") else "")
                                    if e else "없음")]

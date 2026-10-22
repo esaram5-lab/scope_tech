@@ -72,7 +72,7 @@ class GuiTest(unittest.TestCase):
         self.assertIn("VIH", text)
         self.assertEqual(str(w.open_folder.cget("state")), "normal")
         st = StateWriter(self.data.state_path, interval=10)
-        st.start(temp="25", name="T")
+        st.start(temp="25", name="T", sample="T")
         try:
             st.update(current=self.data.rows[2].key)
             w.refresh()

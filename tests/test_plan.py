@@ -150,21 +150,21 @@ class PlanRunnerTest(unittest.TestCase):
         return code, "\n".join(out)
 
     def progress(self, temp="25"):
-        return json.loads((self.base / "plan" / f"progress_{temp}C.json").read_text(encoding="utf-8"))["rows"]
+        return json.loads((self.base / "plan" / "T" / f"progress_{temp}C.json").read_text(encoding="utf-8"))["rows"]
 
     def test_full_run_writes_summary_and_progress(self):
         code, out = self.run_plan(["25", "T"] + [""] * 19 + [""])  # 마지막 Enter: 끝내기
         self.assertEqual(code, 0)
         self.assertTrue(all(e["status"] == DONE for e in self.progress().values()))
         self.assertIn("Enter: 끝내기 / g: 번호로 이동해 다시 측정", out)
-        with (self.base / "plan" / "plan_summary.csv").open(encoding="utf-8-sig", newline="") as f:
+        with (self.base / "plan" / "T" / "plan_summary_T.csv").open(encoding="utf-8-sig", newline="") as f:
             table = list(csv.reader(f))
         self.assertEqual(table[0], ["구분", "핀", "항목", "단위", "25°C", "85°C", "-40°C"])
         self.assertEqual(len(table), 1 + len(self.layout))
         filled = {(r[1], r[2]): r[4] for r in table[1:]}
         for key in (("2", "VIH"), ("10", "VIL"), ("16", "VOL"), ("12", "IOH"), ("5", "Rpu"), ("20", "Rpd")):
             self.assertNotEqual(filled[key], "", key)
-        self.assertTrue((self.base / "plan" / "plan_progress_25C.csv").exists())
+        self.assertTrue((self.base / "plan" / "T" / "plan_progress_25C.csv").exists())
         self.assertIn("[1/19] VI  입력 2 -> 출력 12  PP", out)
         self.assertIn("[IOH/IOL]", out)
 
@@ -238,7 +238,7 @@ class PlanRunnerTest(unittest.TestCase):
         cfg_path.write_text(f"[plan]\nsummary = {ROOT / 'test_plan_summary.csv'}\n", encoding="utf-8")
         self.assertEqual(plan_summary.main(["--config", str(cfg_path), "--dir", str(self.base),
                                             "--plan", str(ROOT / "test_plan.csv")]), 0)
-        with (self.base / "plan" / "plan_summary.csv").open(encoding="utf-8-sig", newline="") as f:
+        with (self.base / "plan" / "T" / "plan_summary_T.csv").open(encoding="utf-8-sig", newline="") as f:
             table = list(csv.reader(f))
         self.assertEqual(table[0][4:], ["25°C", "85°C", "-40°C"])
         self.assertTrue(table[1][5])  # 85°C 값

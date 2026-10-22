@@ -33,7 +33,7 @@ class ViewTest(unittest.TestCase):
         rows, layout = load_plan(ROOT / "test_plan.csv"), load_layout(ROOT / "test_plan_summary.csv")
         answers = iter(["25", "T"] + [""] * 8 + ["k"] + [""] * 10 + ["q"])
         PlanRunner(bench, rows, layout, ask=lambda _: next(answers), echo=lambda _: None).run()
-        folder = cls.base / json.loads((cls.base / "plan" / "progress_25C.json").read_text(encoding="utf-8"))["rows"][rows[0].key]["folder"]
+        folder = cls.base / json.loads((cls.base / "plan" / "T" / "progress_25C.json").read_text(encoding="utf-8"))["rows"][rows[0].key]["folder"]
         (folder / "meas.png").write_bytes(b"png")
 
     @classmethod
@@ -62,7 +62,7 @@ class ViewTest(unittest.TestCase):
 
     def test_current_row_follows_cli_state(self):
         w = StateWriter(self.data.state_path, interval=10)
-        w.start(temp="25", name="T")
+        w.start(temp="25", name="T", sample="T")
         try:
             w.update(current=self.data.rows[3].key, measuring=True)
             rows = self.data.progress_rows("25")
@@ -96,7 +96,8 @@ class ViewTest(unittest.TestCase):
     def test_summary_matches_csv_and_blank_flags(self):
         head, rows, blank = self.data.summary("25")
         self.assertEqual(head, ["구분", "핀", "항목", "단위", "25°C", "85°C", "-40°C"])
-        csv_rows = (self.base / "plan" / "plan_summary.csv").read_text(encoding="utf-8-sig").splitlines()[1:]
+        self.assertEqual(self.data.sample, "T")
+        csv_rows = (self.base / "plan" / "T" / "plan_summary_T.csv").read_text(encoding="utf-8-sig").splitlines()[1:]
         self.assertEqual([",".join(r) for r in rows], csv_rows)
         by = {(r[1], r[2]): b for r, b in zip(rows, blank)}
         self.assertTrue(by[("12", "IOH")])    # 9번 IOH 12 건너뜀
