@@ -3,6 +3,7 @@
     reset.py    상태 정리 (매 측정 전)
     vih.py      VIL/VIH 측정 (+ 같은 파형의 출력 VOH/VOL), 커서
     voh.py      VOH/VOL 측정 (TOP/BASE 통계), 커서
+    por.py      전원 인가 후 출력 VOL(POR 지연 중)·VOH·지연 (VDD 상승 트리거)
     capture.py  화면 캡처 meas.png / clean.png (캡처 방법은 scopetech/capture/)
     save.py     파형 CSV / .wfm / 설정 저장
     manual.py   데이터·화면 저장 (메뉴 3)

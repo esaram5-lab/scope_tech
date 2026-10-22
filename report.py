@@ -28,7 +28,7 @@ COLS = ("VIL", "VIH", "HYS", "VOL", "VOH")
 COL_TITLE = {"VIL": "VIL (VT-)", "VIH": "VIH (VT+)", "HYS": "Hys", "VOL": "VOL", "VOH": "VOH"}
 # 핀 요약의 최악값: 판정 규칙과 같은 방향 (VIL·VOH 는 가장 낮은 값, VIH·VOL 은 가장 높은 값)
 WORST = {"VIL": min, "VIH": max, "HYS": min, "VOL": max, "VOH": min}
-ITEM_TITLE = {"VIH": "VIL/VIH", "VOH": "VOH/VOL", "MANUAL": "데이터·화면 저장", "SNAP": "화면 캡처", "MISC": "기타 캡처"}
+ITEM_TITLE = {"VIH": "VIL/VIH", "VOH": "VOH/VOL", "POR": "전원 인가 후 VOL/VOH", "MANUAL": "데이터·화면 저장", "SNAP": "화면 캡처", "MISC": "기타 캡처"}
 IMAGES = ("meas.png", "clean.png", "screen.png", "xy.svg")
 NO_PIN = "미지정"
 
@@ -225,6 +225,10 @@ def detail(w, pin: str, i: int, e: dict, root: Path) -> None:
             info.append("출력 극성: " + {"inverting": "반전", "non-inverting": "비반전"}.get(pol, "판별 불가"))
     elif e["channel"]:
         info.append(f"채널: {e['channel']} ({e['signal']})")
+    if item == "POR":
+        a = r.get("analysis") or {}
+        d, vdd = a.get("delay_s"), a.get("vdd_V")
+        info.append(f"VDD {v3(vdd)} V, 전원 인가 -> 출력 High 지연 " + ("-" if d is None else f"{d * 1e3:.3f} ms"))
     if e["profile"]:
         info.append(f"판정 기준: {e['profile']}")
     if r.get("note"):
