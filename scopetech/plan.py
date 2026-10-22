@@ -538,6 +538,7 @@ class PlanRunner:
                 b.scope.single(b.cfg.getfloat("measure", "single_timeout_s"))
                 rec = b.save_manual(MANUAL_LABEL[row.kind], row.channels, f"계획 {row.no}")
                 self._check_bias(row, rec)
+            b.resume()  # 다음 항목을 준비하는 동안 화면이 계속 갱신되도록 Run
         except KeyboardInterrupt:
             return {"status": FAIL, "error": "사용자 취소", "time": now}, 130
         except (ScopeError, OSError, ValueError, KeyError) as e:

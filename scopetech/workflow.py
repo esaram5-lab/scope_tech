@@ -15,6 +15,7 @@ from . import capture as capture_methods
 from . import gallery, results
 from .config import Config
 from .mso import MSO5B
+from .transport import ScopeError
 from .steps import capture as capture_step
 from .steps import manual as manual_step
 from .steps import por as por_step
@@ -68,6 +69,15 @@ class Bench:
 
     def por(self, ch_vdd: int, ch_out: int) -> Record:
         return por_step.run(self, ch_vdd, ch_out)
+
+    def resume(self) -> None:
+        """측정·저장이 끝난 뒤 스코프를 Run 으로 되돌린다([measure] run_after). 실패해도 측정 결과는 그대로."""
+        if not self.cfg.getbool("measure", "run_after") or self.scope.aoe_active:
+            return
+        try:
+            self.scope.run()
+        except (ScopeError, OSError) as e:
+            self.echo(f"  [경고] 스코프를 Run 으로 되돌리지 못했습니다: {e}")
 
     def capture(self) -> list[Path]:
         return capture_step.run(self)
