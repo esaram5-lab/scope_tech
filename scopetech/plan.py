@@ -405,13 +405,18 @@ class PlanRunner:
                 if i is None:
                     self.echo(f"\n{b.temp}°C 계획의 모든 항목이 완료되었습니다(건너뜀 포함). {self._counts(progress)}")
                     skipped = [k for k, r in enumerate(self.rows) if progress.get(r.key, {}).get("status") == SKIP]
+                    choice = self.prompt(("Enter: 건너뛴 항목 측정 / g: 번호로 이동 / q: 끝내기" if skipped
+                                          else "Enter: 끝내기 / g: 번호로 이동해 다시 측정"), "",
+                                         lambda s: s.lower() in ("", "g")).lower()
+                    if choice == "g":
+                        i = self._goto()
+                        continue
                     if not skipped:
                         return 0
-                    if self.prompt("Enter: 건너뛴 항목 측정 / q: 끝내기", "", lambda s: s == "") == "":
-                        for k in skipped:
-                            progress[self.rows[k].key].pop("status", None)
-                        i = skipped[0]
-                        continue
+                    for k in skipped:
+                        progress[self.rows[k].key].pop("status", None)
+                    i = skipped[0]
+                    continue
                 row = self.rows[i]
                 group = GROUP[row.kind]
                 if group != shown_group:
@@ -421,7 +426,7 @@ class PlanRunner:
                 self.echo(f"\n[{i + 1}/{len(self.rows)}] {row.title()}   채널 "
                           + ", ".join(f"CH{c}" for c in row.channels)
                           + (f"\n  준비: {row.setup}" if row.setup else "")
-                          + (f"\n  지난 결과({e['status']}): {e.get('summary') or e.get('error') or '-'}"
+                          + (f"\n  지난 결과({e['status']}): {(e.get('error') if e['status'] == FAIL else '') or e.get('summary') or '-'}"
                              if e.get("status") in (DONE, SKIP, FAIL) else ""))
                 action = self.prompt("Enter: 측정 / k: 건너뛰기 / p: 이전 / g: 번호로 이동 / q: 멈춤(다음에 이어서)", "",
                                      lambda s: s.lower() in ("", "k", "p", "g")).lower()
@@ -435,11 +440,14 @@ class PlanRunner:
                     i = (i - 1) % len(self.rows)
                     continue
                 if action == "g":
-                    no = self.prompt(f"이동할 번호 (1~{len(self.rows)})", "",
-                                     lambda s: s.isdigit() and 1 <= int(s) <= len(self.rows))
-                    i = int(no) - 1
+                    i = self._goto()
                     continue
                 entry, code = self._measure(row)
+                if entry["status"] != DONE and e.get("status") == DONE:  # 다시 재다 실패하면 앞의 결과를 그대로 둔다
+                    self.echo(f"  => 실패: {entry.get('error')} — 앞의 측정 결과를 그대로 둡니다 (Enter 로 다시, k 로 넘어가기)")
+                    if code is not None:
+                        return code
+                    continue
                 progress[row.key] = entry
                 self._save(doc)
                 if code is not None:
@@ -452,6 +460,11 @@ class PlanRunner:
         except (EOFError, KeyboardInterrupt):
             self.echo("\n계획 진행을 멈춥니다. 다음에 같은 온도를 고르면 이어서 진행합니다.")
             return 0
+
+    def _goto(self) -> int:
+        no = self.prompt(f"이동할 번호 (1~{len(self.rows)})", "",
+                         lambda s: s.isascii() and s.isdigit() and 1 <= int(s) <= len(self.rows))
+        return int(no) - 1
 
     def _save(self, doc: dict) -> None:
         try:
@@ -476,6 +489,9 @@ class PlanRunner:
                     b.capture()
                 b.save()
             else:
+                # 앞 항목(VI/POR)의 Single 뒤 스코프는 멈춰 있다. 그 파형을 저장하지 않도록 새로 1회 획득(CH1 트리거 스윙).
+                self.echo("  단일 획득(Single) 대기 중...")
+                b.scope.single(b.cfg.getfloat("measure", "single_timeout_s"))
                 rec = b.save_manual(MANUAL_LABEL[row.kind], row.channels, f"계획 {row.no}")
                 self._check_bias(row, rec)
         except KeyboardInterrupt:
@@ -486,8 +502,11 @@ class PlanRunner:
                 msg += f" -> 스코프 화면에서 CH{', CH'.join(map(str, row.channels))} 를 켜 주세요(트리거용 CH1 만 숨김)"
             return {"status": FAIL, "error": msg, "time": now}, None
         result = rec.result
-        return {"status": DONE, "folder": rec.folder.relative_to(b.out_dir).as_posix(), "time": now,
-                "summary": describe(row, result), "warnings": warnings_of(row, result)}, None
+        entry = {"status": DONE, "folder": rec.folder.relative_to(b.out_dir).as_posix(), "time": now,
+                 "summary": describe(row, result), "warnings": warnings_of(row, result)}
+        if not row_values(row, result):  # 요약표에 들어갈 값이 없으면 완료로 두지 않고 다시 재거나 건너뛰게
+            entry.update(status=FAIL, error="요약표에 넣을 값이 없음" + "".join(f" — {w}" for w in entry["warnings"]))
+        return entry, None
 
     def _check_bias(self, row: PlanRow, rec) -> None:
         if check_bias(row, rec.result, self.bench.cfg):

@@ -153,9 +153,10 @@ class PlanRunnerTest(unittest.TestCase):
         return json.loads((self.base / "plan" / f"progress_{temp}C.json").read_text(encoding="utf-8"))["rows"]
 
     def test_full_run_writes_summary_and_progress(self):
-        code, out = self.run_plan(["25", "T"] + [""] * 19)
+        code, out = self.run_plan(["25", "T"] + [""] * 19 + [""])  # 마지막 Enter: 끝내기
         self.assertEqual(code, 0)
         self.assertTrue(all(e["status"] == DONE for e in self.progress().values()))
+        self.assertIn("Enter: 끝내기 / g: 번호로 이동해 다시 측정", out)
         with (self.base / "plan" / "plan_summary.csv").open(encoding="utf-8-sig", newline="") as f:
             table = list(csv.reader(f))
         self.assertEqual(table[0], ["구분", "핀", "항목", "단위", "25°C", "85°C", "-40°C"])
@@ -199,8 +200,37 @@ class PlanRunnerTest(unittest.TestCase):
         self.assertNotIn("지난 결과(남음)", out)
         self.assertEqual(self.progress()[self.rows[0].key]["status"], "건너뜀")  # 측정 전에 끝내면 건너뜀 기록 유지
 
+    def test_manual_rows_take_a_fresh_acquisition(self):
+        self.run_plan(["25", "T", "g", "9", "", "q"])
+        log = self.t.sim.log
+        start = max(i for i, line in enumerate(log) if line.upper().startswith("*CLS"))  # 9번 항목의 상태 정리
+        self.assertTrue(any(line.upper().startswith("ACQUIRE:STOPAFTER SEQ") for line in log[start:]), log[start:])
+        self.assertEqual(self.progress()[self.rows[8].key]["status"], DONE)
+
+    def test_failed_remeasure_keeps_result_and_redo_after_all_done(self):
+        self.run_plan(["25", "T"] + [""] * 19 + [""])
+        before = self.progress()[self.rows[8].key]
+        self.t.sim.on[8] = False
+        code, out = self.run_plan(["25", "", "g", "9", "", "q"])  # 모두 완료 -> g 9 -> 다시 재다 실패
+        self.assertEqual(code, 0)
+        self.assertIn("앞의 측정 결과를 그대로 둡니다", out)
+        self.assertEqual(self.progress()[self.rows[8].key], before)
+        self.t.sim.on[8] = True
+        code, out = self.run_plan(["25", "", "g", "1", "", ""])  # 1번 다시 측정 후 Enter 로 끝내기
+        self.assertEqual(code, 0)
+        self.assertNotEqual(self.progress()[self.rows[0].key]["folder"], before["folder"])
+
+    def test_measurement_without_value_is_not_done(self):
+        self.t.sim.on[8] = True
+        self.bench.cfg.cp.set("manual", "vdd_v", "0.5")  # 시뮬레이터 CH2 ≈ 1.7 V ≥ VDD -> Rpd 값 없음
+        code, out = self.run_plan(["25", "T", "g", "16", "", "q"])
+        e = self.progress()[self.rows[15].key]
+        self.assertEqual(e["status"], "실패")
+        self.assertIn("요약표에 넣을 값이 없음", e["error"])
+        self.assertTrue(e["folder"])
+
     def test_rebuild_cli(self):
-        self.run_plan(["85", "T"] + [""] * 19)
+        self.run_plan(["85", "T"] + [""] * 19 + [""])
         cfg_path = self.base / "c.ini"
         cfg_path.write_text("[plan]\nsummary = no_such_layout.csv\n", encoding="utf-8")
         self.assertEqual(plan_summary.main(["--config", str(cfg_path), "--dir", str(self.base),
