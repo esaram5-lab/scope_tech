@@ -24,6 +24,7 @@ from pathlib import Path
 
 from . import manual_calc, results
 from .plan import DONE, MANUAL_LABEL, PlanRow, PlanStore, check_bias, describe, norm_temp, row_values, warnings_of
+from .plan_state import SettingsView
 from .recompute import recompute_manual, recompute_vih
 
 ITEM_DIRS = ("VIH", "MANUAL", "POR")
@@ -58,8 +59,10 @@ class Pick:
     result: dict | None = None  # 채운 뒤의 결과(found.result 의 사본)
     changed: bool = False  # 파형으로 값을 채워 result.json 을 고쳐 써야 함
     notes: list[str] = field(default_factory=list)
-    state: str = ""  # 가져옴 / 유지 / 같음 / 없음
+    state: str = ""  # 가져옴 / 유지 / 같음 / 없음 / 제외
     candidates: int = 0
+    options: list[Found] = field(default_factory=list)  # 같은 줄의 모든 후보(최근 것부터, GUI 에서 고르기)
+    entry: dict = field(default_factory=dict)            # 지금 진행 기록의 이 줄
 
 
 def _read(path: Path) -> dict | None:
@@ -139,8 +142,10 @@ def _why(e: Exception, f: Found) -> str:
 
 
 def fill(row: PlanRow, f: Found, cfg) -> tuple[dict, bool, list[str]]:
-    """(채운 결과 사본, 바뀌었는지, 메모). 파형으로 모자란 값을 채운다. 값이 하나도 없으면 ValueError."""
+    """(채운 결과 사본, 바뀌었는지, 메모). 파형으로 모자란 값을 채운다. 값이 하나도 없으면 ValueError.
+    계획 모드 기록은 그 측정에 쓴 설정(plan_settings)으로, 예전 기록은 지금 설정으로 계산한다."""
     result = copy.deepcopy(f.result)
+    cfg = SettingsView(cfg, result.get("plan_settings"))
     notes = []
     if not result.get("dut_pin"):  # 폴더 이름에서 읽은 핀을 보고서·사진 모음도 쓰도록 기록
         result["dut_pin"] = row.pin
@@ -204,7 +209,7 @@ def plan_import(rows: list[PlanRow], store: PlanStore, cfg, found: list[Found], 
             got = sorted(cand.get((temp, row.key), []), key=lambda f: (f.time, f.rel), reverse=True)
             if not got:
                 continue
-            p = Pick(row, temp, candidates=len(got))
+            p = Pick(row, temp, candidates=len(got), options=got, entry=dict(progress.get(row.key, {})))
             failed = []
             for f in got:  # 최근 기록부터, 값이 나오는 첫 기록
                 try:
@@ -231,6 +236,22 @@ def plan_import(rows: list[PlanRow], store: PlanStore, cfg, found: list[Found], 
                 p.state = SOURCE
             picks.append(p)
     return picks, unmatched
+
+
+def choose(p: Pick, f: Found, cfg) -> None:
+    """GUI 에서 고른 후보로 바꾼다(가장 최근 기록 대신). 값이 안 나오는 기록이면 ValueError."""
+    result, changed, notes = fill(p.row, f, cfg)
+    p.found, p.result, p.changed = f, result, changed
+    p.notes = [f"직접 고른 기록 ({f.time})"] + notes
+    same = p.entry.get("status") == DONE and p.entry.get("folder") == f.rel and not changed
+    p.state = "같음" if same else SOURCE
+
+
+def include(p: Pick, on: bool) -> None:
+    """GUI 체크: 가져올지. 기록이 없거나 이미 연결된 줄은 바꾸지 않는다."""
+    if p.found is None or p.state == "같음":
+        return
+    p.state = SOURCE if on else "제외"
 
 
 def apply(picks: list[Pick], store: PlanStore) -> list[Path]:
@@ -281,7 +302,8 @@ def _pins(row: PlanRow) -> str:
     return f"{row.in_pin}->{row.out_pin}" if row.kind in ("VI", "AI") else row.out_pin
 
 
-STATE_TEXT = {SOURCE: "가져옴", "유지": "계획 측정 유지", "같음": "이미 연결됨", "없음": "쓸 수 있는 기록 없음"}
+STATE_TEXT = {SOURCE: "가져옴", "유지": "계획 측정 유지", "같음": "이미 연결됨", "없음": "쓸 수 있는 기록 없음",
+              "제외": "가져오지 않음"}
 
 
 def preview(picks: list[Pick], unmatched: list[Found], rows: list[PlanRow], echo=print, limit: int = 40) -> None:

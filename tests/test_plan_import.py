@@ -11,7 +11,7 @@ from scopetech import results, wavefile
 from scopetech.analysis import Waveform, find_thresholds
 from scopetech.config import Config
 from scopetech.plan import DONE, PlanStore, load_plan
-from scopetech.plan_import import SOURCE, apply, plan_import, scan
+from scopetech.plan_import import SOURCE, apply, choose, include, plan_import, scan
 from tests.test_analysis import schmitt, triangle
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -209,6 +209,46 @@ class ImportTest(unittest.TestCase):
         self.assertEqual(len(list(self.store.dir.glob("import_*.csv"))), 1)
         self.assertEqual(cli.main(args + ["--apply"]), 0)  # 다시 해도 바뀔 것 없음
         self.assertIn("새로 가져올 항목이 없습니다", out.getvalue())
+
+    # ------------------------------------------------------------ GUI 가져오기 탭: 직접 고르기·체크
+
+    def test_choose_older_candidate_and_exclude(self):
+        old = self.vih("2", "2026-10-10T10:00:00", out_pin="12", vt=(1.8, 1.3), with_output=True)
+        new = self.vih("2", "2026-10-12T10:00:00", out_pin="12", vt=(2.0, 1.5), with_output=True)
+        picks, _ = self.run_import()
+        p = self.pick(picks, "1")
+        self.assertEqual([f.folder for f in p.options], [new, old])
+        choose(p, p.options[1], self.cfg)
+        self.assertEqual((p.found.folder, p.state), (old, SOURCE))
+        self.assertIn("직접 고른", p.notes[0])
+        include(p, False)
+        self.assertEqual(p.state, "제외")
+        apply(picks, self.store)
+        self.assertFalse(self.store.progress_path("25").exists())
+        include(p, True)
+        apply(picks, self.store)
+        self.assertEqual(self.progress()[self.rows[0].key]["folder"], f"VIH/{old.name}")
+        picks, _ = self.run_import()
+        p = self.pick(picks, "1")
+        self.assertEqual(p.state, SOURCE)  # 가져온 줄은 다시 하면 최신 기록으로
+        choose(p, p.options[1], self.cfg)
+        self.assertEqual(p.state, "같음")
+
+    def test_choose_unusable_candidate_raises(self):
+        self.manual("2", "R_pd", "2026-10-10T09:00:00", {"CH2": 1.65})
+        self.manual("2", "R_pd", "2026-10-12T09:00:00", {"CH2": 3.3})
+        picks, _ = self.run_import()
+        p = self.pick(picks, "16")
+        with self.assertRaises(ValueError):
+            choose(p, p.options[0], self.cfg)
+
+    def test_recorded_settings_are_used_for_recompute(self):
+        d = self.manual("20", "R_pd", "2026-10-10T09:00:00", {"CH2": 1.65})
+        r = json.loads((d / "result.json").read_text(encoding="utf-8"))
+        r["plan_settings"] = {"manual.vdd_v": "3.0"}
+        (d / "result.json").write_text(json.dumps(r), encoding="utf-8")
+        picks, _ = self.run_import()
+        self.assertEqual(self.pick(picks, "19").result["calc"]["inputs"]["vdd"], 3.0)
 
 
 if __name__ == "__main__":

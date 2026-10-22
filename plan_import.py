@@ -21,6 +21,7 @@ sys.path.insert(0, str(HERE))
 from scopetech.config import Config  # noqa: E402
 from scopetech.plan import PlanStore, load_layout, load_plan, norm_temp, rebuild  # noqa: E402
 from scopetech.plan_import import SOURCE, apply, plan_import, preview, scan, write_log  # noqa: E402
+from scopetech.plan_state import OVERRIDES_FILE, PlanSettings  # noqa: E402
 
 
 def main(argv: list[str] | None = None, ask=input) -> int:
@@ -50,6 +51,7 @@ def main(argv: list[str] | None = None, ask=input) -> int:
         print(f"[오류] {e}")
         return 1
     store = PlanStore(base, cfg.get("plan", "dir") or "plan")
+    PlanSettings(cfg, store.dir / OVERRIDES_FILE).apply()  # GUI 설정 탭에서 바꾼 값으로 예전 기록 계산
     temps_cfg = [t.strip() for t in cfg.get("plan", "temps").replace(",", " ").split() if t.strip()]
     found = scan(base)
     print(f"가져오기 미리보기 — {base} 의 측정 기록 {len(found)}개, 계획 {len(rows)}개 항목")

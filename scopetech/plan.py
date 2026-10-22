@@ -20,6 +20,7 @@ from datetime import datetime
 from pathlib import Path
 
 from . import manual_calc, results
+from .plan_state import OVERRIDES_FILE, STATE_FILE, PlanSettings, StateWriter, describe_change, replace_retry
 from .transport import ScopeError
 
 KINDS = ("VI", "AI", "POR", "IOH", "IOL", "RPU", "RPD")
@@ -156,7 +157,7 @@ class PlanStore:
         self.dir.mkdir(parents=True, exist_ok=True)
         tmp = self.progress_path(temp).with_suffix(".tmp")
         tmp.write_text(json.dumps(progress, ensure_ascii=False, indent=2), encoding="utf-8")
-        tmp.replace(self.progress_path(temp))
+        replace_retry(tmp, self.progress_path(temp))  # GUI 가 읽는 순간에는 잠깐 기다렸다 교체
 
     def temps(self) -> list[str]:
         out = []
@@ -328,6 +329,8 @@ class PlanRunner:
         cfg = bench.cfg
         self.store = PlanStore(bench.out_dir, cfg.get("plan", "dir") or "plan")
         self.temps = [t.strip() for t in cfg.get("plan", "temps").replace(",", " ").split() if t.strip()]
+        self.settings = PlanSettings(cfg, self.store.dir / OVERRIDES_FILE)  # GUI 설정 탭에서 바꾼 값
+        self.state = StateWriter(self.store.dir / STATE_FILE)               # GUI 가 보는 진행 상태
 
     def prompt(self, label, default="", valid=lambda x: True):
         while True:
@@ -348,7 +351,13 @@ class PlanRunner:
             return False
 
     def run(self) -> int:
-        status = self._run()
+        self.state.start(rows=len(self.rows))
+        try:
+            return self._finish(self._run())
+        finally:
+            self.state.stop()
+
+    def _finish(self, status: int) -> int:
         b = self.bench
         n = b.pending_count()
         if n and status == 0:
@@ -392,8 +401,14 @@ class PlanRunner:
         b = self.bench
         self.echo(f"\n시험 계획 진행 — {len(self.rows)}개 항목, 온도 순서 {' -> '.join(t + '°C' for t in self.temps)}")
         try:
+            self._sync_settings(None, start=True)
             b.temp = norm_temp(self.prompt("온도(°C)", self._default_temp(), self._temp_ok))
-            b.name = self.prompt("시험 이름", b.name, lambda s: bool(s))
+            b.name = self.prompt("시험 이름", b.name, lambda s: bool(s.strip()) and "\n" not in s)
+            try:
+                self.settings.set("session.name", b.name)  # GUI 설정 탭에도 같은 이름
+            except (OSError, ValueError) as e:
+                self.echo(f"[경고] 설정 파일에 시험 이름을 쓰지 못했습니다: {e}")
+            self.state.update(temp=b.temp, name=b.name)
             doc = self.store.load(b.temp)
             doc.setdefault("rows", {})
             doc.update({"temp": b.temp, "name": b.name})
@@ -403,6 +418,7 @@ class PlanRunner:
             shown_group = None
             while True:
                 if i is None:
+                    self.state.update(current=None, current_no=None)
                     self.echo(f"\n{b.temp}°C 계획의 모든 항목이 완료되었습니다(건너뜀 포함). {self._counts(progress)}")
                     skipped = [k for k, r in enumerate(self.rows) if progress.get(r.key, {}).get("status") == SKIP]
                     choice = self.prompt(("Enter: 건너뛴 항목 측정 / g: 번호로 이동 / q: 끝내기" if skipped
@@ -423,6 +439,7 @@ class PlanRunner:
                     self.echo("\n" + "=" * 60 + f"\n{GROUP_GUIDE[group]}\n" + "=" * 60)
                     shown_group = group
                 e = progress.get(row.key, {})
+                self.state.update(current=row.key, current_no=row.no)
                 self.echo(f"\n[{i + 1}/{len(self.rows)}] {row.title()}   채널 "
                           + ", ".join(f"CH{c}" for c in row.channels)
                           + (f"\n  준비: {row.setup}" if row.setup else "")
@@ -442,7 +459,13 @@ class PlanRunner:
                 if action == "g":
                     i = self._goto()
                     continue
-                entry, code = self._measure(row)
+                self._sync_settings(doc)
+                self.state.update(measuring=True)
+                try:
+                    entry, code = self._measure(row)
+                finally:
+                    self.state.update(measuring=False)
+                self.state.update(last=row.key, last_no=row.no, last_status=entry["status"])
                 if entry["status"] != DONE and e.get("status") == DONE:  # 다시 재다 실패하면 앞의 결과를 그대로 둔다
                     self.echo(f"  => 실패: {entry.get('error')} — 앞의 측정 결과를 그대로 둡니다 (Enter 로 다시, k 로 넘어가기)")
                     if code is not None:
@@ -460,6 +483,26 @@ class PlanRunner:
         except (EOFError, KeyboardInterrupt):
             self.echo("\n계획 진행을 멈춥니다. 다음에 같은 온도를 고르면 이어서 진행합니다.")
             return 0
+
+    def _sync_settings(self, doc: dict | None, start: bool = False) -> None:
+        """GUI 설정 탭에서 바꾼 값(overrides.ini)을 측정 직전에 반영."""
+        b = self.bench
+        try:
+            changed = self.settings.apply()
+        except (OSError, ValueError) as e:
+            self.echo(f"[경고] 설정 파일을 읽지 못했습니다(이전 값으로 측정): {e}")
+            return
+        for s, old, new in changed:
+            if s.id == "session.name":
+                if start and "name" in getattr(b, "explicit_options", set()):
+                    continue  # --name 으로 준 이름이 우선
+                b.name = new
+                if doc is not None:
+                    doc["name"] = new
+                    self.state.update(name=new)
+            elif s.id == "capture.enabled":
+                b._capturer = None  # 다음 캡처부터 켬/끔 반영
+            self.echo(("  설정(overrides.ini): " if start else "  설정 변경 반영: ") + describe_change(s, old, new))
 
     def _goto(self) -> int:
         no = self.prompt(f"이동할 번호 (1~{len(self.rows)})", "",
@@ -480,6 +523,7 @@ class PlanRunner:
         b.dut_pin = row.pin
         b.out_pin = row.out_pin if row.kind in ("VI", "AI") else ""
         b.out_type = row.out_type
+        used = self.settings.snapshot()
         try:
             self.echo("  스코프 상태 정리")
             b.reset()
@@ -502,6 +546,11 @@ class PlanRunner:
                 msg += f" -> 스코프 화면에서 CH{', CH'.join(map(str, row.channels))} 를 켜 주세요(트리거용 CH1 만 숨김)"
             return {"status": FAIL, "error": msg, "time": now}, None
         result = rec.result
+        result["plan_settings"] = used  # 이 측정에 쓴 계산·분석 설정 (다시 계산할 때도 이 값)
+        try:
+            results.write_json(rec.folder / "result.json", result)
+        except OSError as e:
+            self.echo(f"  [경고] result.json 에 설정을 기록하지 못했습니다: {e}")
         entry = {"status": DONE, "folder": rec.folder.relative_to(b.out_dir).as_posix(), "time": now,
                  "summary": describe(row, result), "warnings": warnings_of(row, result)}
         if not row_values(row, result):  # 요약표에 들어갈 값이 없으면 완료로 두지 않고 다시 재거나 건너뛰게

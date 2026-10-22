@@ -162,6 +162,23 @@ save 1 2        <- CSV + wfm + setup
 - 계획 모드로 이미 잰 줄은 그대로 둡니다. 더 최근 기록으로 바꾸려면 `--replace`. 다시 실행하면 새 기록만 반영됩니다.
 - 옵션: `--dry-run`(미리보기만), `--apply`(묻지 않고 적용), `--name 이름`, `--since 2026-10-01`, `--temp 25,85`, `--dir 폴더`.
 
+결과·설정 창 (GUI, `run_plan.bat` 을 실행하면 함께 뜸)
+- 측정은 CLI 창에서만 합니다. GUI 는 결과 보기·설정 바꾸기·예전 측정 가져오기만 하고, 닫아도 측정은 계속됩니다.
+- 따로 열기: `run_plan_gui.bat` (측정 중이 아니어도 지난 결과를 봄). 띄우지 않기: `run_plan.bat --no-gui` 또는 `[plan] gui = no`.
+- **진행** 탭: 온도별 19개 항목의 상태·결과·주의. CLI 가 기다리는 항목은 `▶` 표시(“CLI 온도 따라가기”를 켜면 그 항목을 자동 선택).
+  항목을 누르면 스코프 캡처 이미지, 측정값(VT+/VT−, VOH/VOL, POR 지연, Rpd/Rpu/IOH 와 계산 근거), 폴더 열기.
+  파형을 PC 에서 새로 그리지 않고 스코프 캡처만 보여줍니다. 1초마다 파일을 보고 바뀌었을 때만 다시 그립니다.
+- **요약표** 탭: `plan_summary.csv` 와 같은 표. 고른 온도의 칸이 빈 줄은 붉은 배경. `plan_summary.csv 열기` 로 엑셀에서 열기.
+- **설정** 탭: 시험 이름, 화면 캡처 켬/끔, Single 대기 시간, VDD·외부 저항·프로브 저항, IOH/IOL 부하 조건, 출력 전환 기준, 입력 평균 점수.
+  `저장` 하면 CLI 가 **다음 측정 직전**에 반영하고 “설정 변경 반영: VDD 3.3 -> 3.25 V” 처럼 알려줍니다(측정 중인 값은 안 바뀜).
+  `config.ini` 는 그대로 두고 `captures/plan/overrides.ini` 에 저장합니다. `config.ini 값으로` 버튼으로 되돌림. 온도는 CLI 에서 정합니다.
+  CLI 에서 입력한 시험 이름도 이 파일에 적혀 GUI 와 같아집니다. 측정마다 쓴 설정은 `result.json` 의 `plan_settings` 에 남고,
+  가져오기에서 그 기록을 다시 계산할 때도 그 설정을 씁니다.
+- **가져오기** 탭: `run_plan_import.bat` 과 같은 일을 창에서. `미리보기` -> 항목별 체크(☑ 가져옴 / ☐ 안 가져옴, 계획 모드로 잰 줄은 기본 ☐)
+  -> 항목을 누르면 같은 항목의 다른 후보 기록과 캡처가 보이고 `이 기록 사용` 으로 최신 대신 고를 수 있음 -> `적용`.
+  CLI 가 계획을 진행 중일 때는 진행 기록이 겹치지 않게 `적용` 을 막습니다(미리보기만). “연결 안 된 기록” 에 이유가 나옵니다.
+- 창이 이미 열려 있으면 새로 띄우지 않습니다. 오류는 `logs/plan_gui.log`. tkinter 가 없으면 “GUI 를 띄우지 못했습니다” 한 줄만 나오고 CLI 로 진행합니다.
+
 ## 3. 사용 예
 ```
 [25C TEST PP spec=-] scope> temp 25
@@ -314,6 +331,10 @@ scopetech/
     template.py          직접 만들 때 복사할 틀
 scope_capture/            동봉: 스코프 화면 캡처 서버·클라이언트 (scope-capture-api v1.2), run_capture_server.bat
   wizard.py / shell.py   안내 메뉴 / 명령 셸 (Bench 메서드만 호출)
+  plan.py                시험 계획 진행(PlanRunner)·진행 기록·요약표, plan_import.py 예전 측정 가져오기
+  plan_state.py          CLI <-> GUI 연결 파일: plan/state.json(진행 상태), plan/overrides.ini(GUI 설정)
+  plan_view.py           GUI 가 보여줄 데이터(tkinter 없이 시험 가능), GUI 띄우기
+  plan_gui.py            결과·설정 창 (tkinter)
   analysis.py results.py wavefile.py config.py sim.py
 ```
 - `steps/capture.py` 는 **어떤 화면을 몇 장**(측정 표시 meas.png, 숨긴 clean.png) 찍을지만 정하고, **어떻게 찍을지**는 `capture/` 의 방법이 정합니다. 메뉴 3·4(`manual.py`, `snap.py`)도 같은 방법을 씁니다.
