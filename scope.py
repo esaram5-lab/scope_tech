@@ -105,6 +105,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--fetch", action="store_true", help="스코프에 저장해 둔 캡처 PNG 만 가져오고 종료")
     ap.add_argument("--no-capture", action="store_true", help="화면 캡처 없이 측정·파형 저장만 (run_nocap.bat)")
     ap.add_argument("--plan", nargs="?", const="", metavar="CSV", help="시험 계획 진행 (기본: config.ini [plan] file, run_plan.bat)")
+    ap.add_argument("--no-gui", action="store_true", help="시험 계획 진행 때 결과·설정 창(GUI)을 띄우지 않음")
     ap.add_argument("--debug", action="store_true", help="SCPI 송수신을 화면에 출력")
     ap.add_argument("--temp", help="온도 (예: 85)")
     ap.add_argument("--name", help="시험 이름 (예: INV_3V3)")
@@ -164,7 +165,11 @@ def main(argv: list[str] | None = None) -> int:
         elif args.plan is not None:
             from scopetech.plan import PlanRunner, load_layout, load_plan
             rows = load_plan(HERE / (args.plan or cfg.get("plan", "file")), cfg.getint("scope", "num_channels"))
-            status = PlanRunner(bench, rows, load_layout(HERE / cfg.get("plan", "summary"))).run()
+            runner = PlanRunner(bench, rows, load_layout(HERE / cfg.get("plan", "summary")))
+            if not args.no_gui and cfg.getbool("plan", "gui"):
+                from scopetech.plan_view import launch_gui
+                launch_gui(HERE / "plan_gui.py", Path(args.config).resolve(), out_dir, runner.store.dir)
+            status = runner.run()
         else:
             from scopetech.wizard import Wizard
             state_path = HERE / (".session_sim.json" if args.sim else ".session.json")
