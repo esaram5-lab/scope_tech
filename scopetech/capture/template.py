@@ -4,7 +4,7 @@
 1. 이 파일을 scope.py 옆에 복사해 이름을 바꾼다 (예: my_capture.py).
 2. take() 를 구현한다: 스코프 화면 1장을 local(PNG 경로)에 저장하고 local 을 돌려준다.
 3. config.ini [capture] method = my_capture  (클래스 이름이 Capture 가 아니면 my_capture:클래스이름)
-4. py scope.py --sim 으로 흐름 확인 -> run_seq_test.bat --only capture 로 실장비 반복 시험.
+4. py scope.py --sim 으로 흐름 확인 -> run_scope.bat 메뉴 4(화면만 캡처)로 실장비 반복 확인.
 
 쓸 수 있는 것
 - self.scope : MSO5B 드라이버 (write/query/check/pace/stop/single/wait_idle/freeze/abort_capture ...)

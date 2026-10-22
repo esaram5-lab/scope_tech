@@ -1,6 +1,6 @@
 """저장된 원시 파형(waveform*.csv)으로 결과를 다시 계산한다 (스코프 연결 불필요).
 
-analyze.py --recompute 와 plan_import.py(예전 측정 가져오기)가 함께 쓴다.
+analyze.py --recompute 와 plan_import(예전 측정 가져오기·정리 도구)가 함께 쓴다.
 """
 from __future__ import annotations
 
