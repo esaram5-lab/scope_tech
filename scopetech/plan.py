@@ -242,6 +242,23 @@ def write_summary(rows, layout, store: PlanStore, temps: list[str], path: Path) 
     return path
 
 
+def check_bias(row: PlanRow, result: dict, cfg) -> bool:
+    """IOH/IOL: 핀 전압이 부하 조건([plan] ioh_v ± ioh_tol_v)에 맞았는지 calc['check'] 에 기록. 기록했으면 True."""
+    if row.kind not in ("IOH", "IOL"):
+        return False
+    calc = result.get("calc")
+    if not calc:
+        return False
+    calc.pop("check", None)
+    v = (calc.get("inputs") or {}).get("v_pin")
+    target, tol = cfg.getfloat("plan", f"{row.kind.lower()}_v"), cfg.getfloat("plan", f"{row.kind.lower()}_tol_v")
+    if v is None:
+        calc["check"] = f"핀 전압 채널이 없어 부하 조건({target} V)을 확인하지 못했습니다."
+    elif abs(v - target) > tol:
+        calc["check"] = f"핀 전압 {v:.3f} V 가 부하 조건 {target} ± {tol} V 를 벗어남"
+    return "check" in calc
+
+
 def describe(row: PlanRow, result: dict | None) -> str:
     """진행 화면·기록용 한 줄 결과."""
     if not result:
@@ -473,17 +490,5 @@ class PlanRunner:
                 "summary": describe(row, result), "warnings": warnings_of(row, result)}, None
 
     def _check_bias(self, row: PlanRow, rec) -> None:
-        """IOH/IOL: 핀 전압이 부하 조건([plan] ioh_v ± ioh_tol_v)에 맞았는지 기록."""
-        if row.kind not in ("IOH", "IOL"):
-            return
-        calc = rec.result.get("calc") or {}
-        v = (calc.get("inputs") or {}).get("v_pin")
-        cfg = self.bench.cfg
-        target, tol = cfg.getfloat("plan", f"{row.kind.lower()}_v"), cfg.getfloat("plan", f"{row.kind.lower()}_tol_v")
-        if v is None:
-            calc["check"] = f"핀 전압 채널이 없어 부하 조건({target} V)을 확인하지 못했습니다."
-        elif abs(v - target) > tol:
-            calc["check"] = f"핀 전압 {v:.3f} V 가 부하 조건 {target} ± {tol} V 를 벗어남"
-        else:
-            return
-        results.write_json(rec.folder / "result.json", rec.result)
+        if check_bias(row, rec.result, self.bench.cfg):
+            results.write_json(rec.folder / "result.json", rec.result)
