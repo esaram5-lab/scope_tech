@@ -21,6 +21,7 @@ from pathlib import Path
 
 from . import manual_calc, results
 from .plan_state import OVERRIDES_FILE, STATE_FILE, PlanSettings, StateWriter, describe_change, replace_retry
+from .samples import Samples, order_key
 from .transport import ScopeError
 
 KINDS = ("VI", "AI", "POR", "IOH", "IOL", "RPU", "RPD")
@@ -137,11 +138,29 @@ def norm_temp(value: str) -> str:
 
 
 class PlanStore:
-    """온도별 진행 기록(progress_25C.json)과 CSV 들. 측정 폴더는 결과 폴더(base_dir) 기준 상대 경로로 기록."""
+    """샘플 하나의 온도별 진행 기록(plan/<샘플>/progress_25C.json)과 CSV 들.
+    측정 폴더는 결과 폴더(base_dir) 기준 상대 경로로 기록. sample 이 비면 plan/ 바로 아래(공용 파일 자리)."""
 
-    def __init__(self, base: Path, plan_dir: str = "plan"):
+    def __init__(self, base: Path, plan_dir: str = "plan", sample: str = ""):
         self.base = Path(base)
-        self.dir = self.base / plan_dir
+        self.root = self.base / plan_dir
+        self.sample = sample
+        self.dir = self.root / sample if sample else self.root
+
+    @property
+    def summary_path(self) -> Path:
+        return self.dir / (f"plan_summary_{self.sample}.csv" if self.sample else "plan_summary.csv")
+
+    def of(self, sample: str) -> "PlanStore":
+        return PlanStore(self.base, self.root.name, sample)
+
+    def samples(self) -> list[str]:
+        """진행 기록이 있는 샘플 (VIS -> TSMC, 번호 순)."""
+        try:
+            found = [d.name for d in self.root.iterdir() if d.is_dir() and any(d.glob("progress_*C.json"))]
+        except OSError:
+            return []
+        return sorted(found, key=order_key)
 
     def progress_path(self, temp: str) -> Path:
         return self.dir / f"progress_{temp_label(temp)}.json"
@@ -314,11 +333,77 @@ def write_progress_csv(rows, store: PlanStore, temp: str) -> Path:
 
 
 def rebuild(rows, layout, store: PlanStore, configured_temps: list[str]) -> tuple[Path, list[Path]]:
-    """모든 온도의 진행 CSV 와 요약표를 다시 만든다."""
+    """샘플 하나의 모든 온도 진행 CSV 와 요약표를 다시 만든다."""
     temps = ordered_temps(store, configured_temps)
     progress = [write_progress_csv(rows, store, t) for t in store.temps()]
-    summary = write_summary(rows, layout, store, temps, store.dir / "plan_summary.csv")
+    summary = write_summary(rows, layout, store, temps, store.summary_path)
     return summary, progress
+
+
+def all_temps(stores: list[PlanStore], configured: list[str]) -> list[str]:
+    seen = {}
+    for st in stores:
+        for t in ordered_temps(st, configured):
+            seen.setdefault(float(t), t)
+    first = []
+    for t in configured:
+        try:
+            first.append(seen.pop(float(t), norm_temp(t)))
+        except ValueError:
+            continue
+    return first + [seen[k] for k in sorted(seen)]
+
+
+def write_summary_all(rows, layout, stores: list[PlanStore], temps: list[str], path: Path) -> Path:
+    """샘플을 나란히 놓은 요약표: 열 = 샘플 × 온도. 샘플끼리는 섞지 않는다(최악값·평균 없음)."""
+    vals = {(st.sample, t): collect_values(rows, st, t)[0] for st in stores for t in temps}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f)
+        w.writerow(["구분", "핀", "항목", "단위"] + [f"{st.sample} {t}°C" for st in stores for t in temps])
+        for group, pin, item, unit in layout:
+            cells = []
+            for st in stores:
+                for t in temps:
+                    v = vals[(st.sample, t)].get((pin, item))
+                    cells.append("" if v is None else UNIT_FORMAT[unit].format(v + 0.0))
+            w.writerow([group, pin, item, unit] + cells)
+    return path
+
+
+def rebuild_all(rows, layout, root: PlanStore, configured_temps: list[str]) -> tuple[Path | None, list[Path]]:
+    """모든 샘플의 진행 CSV·요약표와 plan_summary_all.csv. (전체 요약표 또는 None, 샘플 요약표 목록)."""
+    stores = [root.of(sid) for sid in root.samples()]
+    summaries = [rebuild(rows, layout, st, configured_temps)[0] for st in stores]
+    if not stores:
+        return None, []
+    return write_summary_all(rows, layout, stores, all_temps(stores, configured_temps),
+                             root.root / "plan_summary_all.csv"), summaries
+
+
+def migrate_legacy(root: PlanStore, samples: Samples) -> list[str]:
+    """샘플 구분 전 버전의 plan/progress_25C.json 을 그 기록의 시험 이름 샘플 폴더로 옮긴다. 옮긴 내용 설명."""
+    moved = []
+    for p in sorted(root.root.glob("progress_*C.json")):
+        try:
+            doc = json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        sid = samples.id_of(str(doc.get("name") or "이름없음"))
+        target = root.of(sid).dir / p.name
+        if target.exists():
+            moved.append(f"{p.name}: {sid} 에 같은 온도 기록이 이미 있어 그대로 둠(정리 도구로 다시 연결하세요)")
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        replace_retry(p, target)
+        moved.append(f"{p.name} -> {sid}/")
+    if moved:
+        for old in list(root.root.glob("plan_progress_*C.csv")) + [root.root / "plan_summary.csv"]:
+            try:
+                old.unlink()
+            except OSError:
+                pass
+    return moved
 
 
 # ---------------------------------------------------------------- 진행 (스코프 필요)
@@ -327,10 +412,12 @@ class PlanRunner:
         self.bench, self.rows, self.layout = bench, rows, layout
         self.ask, self.echo = ask, echo
         cfg = bench.cfg
-        self.store = PlanStore(bench.out_dir, cfg.get("plan", "dir") or "plan")
+        self.root = PlanStore(bench.out_dir, cfg.get("plan", "dir") or "plan")  # 공용 파일(plan/)
+        self.store = self.root                                                  # 시험 이름을 고르면 그 샘플
+        self.samples = Samples(self.root.root)
         self.temps = [t.strip() for t in cfg.get("plan", "temps").replace(",", " ").split() if t.strip()]
-        self.settings = PlanSettings(cfg, self.store.dir / OVERRIDES_FILE)  # GUI 설정 탭에서 바꾼 값
-        self.state = StateWriter(self.store.dir / STATE_FILE)               # GUI 가 보는 진행 상태
+        self.settings = PlanSettings(cfg, self.root.dir / OVERRIDES_FILE)  # GUI 설정 탭에서 바꾼 값
+        self.state = StateWriter(self.root.dir / STATE_FILE)               # GUI 가 보는 진행 상태
 
     def prompt(self, label, default="", valid=lambda x: True):
         while True:
@@ -370,15 +457,20 @@ class PlanRunner:
         elif n:
             self.echo(f"스코프에 저장된 캡처 {n}개를 아직 가져오지 않았습니다. py scope.py --fetch 로 가져오세요.")
         try:
-            summary, _ = rebuild(self.rows, self.layout, self.store, self.temps)
-            self.echo(f"요약표: {summary}")
+            if self.store is not self.root:
+                summary, _ = rebuild(self.rows, self.layout, self.store, self.temps)
+                self.echo(f"요약표: {summary}")
+            every, _ = rebuild_all(self.rows, self.layout, self.root, self.temps)
+            if every:
+                self.echo(f"전체 샘플 요약표: {every}")
         except OSError as e:
             self.echo(f"[경고] 요약표를 쓰지 못했습니다(엑셀에서 열려 있나요?): {e}")
         return status
 
     def _default_temp(self) -> str:
+        store = self.root.of(self.samples.id_of(self.bench.name))  # 지난번 시험 이름의 샘플
         for t in self.temps:
-            rows = self.store.load(t).get("rows", {})
+            rows = store.load(t).get("rows", {})
             if any(rows.get(r.key, {}).get("status") != DONE for r in self.rows):
                 return t
         return self.bench.temp
@@ -402,13 +494,18 @@ class PlanRunner:
         self.echo(f"\n시험 계획 진행 — {len(self.rows)}개 항목, 온도 순서 {' -> '.join(t + '°C' for t in self.temps)}")
         try:
             self._sync_settings(None, start=True)
+            try:
+                for m in migrate_legacy(self.root, self.samples):
+                    self.echo(f"  예전 진행 기록 옮김: {m}")
+            except OSError as e:
+                self.echo(f"[경고] 예전 진행 기록을 샘플 폴더로 옮기지 못했습니다: {e}")
             b.temp = norm_temp(self.prompt("온도(°C)", self._default_temp(), self._temp_ok))
             b.name = self.prompt("시험 이름", b.name, lambda s: bool(s.strip()) and "\n" not in s)
             try:
                 self.settings.set("session.name", b.name)  # GUI 설정 탭에도 같은 이름
             except (OSError, ValueError) as e:
                 self.echo(f"[경고] 설정 파일에 시험 이름을 쓰지 못했습니다: {e}")
-            self.state.update(temp=b.temp, name=b.name)
+            self._use_sample()
             doc = self.store.load(b.temp)
             doc.setdefault("rows", {})
             doc.update({"temp": b.temp, "name": b.name})
@@ -484,6 +581,18 @@ class PlanRunner:
             self.echo("\n계획 진행을 멈춥니다. 다음에 같은 온도를 고르면 이어서 진행합니다.")
             return 0
 
+    def _use_sample(self) -> None:
+        """시험 이름으로 샘플을 정하고 그 샘플의 진행 기록을 쓴다."""
+        b = self.bench
+        try:
+            self.samples.sync([b.name])
+        except OSError as e:
+            self.echo(f"[경고] {self.samples.path.name} 에 시험 이름을 추가하지 못했습니다: {e}")
+        sid = self.samples.id_of(b.name)
+        self.store = self.root.of(sid)
+        self.echo(f"  {self.samples.describe(b.name)}")
+        self.state.update(temp=b.temp, name=b.name, sample=sid)
+
     def _sync_settings(self, doc: dict | None, start: bool = False) -> None:
         """GUI 설정 탭에서 바꾼 값(overrides.ini)을 측정 직전에 반영."""
         b = self.bench
@@ -496,6 +605,10 @@ class PlanRunner:
             if s.id == "session.name":
                 if start and "name" in getattr(b, "explicit_options", set()):
                     continue  # --name 으로 준 이름이 우선
+                if doc is not None and self.samples.id_of(new) != self.store.sample:
+                    self.echo(f"  [주의] GUI 의 시험 이름 '{new}' 은 다른 샘플({self.samples.id_of(new)})이라 반영하지 않습니다. "
+                              f"샘플을 바꾸려면 q 로 멈추고 다시 시작하세요(지금: {self.store.sample}).")
+                    continue
                 b.name = new
                 if doc is not None:
                     doc["name"] = new

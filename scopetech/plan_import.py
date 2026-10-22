@@ -25,6 +25,7 @@ from pathlib import Path
 from . import manual_calc, results
 from .plan import DONE, MANUAL_LABEL, PlanRow, PlanStore, check_bias, describe, norm_temp, row_values, warnings_of
 from .plan_state import SettingsView
+from .samples import order_key
 from .recompute import recompute_manual, recompute_vih
 
 ITEM_DIRS = ("VIH", "MANUAL", "POR")
@@ -48,6 +49,8 @@ class Found:
     out_pin: str = ""
     time: str = ""
     problem: str = ""  # 계획 줄에 연결할 수 없는 이유
+    name: str = ""     # 시험 이름 (result.json, 없으면 폴더 이름)
+    sample: str = ""   # 샘플 ID (samples.csv)
 
 
 @dataclass
@@ -55,6 +58,7 @@ class Pick:
     """(온도, 계획 줄) 하나에 붙일 기록."""
     row: PlanRow
     temp: str
+    sample: str = ""
     found: Found | None = None
     result: dict | None = None  # 채운 뒤의 결과(found.result 의 사본)
     changed: bool = False  # 파형으로 값을 채워 result.json 을 고쳐 써야 함
@@ -84,8 +88,58 @@ def _time_of(result: dict, folder: Path) -> str:
     return datetime.fromtimestamp(folder.stat().st_mtime).isoformat(timespec="seconds")
 
 
-def scan(base: Path) -> list[Found]:
-    """결과 폴더의 VIH / MANUAL / POR 측정 기록과 각 기록의 온도·종류·핀."""
+_NAME = re.compile(r"^(?:PIN[^_]+?(?:_OUT[^_]+)?_)?(.+?)_-?\d+(?:\.\d+)?C(?:_|$)")
+MISSING_PINS = "missing_pins.csv"
+MISSING_HEADER = ["폴더", "측정 시각", "시험 이름", "온도", "종류", "입력핀", "출력핀"]
+
+
+def name_from_folder(folder: str) -> str:
+    m = _NAME.match(folder)
+    return m.group(1) if m else ""
+
+
+def load_missing_pins(plan_root: Path) -> dict[str, tuple[str, str]]:
+    """사용자가 채운 핀 {폴더: (입력핀, 출력핀)}. VIL/VIH 는 입력 -> 출력, 그 외는 출력핀 칸에 대상 핀."""
+    out = {}
+    try:
+        with (Path(plan_root) / MISSING_PINS).open(encoding="utf-8-sig", newline="") as f:
+            for rec in csv.DictReader(f):
+                a, b = (rec.get("입력핀") or "").strip(), (rec.get("출력핀") or "").strip()
+                if (rec.get("폴더") or "").strip() and (a or b):
+                    out[rec["폴더"].strip()] = (a, b)
+    except (OSError, UnicodeDecodeError, csv.Error):
+        pass
+    return out
+
+
+def export_missing_pins(found: list[Found], plan_root: Path) -> tuple[Path, int]:
+    """핀 정보가 없는 기록을 missing_pins.csv 로(이미 채운 칸은 유지). (파일, 빈 줄 수)."""
+    path = Path(plan_root) / MISSING_PINS
+    filled = load_missing_pins(plan_root)
+    keep = []
+    try:
+        with path.open(encoding="utf-8-sig", newline="") as f:
+            keep = [r for r in csv.DictReader(f) if (r.get("폴더") or "").strip()]
+    except (OSError, UnicodeDecodeError, csv.Error):
+        pass
+    rows = {r["폴더"].strip(): [r.get(h, "") or "" for h in MISSING_HEADER] for r in keep}
+    for x in found:
+        if x.rel not in rows and (x.problem.startswith("핀 정보 없음") or (x.rel in filled and not x.problem)):
+            rows[x.rel] = [x.rel, x.time, x.name, x.temp, x.kind or x.item, "", ""]
+    empty = sum(1 for k in rows if k not in filled)
+    if rows:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", newline="", encoding="utf-8-sig") as f:
+            w = csv.writer(f)
+            w.writerow(MISSING_HEADER)
+            w.writerows(rows.values())
+    return path, empty
+
+
+def scan(base: Path, pins: dict[str, tuple[str, str]] | None = None) -> list[Found]:
+    """결과 폴더의 VIH / MANUAL / POR 측정 기록과 각 기록의 온도·종류·핀·시험 이름.
+    pins: 핀 정보가 없는 기록에 사용자가 채운 핀 (load_missing_pins)."""
+    pins = pins or {}
     out = []
     for item in ITEM_DIRS:
         for path in sorted((Path(base) / item).glob("*/result.json")):
@@ -97,9 +151,13 @@ def scan(base: Path) -> list[Found]:
                 out.append(f)
                 continue
             f.time = _time_of(result, folder)
+            f.name = str(result.get("name") or name_from_folder(folder.name)).strip()
             name_pin = _PIN.match(folder.name)
             f.pin = str(result.get("dut_pin") or (name_pin.group(1) if name_pin else "")).strip()
             f.out_pin = str(result.get("out_pin") or (name_pin.group(2) if name_pin and name_pin.group(2) else "")).strip()
+            if not f.pin and f.rel in pins:  # missing_pins.csv 에 사용자가 채운 핀
+                a, b = pins[f.rel]
+                f.pin, f.out_pin = (a, f.out_pin or b) if item == "VIH" else (b or a, "")
             try:
                 f.temp = norm_temp(str(result.get("temp", "")))
             except ValueError:
@@ -184,8 +242,10 @@ def fill(row: PlanRow, f: Found, cfg) -> tuple[dict, bool, list[str]]:
 
 def plan_import(rows: list[PlanRow], store: PlanStore, cfg, found: list[Found], replace: bool = False,
                 name: str = "", since: str = "", temps: list[str] | None = None,
-                order: list[str] = ()) -> tuple[list[Pick], list[Found]]:
-    """(온도·줄마다 붙일 기록, 연결하지 못한 기록). 파일은 쓰지 않는다(apply 가 씀). order: 온도 표시 순서."""
+                order: list[str] = (), samples=None) -> tuple[list[Pick], list[Found]]:
+    """(샘플·온도·줄마다 붙일 기록, 연결하지 못한 기록). 파일은 쓰지 않는다(apply 가 씀). order: 온도 표시 순서.
+    samples(samples.Samples) 를 주면 시험 이름으로 샘플을 나누고 같은 샘플 안에서만 최신 기록을 고른다.
+    store 는 공용(plan/) 자리이고 샘플마다 store.of(샘플) 에 쓴다."""
     unmatched = []
     cand: dict[tuple[str, str], list[Found]] = {}
     for f in found:
@@ -195,21 +255,24 @@ def plan_import(rows: list[PlanRow], store: PlanStore, cfg, found: list[Found], 
             continue
         if temps is not None and f.temp and f.temp not in temps:
             continue
+        f.sample = samples.id_of(f.name) if samples is not None else ""
         hit, why = ([], f.problem) if f.problem else rows_for(f, rows)
         if not hit:
             f.problem = why
             unmatched.append(f)
         for r in hit:
-            cand.setdefault((f.temp, r.key), []).append(f)
+            cand.setdefault((f.sample, f.temp, r.key), []).append(f)
     picks = []
     order = list(order)
-    for temp in sorted({t for t, _ in cand}, key=lambda t: (order.index(t) if t in order else len(order), float(t))):
-        progress = store.load(temp).get("rows", {})
+    keys = sorted({(sid, t) for sid, t, _ in cand},
+                  key=lambda k: (order_key(k[0]), order.index(k[1]) if k[1] in order else len(order), float(k[1])))
+    for sid, temp in keys:
+        progress = (store.of(sid) if sid else store).load(temp).get("rows", {})
         for row in rows:
-            got = sorted(cand.get((temp, row.key), []), key=lambda f: (f.time, f.rel), reverse=True)
+            got = sorted(cand.get((sid, temp, row.key), []), key=lambda f: (f.time, f.rel), reverse=True)
             if not got:
                 continue
-            p = Pick(row, temp, candidates=len(got), options=got, entry=dict(progress.get(row.key, {})))
+            p = Pick(row, temp, sid, candidates=len(got), options=got, entry=dict(progress.get(row.key, {})))
             failed = []
             for f in got:  # 최근 기록부터, 값이 나오는 첫 기록
                 try:
@@ -254,32 +317,72 @@ def include(p: Pick, on: bool) -> None:
     p.state = SOURCE if on else "제외"
 
 
+def write_result(f: Found, result: dict) -> None:
+    """채운 result.json 쓰기. 원본은 처음 한 번 result.orig.json 으로 남긴다."""
+    backup = f.folder / "result.orig.json"
+    if not backup.exists():
+        shutil.copy2(f.folder / "result.json", backup)
+    results.write_json(f.folder / "result.json", result)
+
+
+def normalize(picks: list[Pick], cfg) -> list[tuple[Found, dict]]:
+    """계획 줄에 연결된 모든 후보 기록(고르지 않은 것 포함)을 최신 형식으로 채운 결과. 바뀌는 기록만 [(기록, 결과)]."""
+    seen: dict[str, tuple[Found, dict] | None] = {}
+    for p in picks:
+        for f in p.options:
+            if f.rel in seen:
+                continue
+            try:
+                result, changed, _ = fill(p.row, f, cfg)
+            except ValueError:
+                seen[f.rel] = None
+                continue
+            seen[f.rel] = (f, result) if changed else None
+    return [v for v in seen.values() if v]
+
+
+def generation(f: Found) -> str:
+    """기록이 어느 버전 형식인지 (정리 미리보기용)."""
+    r = f.result
+    if not r:
+        return "읽을 수 없음"
+    if "plan_settings" in r:
+        return "계획 모드"
+    if not r.get("dut_pin"):
+        return "핀 기록 없음(초기)"
+    if f.item == "VIH" and "out_pin" not in r:
+        return "출력 핀 없음"
+    if f.item == "VIH" and not any(m.get("output") for m in r.get("metrics", [])):
+        return "출력 VOH/VOL 없음"
+    if f.item == "MANUAL" and not r.get("calc"):
+        return "계산값 없음"
+    return "최신 형식"
+
+
 def apply(picks: list[Pick], store: PlanStore) -> list[Path]:
     """고른 기록을 진행 기록에 쓰고(필요하면 result.json 도), 쓴 진행 기록 파일 목록을 돌려준다."""
     now = datetime.now().isoformat(timespec="seconds")
-    by_temp: dict[str, list[Pick]] = {}
+    by_temp: dict[tuple[str, str], list[Pick]] = {}
     for p in picks:
         if p.state == SOURCE:
-            by_temp.setdefault(p.temp, []).append(p)
+            by_temp.setdefault((p.sample, p.temp), []).append(p)
     written = []
-    for temp, ps in by_temp.items():
-        doc = store.load(temp)
+    for (sid, temp), ps in by_temp.items():
+        st = store.of(sid) if sid else store
+        doc = st.load(temp)
         doc.setdefault("rows", {})
         doc.setdefault("temp", temp)
         for p in ps:
             f = p.found
             if p.changed:
-                backup = f.folder / "result.orig.json"
-                if not backup.exists():
-                    shutil.copy2(f.folder / "result.json", backup)
-                results.write_json(f.folder / "result.json", p.result)
+                write_result(f, p.result)
             doc.setdefault("name", str(p.result.get("name", "")))
             doc["rows"][p.row.key] = {"status": DONE, "folder": f.rel, "time": f.time,
                                       "summary": describe(p.row, p.result),
                                       "warnings": warnings_of(p.row, p.result),
                                       "source": SOURCE, "imported": now}
-        store.save(temp, doc)
-        written.append(store.progress_path(temp))
+        st.save(temp, doc)
+        written.append(st.progress_path(temp))
     return written
 
 
@@ -288,13 +391,13 @@ def write_log(picks: list[Pick], unmatched: list[Found], path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f)
-        w.writerow(["온도", "순서", "항목", "핀", "처리", "기록", "측정 시각", "후보 수", "결과", "메모"])
+        w.writerow(["샘플", "온도", "순서", "항목", "핀", "처리", "기록", "측정 시각", "후보 수", "결과", "메모"])
         for p in picks:
-            w.writerow([p.temp, p.row.no, p.row.kind, _pins(p.row), p.state, p.found.rel if p.found else "",
+            w.writerow([p.sample, p.temp, p.row.no, p.row.kind, _pins(p.row), p.state, p.found.rel if p.found else "",
                         p.found.time if p.found else "", p.candidates,
                         describe(p.row, p.result) if p.result else "", " / ".join(p.notes)])
         for x in unmatched:
-            w.writerow([x.temp, "", x.kind or x.item, x.pin, "연결 안 됨", x.rel, x.time, "", "", x.problem])
+            w.writerow([x.sample, x.temp, "", x.kind or x.item, x.pin, "연결 안 됨", x.rel, x.time, "", "", x.problem])
     return path
 
 
@@ -307,14 +410,14 @@ STATE_TEXT = {SOURCE: "가져옴", "유지": "계획 측정 유지", "같음": "
 
 
 def preview(picks: list[Pick], unmatched: list[Found], rows: list[PlanRow], echo=print, limit: int = 40) -> None:
-    temps = []
+    groups = []
     for p in picks:
-        if p.temp not in temps:
-            temps.append(p.temp)
-    for temp in temps:
-        ps = [p for p in picks if p.temp == temp]
+        if (p.sample, p.temp) not in groups:
+            groups.append((p.sample, p.temp))
+    for sid, temp in groups:
+        ps = [p for p in picks if (p.sample, p.temp) == (sid, temp)]
         new = sum(p.state == SOURCE for p in ps)
-        echo(f"\n[{temp}°C] 가져올 항목 {new}개 / 계획 {len(rows)}개 중 기록 있는 항목 {len(ps)}개")
+        echo(f"\n[{sid + ' ' if sid else ''}{temp}°C] 가져올 항목 {new}개 / 계획 {len(rows)}개 중 기록 있는 항목 {len(ps)}개")
         for p in ps:
             line = f"  {p.row.no:>2} {p.row.kind:<3} {_pins(p.row):<8} {STATE_TEXT[p.state]:<10}"
             if p.found:

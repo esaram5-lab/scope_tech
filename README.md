@@ -163,6 +163,27 @@ save 1 2        <- CSV + wfm + setup
 - 계획 모드로 이미 잰 줄은 그대로 둡니다. 더 최근 기록으로 바꾸려면 `--replace`. 다시 실행하면 새 기록만 반영됩니다.
 - 옵션: `--dry-run`(미리보기만), `--apply`(묻지 않고 적용), `--name 이름`, `--since 2026-10-01`, `--temp 25,85`, `--dir 폴더`.
 
+샘플(fab × 번호)별 진행 — 같은 계획을 샘플마다 따로 (예: TSMC 3개, VIS(뱅가드) 3개)
+- 시험 이름이 샘플을 정합니다. `captures/plan/samples.csv`(시험이름, fab, 샘플)에 없는 이름은 이름에서 추정해 추가합니다
+  (`TSMC` / `VIS`·`VANGUARD`·`뱅가드` + 마지막 숫자, 예: `TSMC_1` -> TSMC_1, `VIS-2` -> VIS_2). 틀리면 엑셀로 고칩니다.
+  fab·샘플이 같으면 이름이 달라도(오타, `_재측정`) 같은 샘플입니다. fab 을 못 찾으면 시험 이름 자체가 샘플입니다.
+- 진행 기록·요약표는 샘플마다: `captures/plan/<샘플>/progress_25C.json`, `plan_summary_<샘플>.csv`.
+  모든 샘플을 나란히 놓은 `captures/plan/plan_summary_all.csv`(열 = 샘플 × 온도, VIS -> TSMC, 번호 순). **샘플끼리는 섞지 않습니다**
+  (한 샘플 안에서 같은 값이 두 측정에서 나오면 지금처럼 최악값).
+- CLI 에서 시험 이름을 입력하면 “샘플 TSMC_1 (fab TSMC, 샘플 1)” 처럼 보여주고 그 샘플의 기록을 이어서 진행합니다.
+  진행 중에 GUI 에서 다른 샘플의 이름으로 바꾸면 반영하지 않습니다(q 로 멈추고 다시 시작).
+- 이전 버전의 `plan/progress_25C.json` 은 처음 실행할 때 그 기록의 시험 이름 샘플 폴더로 옮깁니다.
+
+예전 측정 섞어 넣고 정리 (`run_cleanup.bat`, 스코프 연결 불필요)
+1. 예전 `captures` 에서 측정 폴더(`VIH`, `MANUAL`, `POR`, `VOH`, `SNAP`, `MISC`)만 복사해 최신 `captures` 에 붙여 넣습니다(폴더 병합 예, 파일 덮어쓰기는 건너뛰기).
+   `plan/`, `result/`, `results.csv`, `results_old_*.csv`, `_pending_images.json` 은 붙여 넣지 않습니다(정리 도구가 다시 만듦).
+2. `run_cleanup.bat` -> 미리보기: 버전별 기록 수, 샘플 묶음(시험 이름 -> 샘플), 샘플·온도별로 연결할 기록, 연결 못 한 기록과 이유.
+   `plan/samples.csv` 와 `plan/missing_pins.csv`(핀 정보 없는 예전 기록)는 미리보기 때 만들어집니다. 고치거나 채운 뒤 다시 실행하세요.
+3. `y` 로 적용: 구버전 기록의 빠진 값(출력 핀, 출력 VOH/VOL, Rpd/Rpu/IOH 계산값)을 파형으로 채우고(원본 `result.orig.json`),
+   샘플·온도·항목마다 **같은 샘플 안의 가장 최근 기록**을 연결, 샘플별·전체 요약표, `results.csv`(이전 것은 `results_before_cleanup_*.csv`),
+   사진 모음(`result/`)을 다시 만듭니다. 내역은 `plan/cleanup_*.csv`. 계획 진행(CLI)이 실행 중이면 하지 않습니다.
+- 여러 번 실행해도 됩니다(새로 생긴 것만 반영). 계획 모드로 잰 줄은 그대로 두며, 바꾸려면 `--replace`. `--dry-run` 미리보기만.
+
 결과·설정 창 (GUI, `run_plan.bat` 을 실행하면 함께 뜸)
 - 측정은 CLI 창에서만 합니다. GUI 는 결과 보기·설정 바꾸기·예전 측정 가져오기만 하고, 닫아도 측정은 계속됩니다.
 - 따로 열기: `run_plan_gui.bat` (측정 중이 아니어도 지난 결과를 봄). 띄우지 않기: `run_plan.bat --no-gui` 또는 `[plan] gui = no`.
@@ -333,6 +354,7 @@ scopetech/
 scope_capture/            동봉: 스코프 화면 캡처 서버·클라이언트 (scope-capture-api v1.2), run_capture_server.bat
   wizard.py / shell.py   안내 메뉴 / 명령 셸 (Bench 메서드만 호출)
   plan.py                시험 계획 진행(PlanRunner)·진행 기록·요약표, plan_import.py 예전 측정 가져오기
+  samples.py             시험 이름 -> 샘플(fab·번호) 대응표 plan/samples.csv
   plan_state.py          CLI <-> GUI 연결 파일: plan/state.json(진행 상태), plan/overrides.ini(GUI 설정)
   plan_view.py           GUI 가 보여줄 데이터(tkinter 없이 시험 가능), GUI 띄우기
   plan_gui.py            결과·설정 창 (tkinter)

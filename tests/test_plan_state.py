@@ -143,7 +143,7 @@ class RunnerLinkTest(unittest.TestCase):
         return code, "\n".join(out)
 
     def progress(self):
-        return json.loads((self.base / "plan" / "progress_25C.json").read_text(encoding="utf-8"))["rows"]
+        return json.loads((self.base / "plan" / "T" / "progress_25C.json").read_text(encoding="utf-8"))["rows"]
 
     def test_overrides_applied_before_each_measurement_and_recorded(self):
         write_overrides(self.over, {"manual.vdd_v": "3.0"})
@@ -158,7 +158,7 @@ class RunnerLinkTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("설정(overrides.ini): VDD 3.3 -> 3 V", out)
         self.assertIn("설정 변경 반영: VDD 3 -> 3.1 V", out)
-        self.assertIn("설정 변경 반영: 시험 이름 T -> NEW", out)
+        self.assertIn("다른 샘플(NEW)이라 반영하지 않습니다", out)  # 이름을 바꿔 샘플이 바뀌면 진행 중엔 반영 안 함
         self.assertEqual(read_overrides(self.over)["session.name"], "NEW")
         rows = self.progress()
         r16 = json.loads((self.base / rows[self.rows[15].key]["folder"] / "result.json").read_text(encoding="utf-8"))
@@ -166,9 +166,9 @@ class RunnerLinkTest(unittest.TestCase):
         self.assertEqual(r16["calc"]["inputs"]["vdd"], 3.0)
         r17 = json.loads((self.base / rows[self.rows[16].key]["folder"] / "result.json").read_text(encoding="utf-8"))
         self.assertEqual(r17["plan_settings"]["manual.vdd_v"], "3.1")
-        self.assertEqual(r17["name"], "NEW")
-        doc = json.loads((self.base / "plan" / "progress_25C.json").read_text(encoding="utf-8"))
-        self.assertEqual(doc["name"], "NEW")
+        self.assertEqual(r17["name"], "T")
+        doc = json.loads((self.base / "plan" / "T" / "progress_25C.json").read_text(encoding="utf-8"))
+        self.assertEqual(doc["name"], "T")
         # state.json: 진행 중엔 현재 항목, 끝나면 running False
         self.assertTrue(seen[0]["running"])
         self.assertEqual(seen[0]["current"], self.rows[0].key)
@@ -243,6 +243,22 @@ class RunnerLinkTest(unittest.TestCase):
         self.bench.cfg.cp.set("measure", "run_after", "no")
         self.run_plan(["25", "T", "g", "1", "", "q"])
         self.assertEqual(self.t.sim.acq_state, 0)  # 끄면 Single 뒤 Stop 그대로
+
+    def test_gui_name_change_within_same_sample_is_applied(self):
+        (self.base / "plan").mkdir(parents=True, exist_ok=True)
+        (self.base / "plan" / "samples.csv").write_text("시험이름,fab,샘플\nT,TSMC,1\nT2,TSMC,1\n", encoding="utf-8-sig")
+        seen = []
+
+        def edit(prompt):
+            if prompt.startswith("Enter: 측정"):
+                seen.append(1)
+                if len(seen) == 2:
+                    write_overrides(self.over, {"session.name": "T2"})
+        code, out = self.run_plan(["25", "T", "", "", "q"], edit)
+        self.assertIn("설정 변경 반영: 시험 이름 T -> T2", out)
+        rows = json.loads((self.base / "plan" / "TSMC_1" / "progress_25C.json").read_text(encoding="utf-8"))["rows"]
+        r2 = json.loads((self.base / rows[self.rows[1].key]["folder"] / "result.json").read_text(encoding="utf-8"))
+        self.assertEqual(r2["name"], "T2")
 
 
 if __name__ == "__main__":

@@ -19,8 +19,10 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 from scopetech.config import Config  # noqa: E402
-from scopetech.plan import PlanStore, load_layout, load_plan, norm_temp, rebuild  # noqa: E402
-from scopetech.plan_import import SOURCE, apply, plan_import, preview, scan, write_log  # noqa: E402
+from scopetech.plan import PlanStore, load_layout, load_plan, migrate_legacy, norm_temp, rebuild_all  # noqa: E402
+from scopetech.plan_import import (SOURCE, apply, load_missing_pins, plan_import, preview, scan,  # noqa: E402
+                                   write_log)
+from scopetech.samples import Samples  # noqa: E402
 from scopetech.plan_state import OVERRIDES_FILE, PlanSettings  # noqa: E402
 
 
@@ -53,10 +55,22 @@ def main(argv: list[str] | None = None, ask=input) -> int:
     store = PlanStore(base, cfg.get("plan", "dir") or "plan")
     PlanSettings(cfg, store.dir / OVERRIDES_FILE).apply()  # GUI 설정 탭에서 바꾼 값으로 예전 기록 계산
     temps_cfg = [t.strip() for t in cfg.get("plan", "temps").replace(",", " ").split() if t.strip()]
-    found = scan(base)
+    samples = Samples(store.root)
+    legacy = sorted(store.root.glob("progress_*C.json"))
+    if legacy and not args.dry_run:  # 샘플 구분 전 진행 기록을 먼저 샘플 폴더로
+        try:
+            for m in migrate_legacy(store, samples):
+                print(f"예전 진행 기록 옮김: {m}")
+        except OSError as e:
+            print(f"[오류] 예전 진행 기록을 옮기지 못했습니다: {e}")
+            return 1
+    elif legacy:
+        print(f"샘플 구분 전 진행 기록 {len(legacy)}개는 적용할 때 시험 이름의 샘플 폴더로 옮깁니다.")
+    found = scan(base, load_missing_pins(store.root))
     print(f"가져오기 미리보기 — {base} 의 측정 기록 {len(found)}개, 계획 {len(rows)}개 항목")
     picks, unmatched = plan_import(rows, store, cfg, found, replace=args.replace, name=args.name or "",
-                                   since=args.since or "", temps=temps, order=[norm_temp(t) for t in temps_cfg])
+                                   since=args.since or "", temps=temps, order=[norm_temp(t) for t in temps_cfg],
+                                   samples=samples)
     preview(picks, unmatched, rows)
     todo = [p for p in picks if p.state == SOURCE]
     if not todo:
@@ -77,15 +91,20 @@ def main(argv: list[str] | None = None, ask=input) -> int:
             print("\n적용하지 않았습니다.")
             return 0
     try:
+        samples.sync(f.name for f in found if f.name)
         written = apply(picks, store)
         log = write_log(picks, unmatched, store.dir / f"import_{datetime.now():%Y%m%d_%H%M%S}.csv")
-        summary, progress = rebuild(rows, layout, store, temps_cfg)
+        every, summaries = rebuild_all(rows, layout, store, temps_cfg)
     except OSError as e:
         print(f"[오류] 쓸 수 없습니다(엑셀에서 열려 있나요?): {e}")
         return 1
     for p in written:
         print(f"진행 기록: {p}")
-    print(f"가져오기 내역: {log}\n요약표: {summary}")
+    print(f"가져오기 내역: {log}")
+    for p in summaries:
+        print(f"요약표: {p}")
+    if every:
+        print(f"전체 샘플 요약표: {every}")
     return 0
 
 
