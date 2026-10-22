@@ -34,6 +34,7 @@ class ManualTest(unittest.TestCase):
             self.assertFalse((Path(d)/'results.csv').exists())
             self.assertFalse(list(rec.folder.glob('*.wfm')))
             rec2 = b.save_manual('R_pu', [1], '')
+            self.assertEqual(json.loads((rec2.folder/'result.json').read_text())['calc']['kind'], 'RPU')
             self.assertNotEqual(rec.folder, rec2.folder)
 
     def test_menu_manual_only_and_validation(self):

@@ -166,6 +166,9 @@ class SimScope:
         mm = re.fullmatch(r"DISPLAY:GLOBAL:CH(\d):STATE", h)
         if mm and q:
             return resp(int(self.on[int(mm.group(1))]))
+        if mm and not q:
+            self.on[int(mm.group(1))] = arg.upper() in ("ON", "1")
+            return None
         if h.startswith("DATA:"):
             key = h[5:]
             if key in self.data and not q:

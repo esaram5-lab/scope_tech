@@ -313,3 +313,91 @@ def find_thresholds(
     if res.polarity == "unknown" and reps:
         res.warnings.append("출력 극성을 판별할 수 없습니다(반전/비반전 전환 수가 같음). 파형을 확인하세요.")
     return res
+
+
+@dataclass
+class PowerOnResult:
+    """전원 인가 후 출력 레벨: VDD 가 올라온 뒤 출력이 Low 로 머무는 구간(VOL)과 그 뒤 High 구간(VOH)."""
+
+    vol: float | None = None
+    voh: float | None = None
+    vdd: float | None = None  # VDD 안정 레벨 [V]
+    delay_s: float | None = None  # VDD 50% -> 출력 50% 상승까지
+    low_s: float | None = None  # VOL 을 계산한 Low 구간 길이
+    warnings: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return {"vol_V": self.vol, "voh_V": self.voh, "vdd_V": self.vdd, "delay_s": self.delay_s,
+                "low_window_s": self.low_s, "warnings": list(self.warnings)}
+
+
+def _first_at_or_above(raw: Sequence[float], level: float, start: int = 0) -> int | None:
+    for i in range(start, len(raw)):
+        if raw[i] >= level:
+            return i
+    return None
+
+
+def _middle_mean(raw: Sequence[float], a: int, b: int) -> float | None:
+    """[a, b) 구간 가운데 50% 평균(에지·링잉 제외). 너무 짧으면 None."""
+    if b - a < 8:
+        return None
+    q = (b - a) // 4
+    seg = raw[a + q: b - q]
+    return sum(seg) / len(seg)
+
+
+def power_on_levels(wvdd: Waveform, wout: Waveform, settle: float = 0.9) -> PowerOnResult:
+    """VDD 상승(전원 인가)을 트리거로 잡은 파형에서 출력의 VOL·VOH·지연을 구한다.
+
+    VDD 가 안정 레벨의 settle(90%) 에 닿은 뒤부터 출력이 자기 진폭의 50% 를 넘기 전까지 = Low 구간 -> VOL,
+    그 뒤 끝까지 = High 구간 -> VOH (각 구간 가운데 50% 평균).
+    """
+    res = PowerOnResult()
+    lv_vdd = levels(wvdd)
+    if lv_vdd.amplitude < 0.5:
+        res.warnings.append(f"VDD({wvdd.source}) 변화가 {lv_vdd.amplitude:.3f} V 로 작습니다. 전원 인가(상승 에지)를 잡았는지 확인하세요.")
+        return res
+    vraw = wvdd.raw
+    c_top, c_base = wvdd.to_code(lv_vdd.top), wvdd.to_code(lv_vdd.base)
+    if c_top < c_base:
+        c_top, c_base = c_base, c_top
+    i_half = _first_at_or_above(vraw, c_base + 0.5 * (c_top - c_base))
+    i_set = _first_at_or_above(vraw, c_base + settle * (c_top - c_base))
+    if i_set is None or i_half is None:
+        res.warnings.append("VDD 가 안정 레벨에 닿는 지점을 찾지 못했습니다.")
+        return res
+    tail = vraw[i_set:]
+    res.vdd = wvdd.to_volts(sum(tail) / len(tail))
+
+    oraw = wout.raw
+    j0 = round(wout.index_at(wvdd.time_at(i_set)))  # 출력 파형 기준 VDD 안정 시점
+    j0 = min(max(j0, 0), len(oraw) - 1)
+    after = oraw[j0:]
+    o_lo, o_hi = min(after), max(after)
+    if wout.to_volts(o_hi) - wout.to_volts(o_lo) < 0.5 * (res.vdd or 0):
+        # 출력이 바뀌지 않음: 전부 Low 이거나 전부 High
+        level = wout.to_volts(sum(after) / len(after))
+        if level < 0.5 * res.vdd:
+            m = _middle_mean(oraw, j0, len(oraw))
+            res.vol = wout.to_volts(m if m is not None else sum(after) / len(after))
+            res.low_s = (len(oraw) - j0) * wout.xincr
+            res.warnings.append("기록 안에서 출력이 High 로 바뀌지 않았습니다. 시간축을 늘리세요(POR 후 지연보다 길게).")
+        else:
+            res.voh = level
+            res.warnings.append("VDD 가 안정되기 전에 출력이 이미 High 입니다. VOL 구간이 없습니다(트리거·시간축 확인).")
+        return res
+    j_rise = _first_at_or_above(oraw, o_lo + 0.5 * (o_hi - o_lo), j0)
+    vol = _middle_mean(oraw, j0, j_rise)
+    voh = _middle_mean(oraw, j_rise, len(oraw))
+    if vol is None:
+        res.warnings.append("VDD 안정 후 출력 Low 구간이 너무 짧습니다. 시간축을 줄이세요.")
+    else:
+        res.vol = wout.to_volts(vol)
+        res.low_s = (j_rise - j0) * wout.xincr
+    if voh is None:
+        res.warnings.append("출력 High 구간이 너무 짧습니다. 기록 끝을 늘리세요.")
+    else:
+        res.voh = wout.to_volts(voh)
+    res.delay_s = wout.time_at(j_rise) - wvdd.time_at(i_half)
+    return res

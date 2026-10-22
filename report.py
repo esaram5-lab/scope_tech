@@ -21,14 +21,14 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-from scopetech import results  # noqa: E402
+from scopetech import manual_calc, results  # noqa: E402
 from scopetech.config import Config  # noqa: E402
 
 COLS = ("VIL", "VIH", "HYS", "VOL", "VOH")
 COL_TITLE = {"VIL": "VIL (VT-)", "VIH": "VIH (VT+)", "HYS": "Hys", "VOL": "VOL", "VOH": "VOH"}
 # 핀 요약의 최악값: 판정 규칙과 같은 방향 (VIL·VOH 는 가장 낮은 값, VIH·VOL 은 가장 높은 값)
 WORST = {"VIL": min, "VIH": max, "HYS": min, "VOL": max, "VOH": min}
-ITEM_TITLE = {"VIH": "VIL/VIH", "VOH": "VOH/VOL", "MANUAL": "데이터·화면 저장", "SNAP": "화면 캡처", "MISC": "기타 캡처"}
+ITEM_TITLE = {"VIH": "VIL/VIH", "VOH": "VOH/VOL", "POR": "전원 인가 후 VOL/VOH", "MANUAL": "데이터·화면 저장", "SNAP": "화면 캡처", "MISC": "기타 캡처"}
 IMAGES = ("meas.png", "clean.png", "screen.png", "xy.svg")
 NO_PIN = "미지정"
 
@@ -143,7 +143,11 @@ def build(base: Path, entries: list[dict], profiles: set[str], cfg: Config, root
       "입력 상승 시 문턱 VT+ 를 VIH 측, 하강 시 문턱 VT- 를 VIL 측으로 표기하고, 여러 번 전환 중 최악값(VT+ 최댓값, VT- 최솟값)을 씁니다.")
     w("- **VOL / VOH (VIL/VIH 측정 중)**: 같은 파형에서 출력 High/Low 구간 가운데 50% 의 평균. 최악값은 VOH 가장 낮은 값, VOL 가장 높은 값.")
     w("- **VOL / VOH (단독 측정)**: 스코프 TOP(=VOH) / BASE(=VOL) 측정 통계. 최악값은 TOP 최솟값, BASE 최댓값.")
-    w("- OD 출력은 풀업 전압이 High 이므로 VOH 를 판정하지 않습니다.\n")
+    w("- OD 출력은 풀업 전압이 High 이므로 VOH 를 판정하지 않습니다.")
+    w(f"- **Rpd / Rpu**: 외부 {cfg.getfloat('manual', 'r_ext_ohm') / 1e6:g} MΩ 을 Rpd 는 핀→VDD, Rpu 는 핀→GND 로 연결하고 "
+      f"핀 전압 V 를 프로브(입력 {cfg.getfloat('manual', 'probe_r_ohm') / 1e6:g} MΩ, TPP1000)로 측정, VDD = {cfg.getfloat('manual', 'vdd_v'):g} V. "
+      "프로브 입력 저항을 병렬로 보정합니다: Rpd = 1/(1/(R_ext·V/(VDD−V)) − 1/R_probe), Rpu = (R_ext‖R_probe)·(VDD−V)/V.")
+    w("- **IOH / IOL**: 전류 프로브 채널의 레코드 평균. 함께 저장한 핀 전압 채널이 있으면 그때 전압도 적습니다.\n")
 
     if profiles:
         w("## 판정 기준 (config.ini)\n")
@@ -170,6 +174,19 @@ def build(base: Path, entries: list[dict], profiles: set[str], cfg: Config, root
         judges = [v["judge"] for e in es for v in e["values"].values()]
         w(f"| {pin} | {len(pins[pin])} | " + " | ".join(cells) + f" | {overall(judges)} |")
     w("")
+
+    calcs = [e for e in entries if e["result"].get("calc")]
+    if calcs:
+        w("## 핀별 저항·전류 (메뉴 3 수동 측정)\n")
+        w("| 핀 | 항목 | 시험 | 온도(°C) | 값 | 핀 전압 (V) | 측정 시각 |\n|---|---|---|---|---|---|---|")
+        for e in sorted(calcs, key=lambda e: (pin_key(e["pin"]), e["result"]["calc"]["kind"],
+                                               temp_key(e["result"].get("temp")), e["result"].get("timestamp", ""))):
+            r, c = e["result"], e["result"]["calc"]
+            value, unit = manual_calc.display(c)
+            vpin = c["inputs"].get("v_pin")
+            w(f"| {e['pin']} | {c['name']} | {r.get('name', '')} | {r.get('temp', '')} | {value} {unit} | "
+              f"{v3(vpin)} | {r.get('timestamp', '').replace('T', ' ')} |")
+        w("")
 
     for pin in order:
         es = sorted(pins[pin], key=lambda e: (temp_key(e["result"].get("temp")), e["result"].get("timestamp", "")))
@@ -208,6 +225,10 @@ def detail(w, pin: str, i: int, e: dict, root: Path) -> None:
             info.append("출력 극성: " + {"inverting": "반전", "non-inverting": "비반전"}.get(pol, "판별 불가"))
     elif e["channel"]:
         info.append(f"채널: {e['channel']} ({e['signal']})")
+    if item == "POR":
+        a = r.get("analysis") or {}
+        d, vdd = a.get("delay_s"), a.get("vdd_V")
+        info.append(f"VDD {v3(vdd)} V, 전원 인가 -> 출력 High 지연 " + ("-" if d is None else f"{d * 1e3:.3f} ms"))
     if e["profile"]:
         info.append(f"판정 기준: {e['profile']}")
     if r.get("note"):
@@ -217,6 +238,14 @@ def detail(w, pin: str, i: int, e: dict, root: Path) -> None:
     for line in info:
         w(f"- {line}")
     w("")
+    calc = r.get("calc")
+    if calc:
+        value, unit = manual_calc.display(calc)
+        inp = calc["inputs"]
+        w(f"| 항목 | 값 | 계산 근거 |\n|---|---|---|\n| {calc['name']} | {value} {unit} | {calc['note']} |\n")
+        if calc["unit"] == "ohm":
+            w(f"- 입력: 핀 전압 {inp['channel']} = {inp['v_pin']:.4f} V, VDD = {inp['vdd']:g} V, "
+              f"R_ext = {inp['r_ext'] / 1e6:g} MΩ, 프로브 = {inp['r_probe'] / 1e6:g} MΩ\n")
     if e["values"]:
         w("| 항목 | typ (V) | 최악 (V) | n | 기준 (V) | 판정 |\n|---|---|---|---|---|---|")
         for c in COLS:

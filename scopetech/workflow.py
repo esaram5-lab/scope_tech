@@ -17,6 +17,7 @@ from .config import Config
 from .mso import MSO5B
 from .steps import capture as capture_step
 from .steps import manual as manual_step
+from .steps import por as por_step
 from .steps import reset as reset_step
 from .steps import save as save_step
 from .steps import snap as snap_step
@@ -64,6 +65,9 @@ class Bench:
 
     def voh(self, chans: list[int], hold: bool = False) -> Record:
         return voh_step.run(self, chans, hold)
+
+    def por(self, ch_vdd: int, ch_out: int) -> Record:
+        return por_step.run(self, ch_vdd, ch_out)
 
     def capture(self) -> list[Path]:
         return capture_step.run(self)

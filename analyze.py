@@ -12,41 +12,14 @@ import argparse
 import json
 import math
 import sys
-from datetime import datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-from scopetech import results, wavefile  # noqa: E402
-from scopetech.analysis import Waveform, find_thresholds  # noqa: E402
+from scopetech import results  # noqa: E402
 from scopetech.config import Config  # noqa: E402
-
-
-def load_waves(folder: Path, sources: list[str]) -> dict[str, Waveform]:
-    waves: dict[str, Waveform] = {}
-    for f in sorted(folder.glob("waveform*.csv")):
-        for w in wavefile.read_csv(f):
-            waves.setdefault(w.source, w)
-    missing = [s for s in sources if s not in waves]
-    if missing:
-        raise FileNotFoundError(f"{folder}: 파형 CSV 에 {', '.join(missing)} 가 없습니다(save 를 했는지 확인).")
-    return waves
-
-
-def recompute_vih(folder: Path, result: dict, cfg: Config) -> None:
-    ch_in, ch_out = result["channels"]["in"], result["channels"]["out"]
-    waves = load_waves(folder, [ch_in, ch_out])
-    th = find_thresholds(
-        waves[ch_in], waves[ch_out],
-        avg_points=cfg.getint("measure", "vin_avg_points"),
-        cross=cfg.getfloat("measure", "out_cross"),
-    )
-    names = result.get("channel_names", {})
-    result["analysis"] = th.to_dict()
-    result["metrics"] = results.vih_metrics(th, f"{ch_in}->{ch_out}", f"{names.get(ch_in, ch_in)}->{names.get(ch_out, ch_out)}")
-    result["params"] = {"vin_avg_points": cfg.getint("measure", "vin_avg_points"), "out_cross": cfg.getfloat("measure", "out_cross")}
-    result["recomputed"] = datetime.now().isoformat(timespec="seconds")
+from scopetech.recompute import load_waves, recompute_vih  # noqa: E402
 
 
 def plot_xy(folder: Path, result: dict, spec: dict, max_points: int = 4000) -> Path:
