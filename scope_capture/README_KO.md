@@ -84,10 +84,7 @@ Remove-NetFirewallRule -DisplayName "Scope Capture Discovery UDP"
 
 ## 4. 외부 PC에서 Python 자동 연결
 
-```powershell
-py -m pip install psutil
-py example_auto_connect.py
-```
+scope_tech 에서는 `config.ini [capture] method = screen_api` 로 자동 연결합니다(`scopetech/capture/screen_api.py`).
 
 다른 Python 프로그램에서 사용:
 
@@ -225,14 +222,6 @@ except (CaptureError, OSError, ValueError) as error:
 프로그램은 가상환경 python.exe 절대 경로, 인수는 서버 파일 절대 경로와 --discovery --name MSO58B_01,
 시작 위치는 압축을 푼 디렉터리로 지정합니다. 처음에는 수동 실행으로 확인하세요.
 
-## 10. 테스트 범위
+## 10. 테스트
 
-```powershell
-py -m unittest -v test_capture_api.py test_discovery.py
-```
-
-26개 자동 테스트: 기본 캡처 API 6개 + 화면 안정 대기·창 캡처 11개 + 검색 9개.
-창 찾기(user32 EnumWindows/DwmGetWindowAttribute)는 가짜 창 목록으로만 시험했습니다.
-가짜 PNG/로컬 HTTP·UDP 소켓, NIC 열거 mock으로 검증했습니다.
-실제 MSO58B Windows 화면, 실제 Windows NIC broadcast/방화벽, APIPA 직결은 아직 실장비 미검증입니다.
-다른 AI에게는 이 ZIP과 ScopeCaptureAPI_AI_HANDOFF.md를 함께 전달하세요. 인계 문서는 ZIP에도 포함되어 있습니다.
+서버 자동 테스트와 예제, 개발용 인계 문서는 원본 저장소(esaram5-lab/scope-capture-api)에 있습니다.

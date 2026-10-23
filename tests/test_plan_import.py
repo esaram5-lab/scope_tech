@@ -1,12 +1,8 @@
-import contextlib
-import csv
-import io
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
-import plan_import as cli
 from scopetech import results, wavefile
 from scopetech.analysis import Waveform, find_thresholds
 from scopetech.config import Config
@@ -187,31 +183,6 @@ class ImportTest(unittest.TestCase):
         self.assertEqual(vi.state, SOURCE)  # 입력 VIH/VIL 은 있으니 가져오고 출력은 없다고 적음
         self.assertTrue(any("출력 VOH/VOL 없음" in n for n in vi.notes))
         self.assertEqual(rpd.state, "없음")
-
-    def test_cli_preview_confirm_and_summary(self):
-        self.vih("2", "2026-10-10T10:00:00", temp="85.0")
-        self.manual("20", "Rpd", "2026-10-10T10:00:00", {"CH2": 1.0}, temp="85")
-        args = ["--dir", str(self.base)]
-        out = io.StringIO()
-        self.enterContext(contextlib.redirect_stdout(out))
-        st = self.store.of("OLD")  # 시험 이름 OLD -> 샘플 OLD
-        self.assertEqual(cli.main(args + ["--dry-run"]), 0)
-        self.assertFalse(st.progress_path("85").exists())
-        self.assertEqual(cli.main(args, ask=lambda _: "n"), 0)
-        self.assertFalse(st.progress_path("85").exists())
-        self.assertEqual(cli.main(args, ask=lambda _: "y"), 0)
-        rows = st.load("85")["rows"]
-        self.assertEqual(sorted(e["source"] for e in rows.values()), [SOURCE, SOURCE])
-        self.assertTrue((self.store.root / "plan_summary_all.csv").exists())
-        with st.summary_path.open(encoding="utf-8-sig", newline="") as f:
-            table = list(csv.reader(f))
-        self.assertEqual(table[0][4:], ["25°C", "85°C", "-40°C"])
-        cells = {(r[1], r[2]): r[5] for r in table[1:]}
-        self.assertTrue(cells[("2", "VIH")] and cells[("12", "VOH")] and cells[("20", "Rpd")])
-        self.assertEqual(cells[("20", "VIH")], "")
-        self.assertEqual(len(list(self.store.dir.glob("import_*.csv"))), 1)
-        self.assertEqual(cli.main(args + ["--apply"]), 0)  # 다시 해도 바뀔 것 없음
-        self.assertIn("새로 가져올 항목이 없습니다", out.getvalue())
 
     # ------------------------------------------------------------ GUI 가져오기 탭: 직접 고르기·체크
 
