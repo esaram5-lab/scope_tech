@@ -51,6 +51,13 @@ SETTINGS = (
     Setting("plan", "iol_tol_v", "IOL 허용 오차", "float", "V", 0.001, 5, group="부하 조건 (IOH / IOL)"),
     Setting("measure", "out_cross", "출력 전환 기준", "float", "(0~1, 출력 진폭 비율)", 0.05, 0.95, group="분석 (VIL / VIH)"),
     Setting("measure", "vin_avg_points", "입력 평균 점수", "int", "점", 1, 10000, group="분석 (VIL / VIH)"),
+    Setting("supply", "arb_current_limit_ma", "ARB 전류 제한", "float", "mA", 1, 1000, group="N6705C ARB (사다리꼴)"),
+    Setting("supply", "arb_start_ms", "시작(낮은 값) 유지", "float", "ms", 0, 1000, group="N6705C ARB (사다리꼴)"),
+    Setting("supply", "arb_rise_ms", "상승", "float", "ms", 0.01, 1000, group="N6705C ARB (사다리꼴)"),
+    Setting("supply", "arb_top_ms", "꼭대기(높은 값) 유지", "float", "ms", 0, 1000, group="N6705C ARB (사다리꼴)"),
+    Setting("supply", "arb_fall_ms", "하강", "float", "ms", 0.01, 1000, group="N6705C ARB (사다리꼴)"),
+    Setting("supply", "arb_end_ms", "끝(낮은 값) 유지", "float", "ms", 0, 1000, group="N6705C ARB (사다리꼴)"),
+    Setting("supply", "settle_s", "ARB 켠 뒤 대기", "float", "s", 0, 10, group="N6705C ARB (사다리꼴)"),
 )
 BY_ID = {s.id: s for s in SETTINGS}
 TRUE = ("1", "yes", "true", "on", "y")

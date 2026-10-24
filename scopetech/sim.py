@@ -43,6 +43,7 @@ class SimScope:
         self.yzero = 1.65
         self.on = {ch: ch <= 7 for ch in range(1, 9)}
         self.acq_state, self.stopafter, self.acq_mode, self.numacq = 1, "RUNSTOP", "SAMPLE", 0
+        self.trigger_level: dict[int, float] = {}
         self.data = {"SOURCE": "CH1", "ENCDG": "SRIBINARY", "START": 1, "STOP": reclen, "BYT_NR": 2}
         self.meas: dict[str, dict] = {}
         self.cursor = {"STATE": "0"}
@@ -132,6 +133,12 @@ class SimScope:
             return resp(v)
         if h == "*OPC":
             return resp(1) if q else None
+        mt = re.fullmatch(r"TRIGGER:A:LEVEL:CH(\d)", h)
+        if mt:  # 트리거 레벨 (채널별)
+            if q:
+                return resp(self.trigger_level.get(int(mt.group(1)), 0.0))
+            self.trigger_level[int(mt.group(1))] = float(arg)
+            return None
         if q and h in ("*OPT", "HORIZONTAL:MODE", "TRIGGER:A:MODE", "ACQUIRE:STOPAFTER"):
             return resp({"*OPT": "NONE", "HORIZONTAL:MODE": "AUTO", "TRIGGER:A:MODE": "AUTO",
                          "ACQUIRE:STOPAFTER": self.stopafter}[h])

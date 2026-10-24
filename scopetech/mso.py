@@ -114,6 +114,14 @@ class MSO5B:
             time.sleep(0.1)
         time.sleep(self.settle_s)
 
+    def set_trigger_level(self, ch: int, volts: float) -> None:
+        """A 트리거의 채널 레벨 (트리거 소스·모드 등 다른 설정은 그대로)."""
+        self.write(f"TRIGger:A:LEVel:CH{ch} {volts:.6g}")
+        self.check(f"CH{ch} 트리거 레벨")
+
+    def trigger_level(self, ch: int) -> float:
+        return float(self.query(f"TRIGger:A:LEVel:CH{ch}?"))
+
     def run(self) -> None:
         self.write("ACQuire:STOPAfter RUNSTop")
         self.write("ACQuire:STATE RUN")
