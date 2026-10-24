@@ -51,34 +51,50 @@ def open_transport(cfg: Config, sim: bool, logger):
         return SocketTransport(cfg.get("connection", "ip"), cfg.getint("connection", "port"), timeout, logger)
     if iface == "usb":
         return _open_usb(cfg, timeout, logger)
-    raise ScopeError(f"config.ini 의 interface 값이 잘못되었습니다: {iface} (usb 또는 lan)")
+    if iface == "lan_visa":
+        return _open_usb(cfg, timeout, logger, lan_visa_resource(cfg))
+    raise ScopeError(f"config.ini 의 interface 값이 잘못되었습니다: {iface} (usb / lan / lan_visa)")
+
+
+def lan_visa_resource(cfg: Config) -> str:
+    """VISA LAN 주소: [connection] lan_resource, 없으면 ip 와 lan_visa_protocol(hislip / vxi11)로 만든다."""
+    res = cfg.get("connection", "lan_resource")
+    if res:
+        return res
+    ip = cfg.get("connection", "ip")
+    proto = cfg.get("connection", "lan_visa_protocol").lower()
+    if proto not in ("hislip", "vxi11"):
+        raise ScopeError(f"config.ini 의 lan_visa_protocol 값이 잘못되었습니다: {proto} (hislip 또는 vxi11)")
+    return f"TCPIP0::{ip}::{'hislip0' if proto == 'hislip' else 'inst0'}::INSTR"
 
 
 USB_HANG_HELP = """
-[USB 응답 없음] '{stage}' 단계에서 {secs:.0f}초 동안 진행되지 않아 프로그램을 끝냅니다.
+[VISA 응답 없음] '{stage}' 단계에서 {secs:.0f}초 동안 진행되지 않아 프로그램을 끝냅니다.
 스코프 쪽 USB 통신(TekScope 프로그램)이 멈춘 상태입니다. 순서대로 해 주세요:
   1) 작업 관리자에서 남은 python.exe / py.exe 종료
   2) 스코프에서 TekScope 프로그램 재시작 (안 되면 스코프 재부팅)
-  3) 스코프 뒷면 USB 케이블을 뽑고 10초 뒤 다시 연결
+  3) 스코프 뒷면 USB 케이블(VISA LAN 이면 랜선)을 뽑고 10초 뒤 다시 연결
   4) 다시 실행
 """
 
 
-def _open_usb(cfg: Config, timeout: float, logger):
-    """USB 연결. VISA 호출이 스코프 응답을 기다리며 끝없이 막히는 경우가 있어 별도 스레드에서 열고,
-    제한 시간 안에 끝나지 않으면 멈춘 단계와 조치 방법을 출력하고 종료한다."""
+def _open_usb(cfg: Config, timeout: float, logger, resource: str | None = None):
+    """VISA 연결(USB, 또는 resource 로 준 LAN 주소). VISA 호출이 스코프 응답을 기다리며 끝없이 막히는 경우가 있어
+    별도 스레드에서 열고, 제한 시간 안에 끝나지 않으면 멈춘 단계와 조치 방법을 출력하고 종료한다."""
     box: dict = {}
     stage = ["시작"]
+    kind = "USB" if resource is None else "VISA LAN"
 
     def progress(text: str) -> None:
         stage[0] = text
-        print(f"  USB 연결: {text}", flush=True)
+        print(f"  {kind} 연결: {text}", flush=True)
         if logger:
             logger("#", text)
 
     def work() -> None:
         try:
-            box["t"] = VisaTransport(cfg.get("connection", "usb_resource"), cfg.get("connection", "visa_library"),
+            box["t"] = VisaTransport(cfg.get("connection", "usb_resource") if resource is None else resource,
+                                     cfg.get("connection", "visa_library"),
                                      timeout, logger, progress, cfg.getbool("connection", "usb_clear"))
         except BaseException as e:  # noqa: BLE001
             box["e"] = e

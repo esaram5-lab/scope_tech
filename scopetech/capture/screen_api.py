@@ -7,7 +7,7 @@ TekScope 에는 화면 저장·파일 명령을 하나도 보내지 않는다(Ac
 준비 (config.ini [capture] method = screen_api, 설정은 [screen_api])
 - 클라이언트는 scope_tech 에 동봉된 scope_capture/ 의 것을 쓴다(client_dir 로 다른 폴더 지정 가능)
 - 스코프 서버가 처음 만든 capture_token.txt 를 PC 의 scope.py 옆(또는 scope_capture/)에 복사
-- host 에 스코프 IP. 비우면 자동 검색(서버 --discovery, PC 에 psutil 필요)
+- host 에 스코프 IP. 비우면 [connection] interface = lan / lan_visa 일 때 그 ip, 아니면 자동 검색(서버 --discovery, PC 에 psutil 필요)
 
 캡처 순서 (take 1회)
 1. acquire: stop(기본)=실행 중이면 Single 1회 받고 정지 / single=매번 새 Single / keep=건드리지 않음
@@ -88,6 +88,8 @@ class Capture(Base):
             raise ValueError(f"캡처 서버 토큰 파일이 없습니다: {token} (스코프 서버의 capture_token.txt 를 복사)")
         timeout = float(self.opt("timeout_s") or 10)
         host = self.opt("host")
+        if not host and self.cfg.get("connection", "interface").lower() in ("lan", "lan_visa"):
+            host = self.cfg.get("connection", "ip").strip()  # 스코프를 LAN 으로 제어하면 같은 IP 의 캡처 서버
         try:
             if host:
                 client = self._mod.ScopeCaptureClient(host, token_file=token, port=int(self.opt("port") or 8765),
