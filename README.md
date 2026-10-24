@@ -15,6 +15,7 @@ Tektronix MSO58B 로 PLD(SLG4AD4449) 입출력 레벨을 측정하고, 시험 �
 | `run_plan_summary.bat` | 샘플별·전체 요약표 다시 만들기 | 불필요 |
 | `run_scope.bat` / `run_nocap.bat` | 개별 측정 도우미 (캡처 포함 / 캡처 없이) | 필요 |
 | `run_check.bat` | 처음 연결할 때 단계별 사전 점검 | 필요 |
+| `run_psu_check.bat` | N6705C 장비·옵션·모듈·ARB 가능 여부 확인 (`psu.py`) | 불필요 |
 | `run_report.bat`, `run_temp_table.bat`, `run_collect_photos.bat`, `run_analyze.bat` | 보고서 초안, 온도별 표, 사진 모음, 재판정 | 불필요 |
 
 ---
@@ -40,6 +41,19 @@ Tektronix MSO58B 로 PLD(SLG4AD4449) 입출력 레벨을 측정하고, 시험 �
 - 캡처 순서: 실행 중이면 Single 1회 받고 정지 → 서버가 화면이 멈출 때까지(최대 2초) 기다렸다 찍음. 2초 안에 멈추지 않으면 오류로 알립니다.
 - 이전 방식(Act On Event, 스코프에 저장 후 종료할 때 한 번에 가져오기)으로 돌아가려면 `[capture] method = aoe`. 남은 캡처는 `py scope.py --fetch`.
 
+### Keysight N6705C (입력 신호 ARB)
+계획 모드에서 VI/AI 의 입력 신호와 IOH/Rp 의 CH1 트리거용 스윙을 N6705C 1번 슬롯(N6763A)의 ARB 사다리꼴로 냅니다. VDD 는 별도 전원.
+- 연결: USB(VISA, Keysight 장치 자동 검색) 또는 LAN(`[supply] interface = lan`, `ip`, 포트 5025). 설정은 `config.ini [supply]`.
+- 사다리꼴: 시작(낮은 값) 1 ms → 상승 1 ms → 꼭대기 1 ms → 하강 1 ms → 끝 0 ms (주기 4 ms, 무한 반복). 전류 제한 20 mA.
+- 범위는 `test_plan.csv` 의 `입력범위` 칸: 핀 3·6·15 = 0-1.8, 핀 10 = 0.9-1.2, 나머지 0-3.3. IOH/Rp 트리거 스윙은 0-3.3(`trigger_range`).
+- 항목 화면에서 Enter 로 측정을 시작할 때 켜고, 끝나면 끕니다. 측정 직전에 스코프 CH1 트리거 레벨을 범위 중앙(1.65 / 0.9 / 1.05 V)으로 맞춥니다(V/div·시간축은 그대로, 3주기 = 약 2 ms/div).
+- IOH/Rp 측정 때 ARB 는 스코프 CH1 트리거용입니다. DUT 입력에서는 분리해 두세요.
+- N6705C 를 못 찾으면 안내만 하고 진행합니다(함수발생기로 수동). 쓰지 않기: `run_plan.bat --no-psu` 또는 `[supply] enabled = no`.
+- 확인: `run_psu_check.bat` → 장비·옵션(`*OPT?`)·슬롯별 모듈·채널별 ARB 가능 여부를 보여주고 `logs/psu_check_*.txt` 에 남깁니다.
+  직접 다루기: `py psu.py arb 0 3.3`(켜고 Enter 로 끔), `py psu.py off`, `py psu.py measure`. API 는 `scopetech/n6705c.py`
+  (출력·전압·전류·측정·보호, ARB 사다리꼴/램프/계단/사용자 정의, N6781A SMU 전압 인가·전류 측정, N6791A 정전류 부하 — 마지막 두 가지는 실장비 미확인).
+- GUI 설정 탭에서 ARB 구간 시간·전류 제한·켠 뒤 대기 시간을 바꿀 수 있습니다(다음 측정부터).
+
 ### 사전 점검 (`run_check.bat`)
 통신, 임시 폴더, 파일 전송, 화면 캡처, 파형 전송, 측정/커서 명령을 **한 단계씩** 실행하고 걸린 시간과 응답을 기록합니다.
 단계마다 Enter=진행, s=건너뛰기, q=끝내기. 결과는 `logs/check_*.txt` 와 `logs/scpi_*.log` — 문제가 생기면 이 두 파일을 보내주세요.
@@ -63,7 +77,7 @@ Tektronix MSO58B 로 PLD(SLG4AD4449) 입출력 레벨을 측정하고, 시험 �
 
 | 항목 | 측정 | 채널(기본 계획) | 결과 |
 |---|---|---|---|
-| VI / AI | VIL/VIH (+같은 파형의 출력 VOH/VOL) | CH1 입력, CH2 출력, 트리거 CH1 | 입력 핀 VIH/VIL, 출력 핀 VOH/VOL |
+| VI / AI | VIL/VIH (+같은 파형의 출력 VOH/VOL). 입력은 N6705C ARB 사다리꼴(범위 자동) | CH1 입력, CH2 출력, 트리거 CH1 | 입력 핀 VIH/VIL, 출력 핀 VOH/VOL |
 | POR | VDD 를 끈 채 Enter → VDD 켜기. POR 지연 중 Low = VOL, 그 뒤 High = VOH, 지연 시간 | CH1 VDD, CH2 출력, 트리거 CH1 상승 **Normal 모드** | 출력 핀 VOH/VOL |
 | IOH / IOL | 측정마다 Single 1회, 전류 프로브 평균. 핀 전압이 `[plan] ioh_v`(2.4 V) ± 0.1 V 를 벗어나면 주의 | CH8 전류, CH2 핀, CH1 트리거 스윙(숨김) | mA |
 | RPU / RPD | 측정마다 Single 1회, 외부 1 MΩ + TPP1000 10 MΩ 보정 (아래 계산식) | CH2 핀, CH1 트리거 스윙 | kΩ |
@@ -214,7 +228,7 @@ logs/                                 <- 스코프 송수신 기록(scpi_*.log),
 ### 구조 (모듈)
 ```
 scope.py                 실행 (계획 / 안내 메뉴 / 셸 / --fetch / --no-capture / --sim)
-plan_gui.py  cleanup.py  plan_summary.py  analyze.py  report.py  temp_table.py  collect_photos.py  scope_check.py
+plan_gui.py  cleanup.py  psu.py  plan_summary.py  analyze.py  report.py  temp_table.py  collect_photos.py  scope_check.py
 scopetech/
   transport.py           통신 (USB: visa64.dll 직접 호출, LAN: 소켓)
   mso.py                 MSO58B 드라이버 (SCPI 명령 단위)
@@ -227,6 +241,7 @@ scopetech/
   plan_state.py          CLI <-> GUI 연결 파일: plan/state.json(진행 상태), plan/overrides.ini(GUI 설정)
   plan_view.py           GUI 가 보여줄 데이터(tkinter 없이 시험 가능), GUI 띄우기
   plan_gui.py            결과·설정 창 (tkinter)
+  n6705c.py              Keysight N6705C API (USB/LAN), ArbSource(계획 모드 ARB), psu_sim.py 시뮬레이터
   wizard.py / shell.py   안내 메뉴 / 명령 셸 (Bench 메서드만 호출)
   analysis.py results.py recompute.py manual_calc.py gallery.py wavefile.py config.py sim.py
 scope_capture/           동봉: 스코프 화면 캡처 서버·클라이언트 (scope-capture-api v1.2)

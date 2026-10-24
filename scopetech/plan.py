@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -29,12 +30,13 @@ MANUAL_LABEL = {"IOH": "IOH", "IOL": "IOL", "RPU": "R_pu", "RPD": "R_pd"}
 CHANNEL_COUNT = {"VI": 2, "AI": 2, "POR": 2, "IOH": (1, 2), "IOL": (1, 2), "RPU": (1, 1), "RPD": (1, 1)}
 GROUP = {"VI": "VI", "AI": "VI", "POR": "POR", "IOH": "IOH", "IOL": "IOH", "RPU": "RPU", "RPD": "RPD"}
 GROUP_GUIDE = {
-    "VI": "[VI/AI] CH1 = 입력 핀(함수발생기 삼각파 0~VCCIO), CH2 = 출력 핀, 트리거 CH1.",
+    "VI": "[VI/AI] CH1 = 입력 핀(N6705C ARB 사다리꼴, 범위는 항목마다 자동 / 없으면 함수발생기), CH2 = 출력 핀, 트리거 CH1.",
     "POR": "[POR] CH1 = VDD, CH2 = 출력 핀, 트리거 CH1 상승(VDD 켜짐), 시간축은 POR 지연(약 2 ms)보다 길게(약 1 ms/div). "
            "VDD 를 끈 상태에서 Enter 를 누른 뒤 VDD 를 켜세요.",
-    "IOH": "[IOH/IOL] 전류 프로브와 핀 전압 채널 연결, 부하로 핀 전압을 맞추세요. CH1 은 트리거용 스윙(화면에서 숨김). 입력 핀은 모두 Low.",
-    "RPU": "[Rpu] 외부 저항을 핀 -> GND, CH2 = 핀 전압, CH1 은 트리거용 스윙.",
-    "RPD": "[Rpd] 외부 저항을 핀 -> VDD, CH2 = 핀 전압, CH1 은 트리거용 스윙.",
+    "IOH": "[IOH/IOL] CH8 = 전류 프로브, CH2 = 핀 전압, 부하로 핀 전압을 맞추세요. 입력 핀은 모두 Low. "
+           "CH1 = N6705C ARB 트리거용 스윙(DUT 입력에서 분리, 화면에서 숨김).",
+    "RPU": "[Rpu] 외부 저항을 핀 -> GND, CH2 = 핀 전압. CH1 = N6705C ARB 트리거용 스윙(DUT 입력에서 분리).",
+    "RPD": "[Rpd] 외부 저항을 핀 -> VDD, CH2 = 핀 전압. CH1 = N6705C ARB 트리거용 스윙(DUT 입력에서 분리).",
 }
 WORST = {"VIH": max, "VIL": min, "VOH": min, "VOL": max}
 UNIT_FORMAT = {"V": "{:.4f}", "mA": "{:.3f}", "kΩ": "{:.1f}"}
@@ -50,6 +52,7 @@ class PlanRow:
     out_type: str
     channels: list[int]
     setup: str = ""
+    swing: tuple[float, float] | None = None  # 입력범위: ARB(입력 신호 / CH1 트리거 스윙) 낮은·높은 전압
 
     @property
     def key(self) -> str:
@@ -73,6 +76,24 @@ def _pin(value: str) -> str:
     return "" if v.upper() in ("", "X", "-") else v
 
 
+def parse_range(text: str) -> tuple[float, float] | None:
+    """'0-3.3' / '0.9~1.2' -> (0.0, 3.3). 비었거나 X 면 None. 잘못되면 ValueError."""
+    v = (text or "").strip()
+    if v.upper() in ("", "X", "-"):
+        return None
+    m = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*[-~]\s*(\d+(?:\.\d+)?)\s*(?:V)?\s*", v, re.IGNORECASE)
+    if not m:
+        raise ValueError(f"입력범위 '{text}' 는 '낮은값-높은값' (예: 0-3.3, 0.9-1.2) 이어야 합니다.")
+    lo, hi = float(m.group(1)), float(m.group(2))
+    if not lo < hi <= 20:
+        raise ValueError(f"입력범위 '{text}': 낮은값 < 높은값 <= 20 V 이어야 합니다.")
+    return lo, hi
+
+
+def range_text(swing: tuple[float, float] | None) -> str:
+    return "" if swing is None else f"{swing[0]:g}~{swing[1]:g} V"
+
+
 def load_plan(path: Path, num_channels: int = 8) -> list[PlanRow]:
     rows = []
     with Path(path).open(encoding="utf-8-sig", newline="") as f:
@@ -91,9 +112,13 @@ def load_plan(path: Path, num_channels: int = 8) -> list[PlanRow]:
             lo, hi = want if isinstance(want, tuple) else (want, want)
             if not lo <= len(chans) <= hi or any(not 1 <= c <= num_channels for c in chans) or len(set(chans)) != len(chans):
                 raise ValueError(f"{where}: {kind} 의 채널은 서로 다른 1~{num_channels} 번 {lo}" + (f"~{hi}" if hi != lo else "") + "개")
+            try:
+                swing = parse_range(rec.get("입력범위") or "")
+            except ValueError as e:
+                raise ValueError(f"{where}: {e}") from None
             row = PlanRow((rec.get("순서") or "").strip() or str(len(rows) + 1), kind, _pin(rec.get("입력핀")),
                           _pin(rec.get("출력핀")), (rec.get("출력타입") or "").strip().upper() or "PP", chans,
-                          (rec.get("준비") or "").strip())
+                          (rec.get("준비") or "").strip(), swing)
             if row.out_type not in ("PP", "OD", "X"):
                 raise ValueError(f"{where}: 출력타입은 PP / OD")
             if row.out_type == "X":
@@ -408,9 +433,11 @@ def migrate_legacy(root: PlanStore, samples: Samples) -> list[str]:
 
 # ---------------------------------------------------------------- 진행 (스코프 필요)
 class PlanRunner:
-    def __init__(self, bench, rows: list[PlanRow], layout, ask=input, echo=print):
+    def __init__(self, bench, rows: list[PlanRow], layout, ask=input, echo=print, supply=None):
+        """supply: n6705c.ArbSource (없으면 입력 신호는 함수발생기로 수동)."""
         self.bench, self.rows, self.layout = bench, rows, layout
         self.ask, self.echo = ask, echo
+        self.supply = supply
         cfg = bench.cfg
         self.root = PlanStore(bench.out_dir, cfg.get("plan", "dir") or "plan")  # 공용 파일(plan/)
         self.store = self.root                                                  # 시험 이름을 고르면 그 샘플
@@ -438,7 +465,7 @@ class PlanRunner:
             return False
 
     def run(self) -> int:
-        self.state.start(rows=len(self.rows))
+        self.state.start(rows=len(self.rows), supply=self.supply.describe() if self.supply else "")
         try:
             return self._finish(self._run())
         finally:
@@ -539,6 +566,7 @@ class PlanRunner:
                 self.state.update(current=row.key, current_no=row.no)
                 self.echo(f"\n[{i + 1}/{len(self.rows)}] {row.title()}   채널 "
                           + ", ".join(f"CH{c}" for c in row.channels)
+                          + self._swing_text(row)
                           + (f"\n  준비: {row.setup}" if row.setup else "")
                           + (f"\n  지난 결과({e['status']}): {(e.get('error') if e['status'] == FAIL else '') or e.get('summary') or '-'}"
                              if e.get("status") in (DONE, SKIP, FAIL) else ""))
@@ -637,9 +665,11 @@ class PlanRunner:
         b.out_pin = row.out_pin if row.kind in ("VI", "AI") else ""
         b.out_type = row.out_type
         used = self.settings.snapshot()
+        arb = None
         try:
             self.echo("  스코프 상태 정리")
             b.reset()
+            arb = self._arb_on(row)
             if row.kind in ("VI", "AI", "POR"):
                 rec = b.vih(*row.channels) if row.kind != "POR" else b.por(*row.channels)
                 if b.capture_enabled():
@@ -653,14 +683,19 @@ class PlanRunner:
                 self._check_bias(row, rec)
             b.resume()  # 다음 항목을 준비하는 동안 화면이 계속 갱신되도록 Run
         except KeyboardInterrupt:
+            self._arb_off()
             return {"status": FAIL, "error": "사용자 취소", "time": now}, 130
         except (ScopeError, OSError, ValueError, KeyError) as e:
+            self._arb_off()
             msg = str(e).splitlines()[0]
             if "source off" in msg.lower():
                 msg += f" -> 스코프 화면에서 CH{', CH'.join(map(str, row.channels))} 를 켜 주세요(트리거용 CH1 만 숨김)"
             return {"status": FAIL, "error": msg, "time": now}, None
+        self._arb_off()
         result = rec.result
         result["plan_settings"] = used  # 이 측정에 쓴 계산·분석 설정 (다시 계산할 때도 이 값)
+        if arb:
+            result["arb"] = arb
         try:
             results.write_json(rec.folder / "result.json", result)
         except OSError as e:
@@ -670,6 +705,52 @@ class PlanRunner:
         if not row_values(row, result):  # 요약표에 들어갈 값이 없으면 완료로 두지 않고 다시 재거나 건너뛰게
             entry.update(status=FAIL, error="요약표에 넣을 값이 없음" + "".join(f" — {w}" for w in entry["warnings"]))
         return entry, None
+
+    def _swing(self, row: PlanRow) -> tuple[float, float] | None:
+        """이 항목의 ARB 범위: VI/AI 는 입력 신호, IOH/IOL/Rp 는 CH1 트리거용 스윙. POR 은 없음(CH1 = VDD)."""
+        if row.kind == "POR":
+            return None
+        if row.swing:
+            return row.swing
+        try:
+            return parse_range(self.bench.cfg.get("supply", "trigger_range"))
+        except ValueError:
+            return None
+
+    def _swing_text(self, row: PlanRow) -> str:
+        sw = self._swing(row)
+        if sw is None:
+            return ""
+        what = "입력" if row.kind in ("VI", "AI") else "CH1 트리거 스윙"
+        how = "N6705C ARB 자동" if self.supply else "함수발생기로 맞추세요"
+        return f"\n  {what}: {range_text(sw)} 사다리꼴 ({how})"
+
+    def _arb_on(self, row: PlanRow) -> dict | None:
+        """측정 직전: ARB 켜기, 스코프 트리거 레벨을 범위 중앙으로. 기록용 dict 또는 None."""
+        swing = self._swing(row)
+        if swing is None:
+            return None
+        cfg = self.bench.cfg
+        if cfg.getbool("supply", "auto_trigger_level"):
+            ch = cfg.getint("supply", "trigger_channel")
+            level = (swing[0] + swing[1]) / 2
+            self.bench.scope.set_trigger_level(ch, level)
+            self.echo(f"  CH{ch} 트리거 레벨 {level:g} V")
+        if self.supply is None:
+            return None
+        info = self.supply.start(*swing)
+        times = "/".join(f"{t:g}" for t in info["times_ms"])
+        self.echo(f"  ARB 켬: {self.supply.describe()} {range_text(swing)} 사다리꼴 {times} ms, 전류 제한 {info['current_limit_ma']:g} mA")
+        return info
+
+    def _arb_off(self) -> None:
+        if self.supply is None or not self.supply.on:
+            return
+        try:
+            self.supply.stop()
+            self.echo("  ARB 끔")
+        except (ScopeError, OSError) as e:
+            self.echo(f"  [경고] ARB 출력을 끄지 못했습니다 — N6705C 에서 직접 끄세요: {e}")
 
     def _check_bias(self, row: PlanRow, rec) -> None:
         if check_bias(row, rec.result, self.bench.cfg):

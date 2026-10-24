@@ -133,7 +133,8 @@ class PlanData:
         where = f"{row.no}. {row.title()}" if row else "항목 선택 전"
         doing = "측정 중" if state.get("measuring") else "입력 대기"
         sample = f" [{state['sample']}]" if state.get("sample") else ""
-        return f"CLI: {state.get('temp', '?')}°C / {state.get('name', '')}{sample} — {where} ({doing})"
+        psu = f"  |  ARB: {state['supply']}" if state.get("supply") else "  |  ARB: 없음(함수발생기)"
+        return f"CLI: {state.get('temp', '?')}°C / {state.get('name', '')}{sample} — {where} ({doing}){psu}"
 
     # ------------------------------------------------------------ 상세
     def folder_of(self, temp: str, key: str) -> Path | None:
@@ -213,6 +214,10 @@ class PlanData:
                 lines.append(f"  핀 전압 {_fmt(inp['v_pin'])}" + (f" ({inp.get('v_channel') or inp.get('channel')})"))
             if calc.get("check"):
                 lines.append(f"  [부하 조건] {calc['check']}")
+        arb = result.get("arb")
+        if arb:
+            lines.append(f"  ARB: CH{arb.get('channel')} {arb.get('model', '')} {arb.get('low_v'):g}~{arb.get('high_v'):g} V "
+                         f"사다리꼴 {'/'.join(f'{t:g}' for t in arb.get('times_ms', []))} ms, 전류 제한 {arb.get('current_limit_ma'):g} mA")
         used = result.get("plan_settings")
         if used:
             lines.append("  " + self._settings_text(used))

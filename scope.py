@@ -97,6 +97,25 @@ def _open_usb(cfg: Config, timeout: float, logger):
     return box["t"]
 
 
+def open_supply(cfg: Config, logger, sim: bool):
+    """계획 모드의 N6705C ARB 신호원. 못 열면 안내하고 (None, None) — 입력 신호는 함수발생기로 수동."""
+    from scopetech.n6705c import ArbSource, open_psu
+    try:
+        psu = open_psu(cfg, logger, sim)
+    except (ScopeError, OSError) as e:
+        print(f"[N6705C] 연결하지 못했습니다: {str(e).splitlines()[0]}\n"
+              "         입력 신호(삼각파/트리거 스윙)는 함수발생기로 직접 맞춰 주세요. (끄기: --no-psu 또는 [supply] enabled = no)")
+        return None, None
+    supply = ArbSource(psu, cfg)
+    print(f"[N6705C] 연결됨: {psu.idn}  ARB = {supply.describe()}")
+    try:
+        for w in supply.prepare():
+            print(f"[N6705C] 주의: {w}")
+    except (ScopeError, OSError) as e:
+        print(f"[N6705C] 확인 실패: {e}")
+    return supply, psu
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Tektronix MSO58B VIL/VIH/VOH/VOL 측정 도우미")
     ap.add_argument("--config", default=str(HERE / "config.ini"), help="설정 파일 (기본: config.ini)")
@@ -106,6 +125,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--no-capture", action="store_true", help="화면 캡처 없이 측정·파형 저장만 (run_nocap.bat)")
     ap.add_argument("--plan", nargs="?", const="", metavar="CSV", help="시험 계획 진행 (기본: config.ini [plan] file, run_plan.bat)")
     ap.add_argument("--no-gui", action="store_true", help="시험 계획 진행 때 결과·설정 창(GUI)을 띄우지 않음")
+    ap.add_argument("--no-psu", action="store_true", help="시험 계획 진행 때 N6705C(ARB 입력 신호)를 쓰지 않음")
     ap.add_argument("--debug", action="store_true", help="SCPI 송수신을 화면에 출력")
     ap.add_argument("--temp", help="온도 (예: 85)")
     ap.add_argument("--name", help="시험 이름 (예: INV_3V3)")
@@ -122,6 +142,7 @@ def main(argv: list[str] | None = None) -> int:
 
     transport = None
     scope = None
+    supply = psu = None
     status = 1
     previous_break = None
     if hasattr(signal, "SIGBREAK"):
@@ -165,7 +186,9 @@ def main(argv: list[str] | None = None) -> int:
         elif args.plan is not None:
             from scopetech.plan import PlanRunner, load_layout, load_plan
             rows = load_plan(HERE / (args.plan or cfg.get("plan", "file")), cfg.getint("scope", "num_channels"))
-            runner = PlanRunner(bench, rows, load_layout(HERE / cfg.get("plan", "summary")))
+            if not args.no_psu and cfg.getbool("supply", "enabled"):
+                supply, psu = open_supply(cfg, logger, args.sim)
+            runner = PlanRunner(bench, rows, load_layout(HERE / cfg.get("plan", "summary")), supply=supply)
             if not args.no_gui and cfg.getbool("plan", "gui"):
                 from scopetech.plan_view import launch_gui
                 launch_gui(HERE / "plan_gui.py", Path(args.config).resolve(), out_dir, runner.store.dir)
@@ -192,6 +215,13 @@ def main(argv: list[str] | None = None) -> int:
             logger("!", f"종료 정리 실패: {e}")
         finally:
             try:
+                if psu is not None:
+                    try:
+                        supply.stop()
+                        psu.output(cfg.getint("supply", "arb_channel"), False)  # 끝날 때 ARB 출력은 항상 끔
+                    except (ScopeError, OSError) as e:
+                        print(f"[경고] N6705C 출력을 끄지 못했습니다 — 장비에서 직접 끄세요: {e}")
+                    psu.close()
                 if transport is not None:
                     transport.close()
             finally:

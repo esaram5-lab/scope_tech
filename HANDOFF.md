@@ -18,6 +18,16 @@
 - 요약표 순서 `test_plan_summary.csv`: VI 2, 20, 3, 6, 5, 15 (VIH→VIL) / AI 10 / VO_PP 12, 4, 14, 7 (VOH→VOL) / VO_OD 16, 19, 18 (VOL) / IOH / Rpu / Rpd.
 - 샘플: fab(TSMC, VIS=뱅가드)마다 3개, 총 6번. 시험 이름으로 구분. **샘플끼리 값을 섞지 않음**(한 샘플 안의 같은 값은 최악값).
 
+## Keysight N6705C (2026-10-24)
+- 장착: 1번 N6763A(정밀 DC), 2번 N6781A(2사분면 SMU), 3번 N6791A(전자 부하). VDD 는 다른 전원. USB 연결.
+- `scopetech/n6705c.py`: N6705C API(출력·설정·측정·보호·오류, ARB 사다리꼴/램프/계단/사용자 정의, SMU·부하 함수는 확장용),
+  `capabilities()/check_report()` 로 옵션·모듈·채널별 ARB 가능 여부(조회 명령을 보내 오류가 없으면 가능), `ArbSource` 가 계획 모드용.
+  `psu_sim.py` 시뮬레이터. USB 검색은 `VisaTransport(vendors=KEYSIGHT_VENDOR_IDS, models=("N670",))`.
+- 계획 모드: VI/AI 입력과 IOH/Rp 의 CH1 트리거 스윙을 CH1(N6763A) ARB 사다리꼴(1/1/1/1/0 ms, 무한 반복, 전류 제한 20 mA)로.
+  범위는 `test_plan.csv 입력범위`(3·6·15 = 0-1.8, 10 = 0.9-1.2, 나머지 0-3.3, POR 은 없음). 측정 시작 때 켜고 끝나면 끔,
+  스코프 `TRIGger:A:LEVel:CH1` 을 범위 중앙으로(`[supply] auto_trigger_level`). result.json `arb` 에 설정 기록.
+- **SCPI 명령 이름은 설명서 기억에 의존해 실장비 미확인**(특히 ARB:VOLT:TRAP:*, TRIG:ARB:SOUR, ARB:COUN INF, EMUL PS2Q). 먼저 `run_psu_check.bat`, `py psu.py arb 0 3.3` 으로 확인.
+
 ## 실장비에서 확인된 사실 (중요)
 1. **원격 `SAVe:IMAGe`(그리고 이미지 저장 직후 READFile/DELETE)를 보내면 TekScope 가 멈춘다.** tm_devices 공식 라이브러리,
    LAN 연결에서도 같음 → TekScope 쪽 문제로 확정. 그래서 화면은 **캡처 서버(screen_api, 기본)** 로 받는다(2026-10-21 실장비 정상).
@@ -48,6 +58,7 @@ README 의 "개발자용" 참고. 핵심 흐름:
 - GUI: 콘솔 창 없이 뜨는지(pythonw/CREATE_NO_WINDOW), 한글 글꼴, 폴더·CSV 열기(os.startfile).
 - 정리 도구: 실제 섞인 captures(초기 형식 등)에서의 결과.
 - 측정 뒤 Run 복귀.
+- N6705C 전체(연결, ARB 명령, 트리거 레벨 자동 설정).
 
 ## 참고
 - 매뉴얼: https://download.tek.com/manual/4-5-6-Series-MSO_Programmer_077189805.pdf

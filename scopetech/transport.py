@@ -255,6 +255,7 @@ VI_ATTR_TMO_VALUE = 0x3FFF001A
 VI_ERROR_TMO = -1073807339  # 0xBFFF0015
 VI_ERROR_RSRC_NFOUND = -1073807343  # 0xBFFF0011
 TEK_VENDOR_ID = "0x0699"
+KEYSIGHT_VENDOR_IDS = ("0x2a8d", "0x0957")  # Keysight / (이전) Agilent
 
 
 def _load_visa_library(path: str = ""):
@@ -284,8 +285,11 @@ def _load_visa_library(path: str = ""):
 
 class VisaTransport(Transport):
     def __init__(self, resource: str = "", library: str = "", timeout: float = 10.0, logger: Logger | None = None,
-                 progress=None, clear: bool = True):
+                 progress=None, clear: bool = True, vendors: tuple[str, ...] = (TEK_VENDOR_ID,),
+                 models: tuple[str, ...] = ("MSO", "DPO", "LPD"), device: str = "Tektronix 스코프"):
+        """vendors/models/device: USB 자동 검색 조건 (기본 Tektronix 스코프. N6705C 는 n6705c.open_usb 참고)."""
         super().__init__(timeout, logger)
+        self.vendors, self.models, self.device = tuple(v.lower() for v in vendors), models, device
         step = progress or (lambda text: None)  # 멈춘 단계를 알 수 있도록 각 VISA 호출 전에 알림
         step("VISA 라이브러리 불러오기")
         self.lib = lib = _load_visa_library(library)
@@ -351,25 +355,24 @@ class VisaTransport(Transport):
                 if self.lib.viFindNext(flist, desc) >= 0:
                     found.append(desc.value.decode())
             self.lib.viClose(flist)
-        tek = [r for r in found if TEK_VENDOR_ID in r.lower()]
+        tek = [r for r in found if any(v in r.lower() for v in self.vendors)]
         if not tek:
-            raise ScopeError(
-                "USB 에서 Tektronix 스코프를 찾지 못했습니다"
-                + (f" (발견된 장치: {', '.join(found)})" if found else "")
-                + ".\n  - 스코프 뒷면 USB Device 포트(USB 3.0 B 타입)에 연결했는지 확인\n"
-                "  - Utility > I/O > USB Device Port 가 켜져 있는지 확인"
-            )
-        if len(tek) == 1:
+            hint = (".\n  - 스코프 뒷면 USB Device 포트(USB 3.0 B 타입)에 연결했는지 확인\n"
+                    "  - Utility > I/O > USB Device Port 가 켜져 있는지 확인") if TEK_VENDOR_ID in self.vendors else \
+                ".\n  - USB 케이블과 장비 전원, 장비의 USB(I/O) 설정을 확인"
+            raise ScopeError(f"USB 에서 {self.device}를 찾지 못했습니다"
+                             + (f" (발견된 장치: {', '.join(found)})" if found else "") + hint)
+        if len(tek) == 1 and TEK_VENDOR_ID in self.vendors:
             return tek[0]
-        # Tek 함수발생기 등 다른 Tek 장비가 같이 연결된 경우 *IDN? 으로 스코프를 고른다
+        # 같은 회사 장비가 여러 대(Tek 함수발생기 등)면 *IDN? 모델로 고른다
         idns = []
         for r in tek:
             idn = self._probe_idn(r)
             idns.append(f"{r} = {idn or '응답 없음'}")
-            if idn and idn.split(",")[1:2] and idn.split(",")[1].strip().upper().startswith(("MSO", "DPO", "LPD")):
+            if idn and idn.split(",")[1:2] and idn.split(",")[1].strip().upper().startswith(self.models):
                 return r
-        raise ScopeError("USB 에 Tektronix 장비가 여러 대인데 스코프를 고르지 못했습니다:\n  " + "\n  ".join(idns)
-                         + "\n  config.ini 의 usb_resource 에 스코프 주소를 적어주세요.")
+        raise ScopeError(f"USB 장치 중에서 {self.device}를 고르지 못했습니다:\n  " + "\n  ".join(idns)
+                         + "\n  config.ini 의 usb_resource 에 장비 주소를 적어주세요.")
 
     def _probe_idn(self, resource: str) -> str:
         vi = ctypes.c_uint32()
