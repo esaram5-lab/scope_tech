@@ -10,6 +10,8 @@ DEFAULTS = {
         "usb_resource": "",
         "visa_library": "",
         "usb_clear": "yes",
+        "lan_visa_protocol": "hislip",
+        "lan_resource": "",
         "ip": "192.168.0.10",
         "port": "4000",
         "timeout_s": "10",

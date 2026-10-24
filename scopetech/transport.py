@@ -212,17 +212,27 @@ class StreamTransport(Transport):
         self._read_until_idle(0.5)
 
 
+def lan_hint(e: OSError, port: int) -> str:
+    """LAN 연결 오류 종류별 확인할 것."""
+    same_net = "  - PC 와 스코프 IP 가 같은 대역인지 확인 (예: PC 192.168.0.100 / 스코프 192.168.0.10, 서브넷 255.255.255.0)"
+    if isinstance(e, ConnectionRefusedError):
+        return (f"  - 연결 거부: 스코프에 닿았지만 포트 {port} 가 열려 있지 않습니다.\n"
+                "  - 스코프 Utility > I/O > Socket Server 가 On 인지, Port 가 config.ini 의 port 와 같은지 확인")
+    if isinstance(e, (TimeoutError, socket.timeout)):
+        return ("  - 응답 없음: 스코프 IP 가 맞는지, 랜선이 연결됐는지 확인\n" + same_net +
+                "\n  - PC 방화벽/보안 프로그램이 막고 있지 않은지 확인")
+    if getattr(e, "errno", None) in (51, 65, 101, 113, 10051, 10065) or isinstance(e, socket.gaierror):
+        return "  - 경로 없음: PC 이더넷 어댑터에 고정 IP 를 지정했는지 확인\n" + same_net
+    return ("  - 스코프 Utility > I/O > Socket Server 가 On 인지, 포트 번호가 맞는지 확인\n" + same_net)
+
+
 class SocketTransport(StreamTransport):
     def __init__(self, host: str, port: int = 4000, timeout: float = 10.0, logger: Logger | None = None):
         super().__init__(timeout, logger)
         try:
             self.sock = socket.create_connection((host, port), timeout=timeout)
         except OSError as e:
-            raise ScopeError(
-                f"LAN 연결 실패 ({host}:{port}): {e}\n"
-                "  - 스코프 Utility > I/O > Socket Server 가 On 인지, 포트 번호가 맞는지 확인\n"
-                "  - PC 와 스코프 IP 가 같은 대역인지 확인 (예: PC 192.168.0.100 / 스코프 192.168.0.10)"
-            ) from e
+            raise ScopeError(f"LAN 연결 실패 ({host}:{port}): {e}\n" + lan_hint(e, port)) from e
         self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         self.description = f"LAN {host}:{port}"
         banner = self._read_until_idle(0.3)
