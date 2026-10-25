@@ -39,6 +39,8 @@ README 의 "개발자용" 참고. 핵심 흐름:
   구버전 빠진 값은 `recompute.py` 로 채움(원본 `result.orig.json`), 핀 없는 기록은 `plan/missing_pins.csv` 를 사용자가 채움.
 - 공용 파일은 `captures/plan/` 바로 아래: state.json, overrides.ini, gui.json, samples.csv, missing_pins.csv, plan_summary_all.csv.
 
+- 온도 고치기 `fix_temp.py`(`scopetech/fix_temp.py`, `run_fix_temp.bat`): 샘플 → 잘못된 온도 → 원래 온도 → 측정 묶음(30분 간격) 순으로 물어 result.json temp(백업, `temp_fixed` 기록)·진행 기록 이동(원래 온도에 완료된 같은 항목은 묻고 유지/교체)·사진 모음 이름·요약표·results.csv 를 고침.
+
 ## 테스트
 - `python -m unittest discover -s tests -t .` (시뮬레이터, 가짜 TCP/VISA). 이 개발 환경의 Python 3.13 에는 tkinter 가 없어 GUI 시험은
   `xvfb-run -a python3.12 -m unittest tests.test_plan_gui` 로 확인(3.13 에선 건너뜀).

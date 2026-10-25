@@ -13,6 +13,7 @@ Tektronix MSO58B 로 PLD(SLG4AD4449) 입출력 레벨을 측정하고, 시험 �
 | `run_plan_gui.bat` | 결과·설정 창만 열기 | 불필요 |
 | `run_cleanup.bat` | 여러 버전의 측정 기록을 정리해 계획·요약표에 연결 | 불필요 |
 | `run_plan_summary.bat` | 샘플별·전체 요약표 다시 만들기 | 불필요 |
+| `run_fix_temp.bat` | 온도를 잘못 넣고 측정한 기록 고치기 | 불필요 |
 | `run_scope.bat` / `run_nocap.bat` | 개별 측정 도우미 (캡처 포함 / 캡처 없이) | 필요 |
 | `run_check.bat` | 처음 연결할 때 단계별 사전 점검 | 필요 |
 | `run_report.bat`, `run_temp_table.bat`, `run_collect_photos.bat`, `run_analyze.bat` | 보고서 초안, 온도별 표, 사진 모음, 재판정 | 불필요 |
@@ -115,6 +116,15 @@ Tektronix MSO58B 로 PLD(SLG4AD4449) 입출력 레벨을 측정하고, 시험 �
 - 여러 번 실행해도 됩니다(새로 생긴 것만 반영). 계획 모드로 잰 줄은 그대로 두며 바꾸려면 `--replace`. `--dry-run` 미리보기만, `--apply` 묻지 않고 적용.
 - 계획 진행(CLI)이 실행 중이면 하지 않습니다. 이전 버전의 `plan/progress_25C.json` 은 그 기록의 시험 이름 샘플 폴더로 옮깁니다.
 
+### 온도를 잘못 넣고 측정했을 때 (`run_fix_temp.bat`)
+CLI·GUI 를 닫고 실행하면 차례로 묻습니다: **샘플** → **잘못 넣은 온도** → **원래 온도** → **고칠 측정 묶음**(측정 시각이 30분 넘게 비는 곳에서 나눔) → 확인.
+- 잘못된 온도에서 제대로 잰 측정이 섞여 있으면 그 묶음은 빼고 고르면 됩니다(`1,3` 처럼 번호, `a` 전부).
+- 원래 온도에 이미 완료된 같은 항목이 있으면 고친 기록으로 바꿀지 묻습니다(n 이면 원래 온도 기록 유지).
+- 고치는 것: 각 측정의 `result.json` 온도(원본 `result.orig.json`), 진행 기록 항목을 원래 온도로 옮김(비게 된 잘못된 온도 파일은 지움),
+  사진 모음의 잘못된 이름 사진을 지우고 새 이름으로 복사, 요약표·`results.csv`(이전 것 `results_before_fix_*.csv`) 다시 만들기. 내역 `plan/fix_temp_*.txt`.
+- 폴더 이름(`…_85C_…`)은 그대로 둡니다(도구들은 `result.json` 의 온도를 먼저 읽음).
+- 묻지 않고: `py fix_temp.py --sample TSMC_1 --wrong 85 --right 25 --since "2026-10-24 13:00" --until "2026-10-24 15:00" --apply`
+
 ---
 
 ## 4. 개별 측정 도우미 (`run_scope.bat`)
@@ -214,7 +224,7 @@ logs/                                 <- 스코프 송수신 기록(scpi_*.log),
 ### 구조 (모듈)
 ```
 scope.py                 실행 (계획 / 안내 메뉴 / 셸 / --fetch / --no-capture / --sim)
-plan_gui.py  cleanup.py  plan_summary.py  analyze.py  report.py  temp_table.py  collect_photos.py  scope_check.py
+plan_gui.py  cleanup.py  fix_temp.py  plan_summary.py  analyze.py  report.py  temp_table.py  collect_photos.py  scope_check.py
 scopetech/
   transport.py           통신 (USB: visa64.dll 직접 호출, LAN: 소켓)
   mso.py                 MSO58B 드라이버 (SCPI 명령 단위)
@@ -223,6 +233,7 @@ scopetech/
   capture/               화면 캡처 '방법' (config [capture] method): screen_api(기본) aoe off template
   plan.py                시험 계획 진행(PlanRunner)·샘플별 진행 기록·요약표
   plan_import.py         기록 -> (샘플, 온도, 계획 줄) 연결, 빠진 값 채우기 (정리 도구·GUI 가져오기)
+  fix_temp.py            잘못 넣은 온도 고치기 (result.json, 진행 기록, 사진 모음)
   samples.py             시험 이름 -> 샘플(fab·번호) 대응표 plan/samples.csv
   plan_state.py          CLI <-> GUI 연결 파일: plan/state.json(진행 상태), plan/overrides.ini(GUI 설정)
   plan_view.py           GUI 가 보여줄 데이터(tkinter 없이 시험 가능), GUI 띄우기

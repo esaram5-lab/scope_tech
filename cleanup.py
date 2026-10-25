@@ -37,7 +37,7 @@ from scopetech.plan_state import OVERRIDES_FILE, STATE_FILE, PlanSettings, cli_r
 from scopetech.samples import Samples, order_key  # noqa: E402
 
 
-def rebuild_results_csv(base: Path, cfg) -> tuple[Path, int, Path | None]:
+def rebuild_results_csv(base: Path, cfg, prefix: str = "results_before_cleanup") -> tuple[Path, int, Path | None]:
     """모든 result.json 으로 results.csv 를 다시 쓴다. (파일, 줄 수, 보관한 이전 파일)."""
     rows = []
     for meta in sorted(Path(base).glob("*/*/result.json"), key=lambda p: p.parent.name):
@@ -56,7 +56,7 @@ def rebuild_results_csv(base: Path, cfg) -> tuple[Path, int, Path | None]:
     path = Path(base) / "results.csv"
     old = None
     if path.exists():
-        old = path.with_name(f"results_before_cleanup_{datetime.now():%Y%m%d_%H%M%S}.csv")
+        old = path.with_name(f"{prefix}_{datetime.now():%Y%m%d_%H%M%S}.csv")
         path.replace(old)
     results.write_csv(path, rows)
     return path, len(rows), old
