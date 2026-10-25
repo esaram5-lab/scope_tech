@@ -22,13 +22,17 @@ Tektronix MSO58B 로 PLD(SLG4AD4449) 입출력 레벨을 측정하고, 시험 �
 
 ## 1. 연결
 
-| | USB (기본) | LAN |
-|---|---|---|
-| PC 설치 | **TekVISA 또는 NI-VISA 필요**¹ | 없음 |
-| 케이블 | 스코프 뒷면 **USB Device 포트**(USB 3.0 B타입) | 랜선으로 PC와 스코프 직결 |
-| 스코프 설정 | Utility > I/O > USB Device Port **On** | Utility > I/O > LAN: IP 수동 지정(예: `192.168.0.10`), Socket Server **On**, Protocol **None**, Port **4000** |
-| PC 설정 | — | 이더넷 어댑터 IP `192.168.0.100`, 서브넷 `255.255.255.0` |
-| `config.ini` | `interface = usb` | `interface = lan`, `ip = 192.168.0.10` |
+| | USB (기본) | LAN 소켓 | LAN VISA |
+|---|---|---|---|
+| PC 설치 | **TekVISA 또는 NI-VISA 필요**¹ | 없음 | TekVISA 또는 NI-VISA |
+| 케이블 | 스코프 뒷면 **USB Device 포트**(USB 3.0 B타입) | 랜선으로 PC와 스코프 직결 | 랜선 |
+| 스코프 설정 | Utility > I/O > USB Device Port **On** | Utility > I/O > LAN: IP 수동 지정(예: `192.168.0.10`), Socket Server **On**, Protocol **None**, Port **4000** | LAN IP 수동 지정 |
+| PC 설정 | — | 이더넷 어댑터 IP `192.168.0.100`, 서브넷 `255.255.255.0` | 같음 |
+| `config.ini` | `interface = usb` | `interface = lan`, `ip = 192.168.0.10` | `interface = lan_visa`, `ip`, `lan_visa_protocol = hislip`(또는 `vxi11`) |
+
+- LAN 으로 제어하면 화면 캡처 서버도 같은 IP 를 씁니다(`[screen_api] host` 를 비워 두면 `[connection] ip`). 측정은 4000, 캡처는 8765 포트.
+- LAN VISA 는 연결할 때 Device Clear 로 이전 강제 종료의 남은 통신을 정리합니다(소켓은 이 기능이 없어, 이상하면 스코프에서 Socket Server Off → On).
+- LAN 연결이 안 되면 오류 종류에 따라 확인할 것을 보여줍니다(연결 거부 = Socket Server/포트, 응답 없음 = IP·케이블·방화벽, 경로 없음 = PC 고정 IP).
 
 ¹ Windows 에는 USB 계측기(USBTMC) 드라이버가 없어서 USB 로 연결하려면 VISA 가 꼭 필요합니다.
 
@@ -37,7 +41,7 @@ Tektronix MSO58B 로 PLD(SLG4AD4449) 입출력 레벨을 측정하고, 시험 �
 서버·클라이언트는 `scope_capture/` 에 동봉되어 있습니다(scope-capture-api v1.2).
 1. 스코프: `scope_capture/` 폴더를 복사 → 처음 한 번 `py -m pip install Pillow` → `run_capture_server.bat` (처음 실행 때 `capture_token.txt` 생성). 방화벽 등: `scope_capture/README_KO.md`.
 2. PC: 스코프의 `capture_token.txt` 를 `scope.py` 옆에 복사.
-3. `config.ini`: `[screen_api] host = 스코프 IP` (비우면 자동 검색).
+3. `config.ini`: `[screen_api] host = 스코프 IP` (비우면 LAN 제어일 때는 `[connection] ip`, USB 제어일 때는 자동 검색).
 - 캡처 순서: 실행 중이면 Single 1회 받고 정지 → 서버가 화면이 멈출 때까지(최대 2초) 기다렸다 찍음. 2초 안에 멈추지 않으면 오류로 알립니다.
 - 이전 방식(Act On Event, 스코프에 저장 후 종료할 때 한 번에 가져오기)으로 돌아가려면 `[capture] method = aoe`. 남은 캡처는 `py scope.py --fetch`.
 
