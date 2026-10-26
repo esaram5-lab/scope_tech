@@ -10,6 +10,8 @@
 요약표 순서 (test_plan_summary.csv)
     구분,핀,항목,단위     항목 = VIH, VIL, VOH, VOL, IOH, IOL, Rpu, Rpd / 단위 = V, mA, kΩ
 값은 그 온도의 계획 측정 결과에서 가져오고, 같은 값이 여러 측정에서 나오면 최악값(VIH 최대, VIL·VOH 최소, VOL 최대).
+평균값 요약표(mode="avg")는 측정마다 평균(typ)을 쓰고, 같은 값이 여러 측정에서 나오면 그 평균들의 평균.
+최선값 요약표(mode="best")는 최악값의 반대(VIH 최소, VIL·VOH 최대, VOL 최소). 측정 안의 최선값은 result.json 의 analysis 에서 읽는다.
 """
 from __future__ import annotations
 
@@ -37,6 +39,9 @@ GROUP_GUIDE = {
     "RPD": "[Rpd] 외부 저항을 핀 -> VDD, CH2 = 핀 전압, CH1 은 트리거용 스윙.",
 }
 WORST = {"VIH": max, "VIL": min, "VOH": min, "VOL": max}
+BEST = {"VIH": min, "VIL": max, "VOH": max, "VOL": min}
+MODES = ("worst", "avg", "best")
+MODE_LABEL = {"worst": "최악값", "avg": "평균값", "best": "최선값"}
 UNIT_FORMAT = {"V": "{:.4f}", "mA": "{:.3f}", "kΩ": "{:.1f}"}
 DONE, SKIP, FAIL = "완료", "건너뜀", "실패"
 
@@ -194,13 +199,29 @@ class PlanStore:
             return None
 
 
-def row_values(row: PlanRow, result: dict) -> dict[tuple[str, str], float]:
-    """측정 1건에서 요약표에 들어갈 값 {(핀, 항목): 값(요약표 단위)}."""
+def _best(row: PlanRow, m: dict, result: dict) -> float | None:
+    """측정 1건 안의 최선값. VI/AI 는 analysis 의 전환 전압·출력 레벨 목록에서, POR 은 값이 1개라 그대로."""
+    if row.kind == "POR":
+        return m.get("worst")
+    a = result.get("analysis") or {}
+    key = m.get("key")
+    if m.get("output"):
+        levels = a.get("out_high_levels_V" if key == "VOH" else "out_low_levels_V") or []
+        return BEST[key](levels) if levels else None
+    stats = (a.get("vt_plus" if key == "VIH" else "vt_minus") or {}).get("stats") or {}
+    return stats.get("min" if key == "VIH" else "max")
+
+
+def row_values(row: PlanRow, result: dict, mode: str = "worst") -> dict[tuple[str, str], float]:
+    """측정 1건에서 요약표에 들어갈 값 {(핀, 항목): 값(요약표 단위)}. mode: worst(최악값) / avg(평균) / best(최선값)."""
     vals: dict[tuple[str, str], float] = {}
     if row.kind in ("VI", "AI", "POR"):
         for m in result.get("metrics", []):
-            key, worst = m.get("key"), m.get("worst")
-            if key not in WORST or worst is None:
+            key = m.get("key")
+            if key not in WORST:
+                continue
+            worst = _best(row, m, result) if mode == "best" else m.get("typ" if mode == "avg" else "worst")
+            if worst is None:
                 continue
             if row.kind == "POR" or m.get("output"):
                 pin = row.out_pin
@@ -216,11 +237,12 @@ def row_values(row: PlanRow, result: dict) -> dict[tuple[str, str], float]:
     return vals
 
 
-def collect_values(rows: list[PlanRow], store: PlanStore, temp: str) -> tuple[dict, dict]:
-    """(값 {(핀, 항목): 값}, 출처 {(핀, 항목): [순서...]}). 여러 측정에서 같은 값이 나오면 최악값."""
+def collect_values(rows: list[PlanRow], store: PlanStore, temp: str, mode: str = "worst") -> tuple[dict, dict]:
+    """(값 {(핀, 항목): 값}, 출처 {(핀, 항목): [순서...]}). 여러 측정에서 같은 값이 나오면 최악값(avg: 평균, best: 최선값)."""
     progress = store.load(temp).get("rows", {})
     vals: dict[tuple[str, str], float] = {}
     src: dict[tuple[str, str], list[str]] = {}
+    seen: dict[tuple[str, str], list[float]] = {}
     for row in rows:
         entry = progress.get(row.key)
         if not entry or entry.get("status") != DONE:
@@ -228,9 +250,13 @@ def collect_values(rows: list[PlanRow], store: PlanStore, temp: str) -> tuple[di
         result = store.result_of(entry)
         if result is None:
             continue
-        for k, v in row_values(row, result).items():
-            pick = WORST.get(k[1])
-            vals[k] = pick(vals[k], v) if (k in vals and pick) else v
+        for k, v in row_values(row, result, mode).items():
+            pick = (BEST if mode == "best" else WORST).get(k[1])
+            if mode == "avg":
+                seen.setdefault(k, []).append(v)
+                vals[k] = sum(seen[k]) / len(seen[k])
+            else:
+                vals[k] = pick(vals[k], v) if (k in vals and pick) else v
             src.setdefault(k, []).append(row.no)
     return vals, src
 
@@ -354,9 +380,10 @@ def all_temps(stores: list[PlanStore], configured: list[str]) -> list[str]:
     return first + [seen[k] for k in sorted(seen)]
 
 
-def write_summary_all(rows, layout, stores: list[PlanStore], temps: list[str], path: Path) -> Path:
-    """샘플을 나란히 놓은 요약표: 열 = 샘플 × 온도. 샘플끼리는 섞지 않는다(최악값·평균 없음)."""
-    vals = {(st.sample, t): collect_values(rows, st, t)[0] for st in stores for t in temps}
+def write_summary_all(rows, layout, stores: list[PlanStore], temps: list[str], path: Path, mode: str = "worst") -> Path:
+    """샘플을 나란히 놓은 요약표: 열 = 샘플 × 온도. 샘플끼리는 섞지 않는다(샘플 간 최악값·평균 없음).
+    mode: worst(측정마다 최악값) / avg(측정마다 평균값) / best(측정마다 최선값)."""
+    vals = {(st.sample, t): collect_values(rows, st, t, mode)[0] for st in stores for t in temps}
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f)
@@ -371,14 +398,22 @@ def write_summary_all(rows, layout, stores: list[PlanStore], temps: list[str], p
     return path
 
 
+def summary_all_path(root: PlanStore, mode: str = "worst") -> Path:
+    return root.root / ("plan_summary_all.csv" if mode == "worst" else f"plan_summary_all_{mode}.csv")
+
+
 def rebuild_all(rows, layout, root: PlanStore, configured_temps: list[str]) -> tuple[Path | None, list[Path]]:
-    """모든 샘플의 진행 CSV·요약표와 plan_summary_all.csv. (전체 요약표 또는 None, 샘플 요약표 목록)."""
+    """모든 샘플의 진행 CSV·요약표와 plan_summary_all.csv. (전체 요약표 또는 None, 샘플 요약표 목록).
+    평균값·최선값 요약표(plan_summary_all_avg.csv / _best.csv)가 이미 있으면 함께 다시 만든다."""
     stores = [root.of(sid) for sid in root.samples()]
     summaries = [rebuild(rows, layout, st, configured_temps)[0] for st in stores]
     if not stores:
         return None, []
-    return write_summary_all(rows, layout, stores, all_temps(stores, configured_temps),
-                             root.root / "plan_summary_all.csv"), summaries
+    temps = all_temps(stores, configured_temps)
+    for mode in MODES[1:]:
+        if summary_all_path(root, mode).exists():
+            write_summary_all(rows, layout, stores, temps, summary_all_path(root, mode), mode)
+    return write_summary_all(rows, layout, stores, temps, summary_all_path(root)), summaries
 
 
 def migrate_legacy(root: PlanStore, samples: Samples) -> list[str]:

@@ -81,6 +81,12 @@ Tektronix MSO58B 로 PLD(SLG4AD4449) 입출력 레벨을 측정하고, 시험 �
 - `<샘플>/plan_summary_<샘플>.csv`: 문서에 옮길 요약표. 행 = `test_plan_summary.csv` 순서(구분, 핀, 항목, 단위), 열 = 25 / 85 / −40°C.
   한 샘플 안에서 같은 값이 두 측정에서 나오면(예: 핀 16 VOL 은 3→16, 6→16) 최악값(VIH 최대, VIL·VOH 최소, VOL 최대).
 - `plan_summary_all.csv`: 모든 샘플을 나란히(열 = 샘플 × 온도, VIS → TSMC, 번호 순). 샘플끼리 최악값·평균은 내지 않습니다.
+- 같은 표를 다른 값으로: `run_plan_summary.bat` 가 만들고, 이후 요약표를 다시 만들 때 함께 갱신합니다.
+  - `plan_summary_all_avg.csv` **평균값**: 측정마다 평균(typ), 한 샘플에서 같은 값이 여러 측정에서 나오면 그 평균.
+  - `plan_summary_all_best.csv` **최선값**: 최악값의 반대(VIH 최소, VIL·VOH 최대, VOL 최소). 여러 측정이면 그중 최선.
+  - IOH/IOL/Rpu/Rpd 와 POR 은 측정 1건에 값이 하나라 세 표가 같습니다.
+  - 만들 값은 `config.ini [plan] summary_values = worst, avg, best` 에서 고르거나, 실행할 때 `run_plan_summary.bat --value avg,best`.
+    최악값 표(`plan_summary_all.csv`)는 고르지 않아도 항상 있습니다. 샘플별 요약표는 최악값.
 - `<샘플>/plan_progress_25C.csv`: 항목별 상태(완료/건너뜀/실패), 결과 한 줄, 주의, 측정 폴더.
 - 요약표만 다시 만들기: `run_plan_summary.bat`.
 
