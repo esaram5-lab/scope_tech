@@ -93,9 +93,10 @@ class PlanSummaryTest(unittest.TestCase):
         rows = [PlanRow("3", "VI", "3", "16", "OD", [1, 2]), PlanRow("4", "VI", "6", "16", "OD", [1, 2]),
                 PlanRow("9", "IOH", "", "12", "PP", [8, 2]), PlanRow("16", "RPD", "", "2", "PP", [2])]
         results = {
-            "3": {"metrics": [{"key": "VIH", "worst": 1.9}, {"key": "VIL", "worst": 1.4},
-                              {"key": "VOL", "worst": 0.05, "output": True}, {"key": "VOH", "worst": 3.0, "output": True}]},
-            "4": {"metrics": [{"key": "VOL", "worst": 0.08, "output": True}, {"key": "HYS", "worst": 0.5}]},
+            "3": {"metrics": [{"key": "VIH", "worst": 1.9, "typ": 1.7}, {"key": "VIL", "worst": 1.4},
+                              {"key": "VOL", "worst": 0.05, "typ": 0.04, "output": True},
+                              {"key": "VOH", "worst": 3.0, "output": True}]},
+            "4": {"metrics": [{"key": "VOL", "worst": 0.08, "typ": 0.06, "output": True}, {"key": "HYS", "worst": 0.5}]},
             "9": {"calc": {"value": -0.0042, "unit": "A"}},
             "16": {"calc": {"value": 987654.0, "unit": "ohm"}},
         }
@@ -112,6 +113,11 @@ class PlanSummaryTest(unittest.TestCase):
             self.assertEqual(vals[("16", "VOL")], 0.08)  # 두 측정 중 높은 VOL
             self.assertEqual(src[("16", "VOL")], ["3", "4"])
             self.assertEqual(vals[("3", "VIH")], 1.9)
+            avg, _ = collect_values(rows, store, "25", "avg")
+            self.assertAlmostEqual(avg[("16", "VOL")], 0.05)  # 두 측정 평균(0.04, 0.06)의 평균
+            self.assertEqual(avg[("3", "VIH")], 1.7)
+            self.assertNotIn(("3", "VIL"), avg)  # 평균 없음 -> 빈칸(최악값으로 채우지 않음)
+            self.assertAlmostEqual(avg[("12", "IOH")], vals[("12", "IOH")])  # 계산값은 같음
             layout = [("VO_OD", "16", "VOL", "V"), ("IOH", "12", "IOH", "mA"), ("Rpd", "2", "Rpd", "kΩ"),
                       ("VI", "99", "VIH", "V")]
             out = write_summary(rows, layout, store, ["25", "85"], Path(d) / "s.csv")
@@ -242,3 +248,10 @@ class PlanRunnerTest(unittest.TestCase):
             table = list(csv.reader(f))
         self.assertEqual(table[0][4:], ["25°C", "85°C", "-40°C"])
         self.assertTrue(table[1][5])  # 85°C 값
+        with (self.base / "plan" / "plan_summary_all.csv").open(encoding="utf-8-sig", newline="") as f:
+            worst = list(csv.reader(f))
+        with (self.base / "plan" / "plan_summary_all_avg.csv").open(encoding="utf-8-sig", newline="") as f:
+            avg = list(csv.reader(f))
+        self.assertEqual(avg[0], worst[0])
+        self.assertEqual([r[:4] for r in avg], [r[:4] for r in worst])
+        self.assertTrue(any(r[5] for r in avg[1:]))
