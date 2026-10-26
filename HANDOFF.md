@@ -43,19 +43,11 @@ README 의 "개발자용" 참고. 핵심 흐름:
 
 ## 현재 상태와 결정 (2026-10-26, 이 계정에서의 작업 마무리)
 - 기능 구현은 끝남. 남은 일은 아래 "아직 실장비·Windows 에서 확인 안 된 것" 의 실장비 확인뿐이고, 문제가 보고되면 고친다.
-- **스코프 코드를 공용 패키지로 분리하지 않기로 함.** 동작하는 코드를 옮기면 기능은 같은데 실장비 재검증만 늘어나고,
-  아직 그 코드를 쓸 다음 프로젝트가 없어서 필요한 모양을 모른다. `scope_tech` 는 그대로 둔다.
-- 다른 프로젝트에서 스코프 기능이 필요해지면 그때 필요한 부분만 **esaram5-lab/CodeBank**(재사용 패키지 모음) 의
-  `packages/<패키지>/` 로 복사해 그 패키지 기준으로 검증한다. 가져갈 후보:
-
-| 파일 | 내용 | 다른 코드와 묶임 |
-|---|---|---|
-| `scopetech/transport.py` | USB(visa64.dll ctypes)·LAN 소켓, 바이너리 블록, READFile, 타임아웃·복구 | 없음 |
-| `scopetech/mso.py` | MSO 명령: Single/Stop/Run, 파형 전송, 측정 배지, 커서, wfm·setup 저장, 상태 정리 | `analysis.Waveform` 하나 |
-| `scopetech/capture/` | 화면 캡처 방법(screen_api, aoe, off, template) | 없음 |
-| `scope_capture/` | 스코프 Windows 화면 캡처 서버·클라이언트 (원본 esaram5-lab/scope-capture-api) | 없음 |
-| `scopetech/sim.py` | 가짜 스코프(시험용) | PLD 신호 흉내 포함 |
-  가져갈 때는 위 "실장비에서 확인된 사실" 도 그 패키지 README 로 옮길 것(특히 `SAVe:IMAGe` 로 TekScope 멈춤, `TOP/BASE`).
+- **이 레포의 코드를 공용 패키지로 나누지 않는다.** 동작하는 코드를 옮기면 기능은 같은데 실장비 재검증만 늘어난다.
+- 재사용용 복사본은 **esaram5-lab/CodeBank** 에 이미 있다(이 레포는 바꾸지 않음):
+  - `packages/tek_mso5b`: `scopetech/transport.py`, `mso.py`, `sim.py`, `analysis.py` 의 `Waveform`·`levels` (커밋 180f1d1 기준)
+  - `packages/scope_capture`: `scope_capture/` 동봉본과 같은 코드(원본 scope-capture-api v1.2)
+- 여기서 `transport.py` / `mso.py` 의 장비 관련 버그를 고치면 CodeBank `tek_mso5b` 에도 같은 수정을 넣을 것.
 
 ## 테스트
 - `python -m unittest discover -s tests -t .` (시뮬레이터, 가짜 TCP/VISA). 이 개발 환경의 Python 3.13 에는 tkinter 가 없어 GUI 시험은
