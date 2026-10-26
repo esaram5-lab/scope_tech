@@ -35,7 +35,7 @@ DEFAULTS = {
                    "timeout_s": "10", "discovery_timeout_s": "2", "acquire": "stop", "settle_s": "0.3",
                    "stable_ms": "2000", "stable_interval_ms": "100", "stable_frames": "3"},
     "manual": {"vdd_v": "3.3", "r_ext_ohm": "1e6", "probe_r_ohm": "10e6"},
-    "plan": {"file": "test_plan.csv", "summary": "test_plan_summary.csv", "dir": "plan", "temps": "25, 85, -40",
+    "plan": {"file": "test_plan.csv", "summary": "test_plan_summary.csv", "dir": "plan", "temps": "25, 85, -40", "summary_values": "worst, avg, best",
              "ioh_v": "2.4", "ioh_tol_v": "0.1", "iol_v": "0.4", "iol_tol_v": "0.1", "gui": "yes"},
     "save": {"channels": "displayed", "csv": "yes", "wfm": "yes", "setup": "yes"},
     "scope": {"temp_dir": "C:/scope_tech_tmp", "num_channels": "8"},

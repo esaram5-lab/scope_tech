@@ -95,8 +95,11 @@ class PlanSummaryTest(unittest.TestCase):
         results = {
             "3": {"metrics": [{"key": "VIH", "worst": 1.9, "typ": 1.7}, {"key": "VIL", "worst": 1.4},
                               {"key": "VOL", "worst": 0.05, "typ": 0.04, "output": True},
-                              {"key": "VOH", "worst": 3.0, "output": True}]},
-            "4": {"metrics": [{"key": "VOL", "worst": 0.08, "typ": 0.06, "output": True}, {"key": "HYS", "worst": 0.5}]},
+                              {"key": "VOH", "worst": 3.0, "output": True}],
+                  "analysis": {"vt_plus": {"stats": {"min": 1.5, "max": 1.9}}, "vt_minus": {"stats": {"min": 1.4, "max": 1.6}},
+                               "out_high_levels_V": [3.0, 3.2], "out_low_levels_V": [0.03, 0.05]}},
+            "4": {"metrics": [{"key": "VOL", "worst": 0.08, "typ": 0.06, "output": True}, {"key": "HYS", "worst": 0.5}],
+                  "analysis": {"out_low_levels_V": [0.02, 0.08]}},
             "9": {"calc": {"value": -0.0042, "unit": "A"}},
             "16": {"calc": {"value": 987654.0, "unit": "ohm"}},
         }
@@ -118,6 +121,12 @@ class PlanSummaryTest(unittest.TestCase):
             self.assertEqual(avg[("3", "VIH")], 1.7)
             self.assertNotIn(("3", "VIL"), avg)  # 평균 없음 -> 빈칸(최악값으로 채우지 않음)
             self.assertAlmostEqual(avg[("12", "IOH")], vals[("12", "IOH")])  # 계산값은 같음
+            best, _ = collect_values(rows, store, "25", "best")
+            self.assertEqual(best[("3", "VIH")], 1.5)
+            self.assertEqual(best[("3", "VIL")], 1.6)
+            self.assertEqual(best[("16", "VOH")], 3.2)
+            self.assertEqual(best[("16", "VOL")], 0.02)  # 두 측정 중 낮은 VOL
+            self.assertAlmostEqual(best[("2", "Rpd")], vals[("2", "Rpd")])
             layout = [("VO_OD", "16", "VOL", "V"), ("IOH", "12", "IOH", "mA"), ("Rpd", "2", "Rpd", "kΩ"),
                       ("VI", "99", "VIH", "V")]
             out = write_summary(rows, layout, store, ["25", "85"], Path(d) / "s.csv")
@@ -248,10 +257,18 @@ class PlanRunnerTest(unittest.TestCase):
             table = list(csv.reader(f))
         self.assertEqual(table[0][4:], ["25°C", "85°C", "-40°C"])
         self.assertTrue(table[1][5])  # 85°C 값
-        with (self.base / "plan" / "plan_summary_all.csv").open(encoding="utf-8-sig", newline="") as f:
-            worst = list(csv.reader(f))
-        with (self.base / "plan" / "plan_summary_all_avg.csv").open(encoding="utf-8-sig", newline="") as f:
-            avg = list(csv.reader(f))
-        self.assertEqual(avg[0], worst[0])
-        self.assertEqual([r[:4] for r in avg], [r[:4] for r in worst])
-        self.assertTrue(any(r[5] for r in avg[1:]))
+        tables = {}
+        for m in ("", "_avg", "_best"):
+            with (self.base / "plan" / f"plan_summary_all{m}.csv").open(encoding="utf-8-sig", newline="") as f:
+                tables[m] = list(csv.reader(f))
+        for m in ("_avg", "_best"):
+            self.assertEqual([r[:4] for r in tables[m]], [r[:4] for r in tables[""]])
+            self.assertTrue(any(r[5] for r in tables[m][1:]))
+        vih = [i for i, r in enumerate(tables[""]) if r[2] == "VIH" and r[5]][0]
+        self.assertLessEqual(float(tables["_best"][vih][5]), float(tables["_avg"][vih][5]))
+        self.assertLessEqual(float(tables["_avg"][vih][5]), float(tables[""][vih][5]))
+        args = ["--config", str(cfg_path), "--dir", str(self.base), "--plan", str(ROOT / "test_plan.csv")]
+        self.assertEqual(plan_summary.main(args + ["--value", "worst,nope"]), 1)
+        (self.base / "plan" / "plan_summary_all_best.csv").unlink()
+        self.assertEqual(plan_summary.main(args + ["--value", "avg"]), 0)
+        self.assertFalse((self.base / "plan" / "plan_summary_all_best.csv").exists())
