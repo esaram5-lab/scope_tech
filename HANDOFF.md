@@ -41,6 +41,14 @@ README 의 "개발자용" 참고. 핵심 흐름:
 
 - 온도 고치기 `fix_temp.py`(`scopetech/fix_temp.py`, `run_fix_temp.bat`): 샘플 → 잘못된 온도 → 원래 온도 → 측정 묶음(30분 간격) 순으로 물어 result.json temp(백업, `temp_fixed` 기록)·진행 기록 이동(원래 온도에 완료된 같은 항목은 묻고 유지/교체)·사진 모음 이름·요약표·results.csv 를 고침.
 
+## 현재 상태와 결정 (2026-10-26, 이 계정에서의 작업 마무리)
+- 기능 구현은 끝남. 남은 일은 아래 "아직 실장비·Windows 에서 확인 안 된 것" 의 실장비 확인뿐이고, 문제가 보고되면 고친다.
+- **이 레포의 코드를 공용 패키지로 나누지 않는다.** 동작하는 코드를 옮기면 기능은 같은데 실장비 재검증만 늘어난다.
+- 재사용용 복사본은 **esaram5-lab/CodeBank** 에 이미 있다(이 레포는 바꾸지 않음):
+  - `packages/tek_mso5b`: `scopetech/transport.py`, `mso.py`, `sim.py`, `analysis.py` 의 `Waveform`·`levels` (커밋 180f1d1 기준)
+  - `packages/scope_capture`: `scope_capture/` 동봉본과 같은 코드(원본 scope-capture-api v1.2)
+- 여기서 `transport.py` / `mso.py` 의 장비 관련 버그를 고치면 CodeBank `tek_mso5b` 에도 같은 수정을 넣을 것.
+
 ## 테스트
 - `python -m unittest discover -s tests -t .` (시뮬레이터, 가짜 TCP/VISA). 이 개발 환경의 Python 3.13 에는 tkinter 가 없어 GUI 시험은
   `xvfb-run -a python3.12 -m unittest tests.test_plan_gui` 로 확인(3.13 에선 건너뜀).
